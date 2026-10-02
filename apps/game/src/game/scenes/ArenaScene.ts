@@ -11,6 +11,7 @@ import {
 import { Scene, type GameObjects } from 'phaser';
 import type { Socket } from 'socket.io-client';
 import { PlayerView } from '../entities/PlayerView';
+import { MapView } from '../map/MapView';
 import { getClientIdentity, type ClientIdentity } from '../../network/identity';
 import { getSocket } from '../../network/socket';
 import { PlayerRegistry } from '../../state/PlayerRegistry';
@@ -22,6 +23,7 @@ export class ArenaScene extends Scene
     private readonly playerRegistry = new PlayerRegistry();
     private readonly playerViews = new Map<string, PlayerView>();
 
+    private mapView!: MapView;
     private selfId = '';
 
     private roomText!: GameObjects.Text;
@@ -42,12 +44,14 @@ export class ArenaScene extends Scene
         this.socket = getSocket();
 
         this.createInterface();
+        this.mapView = new MapView(this);
         this.attachSocketListeners();
 
         this.events.once('shutdown', () =>
         {
             this.detachSocketListeners();
             this.clearPlayerViews();
+            this.mapView.destroy();
         });
 
         if (this.socket.connected)
@@ -73,7 +77,7 @@ export class ArenaScene extends Scene
             color: '#f8fafc'
         });
 
-        this.roomText = this.add.text(36, 68, `Sala: ${this.identity.roomId}`, {
+        this.roomText = this.add.text(36, 68, 'Sala: ' + this.identity.roomId, {
             fontFamily: 'Arial',
             fontSize: 16,
             color: '#cbd5e1'
@@ -92,7 +96,7 @@ export class ArenaScene extends Scene
             align: 'right'
         }).setOrigin(1, 0);
 
-        this.add.text(988, 68, 'Presencia sincronizada · sin movimiento todavía', {
+        this.add.text(988, 68, 'Mapa sincronizado · obstáculos visuales', {
             fontFamily: 'Arial',
             fontSize: 12,
             color: '#64748b',
@@ -111,11 +115,16 @@ export class ArenaScene extends Scene
             align: 'center'
         }).setOrigin(0.5).setVisible(false);
 
-        this.add.text(512, 730, 'Movimiento, disparos y combate se construirán durante la clase.', {
-            fontFamily: 'Arial',
-            fontSize: 14,
-            color: '#64748b'
-        }).setOrigin(0.5);
+        this.add.text(
+            512,
+            730,
+            'Paredes, trampas y cactus todavía no aplican efectos de gameplay.',
+            {
+                fontFamily: 'Arial',
+                fontSize: 14,
+                color: '#64748b'
+            }
+        ).setOrigin(0.5);
     }
 
     private attachSocketListeners()
@@ -160,21 +169,25 @@ export class ArenaScene extends Scene
         this.setConnectionStatus('disconnected');
         this.playerRegistry.replaceAll([]);
         this.selfId = '';
+        this.mapView.clear();
         this.syncPlayerViews();
     };
 
     private readonly handleRoomState = (payload: RoomStatePayload) =>
     {
-        this.roomText.setText(`Sala: ${payload.roomId}`);
+        this.roomText.setText(
+            'Sala: ' + payload.roomId + ' · mapa #' + payload.map.seed
+        );
         this.selfId = payload.selfId;
         this.playerRegistry.replaceAll(payload.players);
+        this.mapView.render(payload.map);
         this.syncPlayerViews();
     };
 
     private readonly handleRoomError = (payload: RoomErrorPayload) =>
     {
         this.errorText
-            .setText(`${payload.code}: ${payload.message}`)
+            .setText(payload.code + ': ' + payload.message)
             .setVisible(true);
     };
 
@@ -255,7 +268,7 @@ export class ArenaScene extends Scene
 
     private updatePlayerCount()
     {
-        this.playerCountText.setText(`Players: ${this.playerRegistry.size}`);
+        this.playerCountText.setText('Players: ' + this.playerRegistry.size);
     }
 
     private setConnectionStatus(status: ConnectionStatus)
