@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke": "node scripts/smoke-connection.mjs"
   },
   "dependencies": {
     "@hackatec/shared": "0.1.0",
