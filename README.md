@@ -4,9 +4,9 @@ Base educativa para construir colaborativamente un videojuego web 2D multijugado
 
 ## Estado
 
-**Fase 1 — Presencia multijugador**
+**Fase 2 — Classroom Ready**
 
-La base actual ya incluye:
+La base ya incluye:
 
 - monorepo con npm workspaces;
 - cliente Phaser;
@@ -17,9 +17,17 @@ La base actual ya incluye:
 - entrada y salida en tiempo real;
 - aislamiento entre salas;
 - reconexión;
-- tests, build y smoke test multicliente.
+- funcionamiento por LAN;
+- tests, build y smoke test multicliente;
+- CI para pushes y Pull Requests;
+- guía de arquitectura;
+- reglas para agentes;
+- prompts de clase;
+- flujo de contribución;
+- plantillas de Issue y Pull Request;
+- guía operativa del profesor.
 
-Todavía **no** incluye movimiento, disparos, vida, daño, score ni mapa jugable. Esas features quedan reservadas para la clase.
+> La ausencia de movimiento, disparos, daño y score es intencional. Esas features son el contenido práctico de la clase.
 
 ## Requisitos
 
@@ -41,12 +49,12 @@ npm ci
 npm run dev
 ```
 
-Esto levanta:
+Levanta:
 
 - servidor en `http://localhost:3001`;
 - cliente Vite en `http://localhost:5173`.
 
-Prueba tres jugadores con tres pestañas:
+Prueba tres jugadores:
 
 ```text
 http://localhost:5173/?room=hackatec&name=Rafael
@@ -54,37 +62,7 @@ http://localhost:5173/?room=hackatec&name=Ana
 http://localhost:5173/?room=hackatec&name=Luis
 ```
 
-Todos deben ver los mismos jugadores.
-
-Si cierras una pestaña, ese jugador debe desaparecer de las demás sin refrescar.
-
-## Parámetros de entrada
-
-Sala:
-
-```text
-?room=hackatec
-```
-
-Nombre:
-
-```text
-?name=Ana
-```
-
-Combinados:
-
-```text
-?room=hackatec&name=Ana
-```
-
-Si no indicas sala se usa:
-
-```text
-classroom
-```
-
-Si no indicas nombre, el servidor genera uno.
+Todos deben ver los mismos jugadores. Al cerrar una pestaña, ese jugador desaparece de las demás sin refrescar.
 
 ## PC del profesor — servidor central
 
@@ -102,15 +80,6 @@ Health check:
 
 ```text
 http://localhost:3001/health
-```
-
-Respuesta:
-
-```json
-{
-  "ok": true,
-  "service": "hackatec-multiplayer-server"
-}
 ```
 
 ## PC del alumno
@@ -139,38 +108,6 @@ Después:
 npm run dev:game
 ```
 
-Abre, por ejemplo:
-
-```text
-http://localhost:5173/?room=hackatec&name=Ana
-```
-
-## Encontrar la IP del profesor en Windows
-
-```powershell
-ipconfig
-```
-
-Ejemplo:
-
-```text
-192.168.1.25
-```
-
-Desde otra computadora prueba primero:
-
-```text
-http://192.168.1.25:3001/health
-```
-
-o:
-
-```powershell
-Test-NetConnection 192.168.1.25 -Port 3001
-```
-
-Consulta [docs/NETWORKING.md](docs/NETWORKING.md) para el procedimiento completo.
-
 ## Scripts
 
 ```bash
@@ -193,65 +130,75 @@ packages/
 └── shared/        eventos y tipos compartidos
 ```
 
-Flujo de presencia:
+El modelo de autoridad es:
 
 ```text
-cliente
-  │
-  └── room:join
-         ↓
-      servidor
-         │
-         ├── room:state     → cliente que entra
-         └── player:joined  → resto de la sala
-
-disconnect
-    ↓
-servidor
-    ↓
-player:left
+CLIENTE
+solicita acciones
+   ↓
+SERVIDOR
+valida y mantiene estado compartido
+   ↓
+CLIENTES
+renderizan el estado aceptado
 ```
 
-## Seguridad de estado
+## Flujo de trabajo de clase
 
-El servidor decide:
-
-- quién pertenece a una sala;
-- el ID del jugador;
-- su posición inicial;
-- su color;
-- cuándo entra;
-- cuándo sale.
-
-El cliente solo solicita entrar y renderiza el estado recibido.
-
-## Validación
-
-```bash
+```text
+ISSUE
+  ↓
+ANÁLISIS
+  ↓
+PROMPT
+  ↓
+AGENTE
+  ↓
+BRANCH
+  ↓
+IMPLEMENTACIÓN
+  ↓
 npm run check
+  ↓
+PULL REQUEST
+  ↓
+CI + REVIEW
+  ↓
+MERGE
 ```
 
-El CI además:
+No trabajar directamente sobre `main`.
 
-1. arranca el servidor;
-2. comprueba `/health`;
-3. conecta múltiples clientes Socket.IO reales;
-4. comprueba join;
-5. comprueba snapshot;
-6. comprueba `player:joined`;
-7. comprueba aislamiento;
-8. comprueba `player:left`.
+## Documentación
 
-## Lo que se construirá durante la clase
+- [Arquitectura](docs/ARCHITECTURE.md)
+- [Operación de clase](docs/CLASSROOM.md)
+- [Networking LAN](docs/NETWORKING.md)
+- [Prompts para agentes](docs/PROMPTS.md)
+- [Cómo contribuir](CONTRIBUTING.md)
+- [Reglas para agentes](AGENTS.md)
 
-La base termina intencionalmente con jugadores estáticos:
+## CI
+
+Cada Pull Request hacia `main` ejecuta:
+
+1. `npm ci`;
+2. tests y build;
+3. servidor;
+4. `/health`;
+5. smoke test con múltiples clientes Socket.IO.
+
+Un PR con CI fallando no está listo para merge.
+
+## Features reservadas para los alumnos
 
 ```text
-movimiento   ❌
-disparos     ❌
-vida/daño    ❌
-score        ❌
-mapa         ❌
+movimiento sincronizado  ❌
+disparos                  ❌
+vida / daño               ❌
+respawn / kills           ❌
+mapa / obstáculos         ❌
+HUD / scoreboard          ❌
 ```
 
-Esas funcionalidades serán desarrolladas mediante ramas, prompts, agentes, Pull Requests e integración.
+Se desarrollarán en ramas separadas mediante Issues, prompts, agentes y Pull Requests.
