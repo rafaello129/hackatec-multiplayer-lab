@@ -1,4 +1,5 @@
 import { AUTO, Game, Scale, type Types } from 'phaser';
+import { ArenaScene } from './scenes/ArenaScene';
 import { BootScene } from './scenes/BootScene';
 
 const config: Types.Core.GameConfig = {
@@ -12,7 +13,8 @@ const config: Types.Core.GameConfig = {
         autoCenter: Scale.CENTER_BOTH
     },
     scene: [
-        BootScene
+        BootScene,
+        ArenaScene
     ]
 };
 
