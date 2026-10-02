@@ -19,7 +19,7 @@ export class ArenaScene extends Scene
 {
     private socket!: Socket;
     private identity!: ClientIdentity;
-    private readonly registry = new PlayerRegistry();
+    private readonly playerRegistry = new PlayerRegistry();
     private readonly playerViews = new Map<string, PlayerView>();
 
     private selfId = '';
@@ -158,7 +158,7 @@ export class ArenaScene extends Scene
     private readonly handleDisconnect = () =>
     {
         this.setConnectionStatus('disconnected');
-        this.registry.replaceAll([]);
+        this.playerRegistry.replaceAll([]);
         this.selfId = '';
         this.syncPlayerViews();
     };
@@ -167,7 +167,7 @@ export class ArenaScene extends Scene
     {
         this.roomText.setText(`Sala: ${payload.roomId}`);
         this.selfId = payload.selfId;
-        this.registry.replaceAll(payload.players);
+        this.playerRegistry.replaceAll(payload.players);
         this.syncPlayerViews();
     };
 
@@ -180,14 +180,14 @@ export class ArenaScene extends Scene
 
     private readonly handlePlayerJoined = (payload: PlayerJoinedPayload) =>
     {
-        this.registry.add(payload.player);
+        this.playerRegistry.add(payload.player);
         this.upsertPlayerView(payload.player);
         this.updatePlayerCount();
     };
 
     private readonly handlePlayerLeft = (payload: PlayerLeftPayload) =>
     {
-        this.registry.remove(payload.playerId);
+        this.playerRegistry.remove(payload.playerId);
 
         const view = this.playerViews.get(payload.playerId);
 
@@ -203,7 +203,7 @@ export class ArenaScene extends Scene
     private syncPlayerViews()
     {
         const activeIds = new Set(
-            this.registry.getAll().map((player) => player.id)
+            this.playerRegistry.getAll().map((player) => player.id)
         );
 
         for (const [playerId, view] of this.playerViews)
@@ -215,7 +215,7 @@ export class ArenaScene extends Scene
             }
         }
 
-        for (const player of this.registry.getAll())
+        for (const player of this.playerRegistry.getAll())
         {
             this.upsertPlayerView(player);
         }
@@ -250,12 +250,12 @@ export class ArenaScene extends Scene
         }
 
         this.playerViews.clear();
-        this.registry.replaceAll([]);
+        this.playerRegistry.replaceAll([]);
     }
 
     private updatePlayerCount()
     {
-        this.playerCountText.setText(`Players: ${this.registry.size}`);
+        this.playerCountText.setText(`Players: ${this.playerRegistry.size}`);
     }
 
     private setConnectionStatus(status: ConnectionStatus)
