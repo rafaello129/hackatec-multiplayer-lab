@@ -11,7 +11,7 @@ export class MapView
     constructor(private readonly scene: Scene)
     {
         this.graphics = scene.add.graphics();
-        this.graphics.setDepth(1);
+        this.graphics.setDepth(0);
     }
 
     render(map: GameMapState)
