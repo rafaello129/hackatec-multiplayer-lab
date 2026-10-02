@@ -4,20 +4,22 @@ Base educativa para construir colaborativamente un videojuego web 2D multijugado
 
 ## Estado
 
-**Fase 0 — Fundación técnica**
+**Fase 1 — Presencia multijugador**
 
-La base actual incluye:
+La base actual ya incluye:
 
 - monorepo con npm workspaces;
 - cliente Phaser;
 - servidor Node + Express + Socket.IO;
 - contratos compartidos;
-- `GET /health`;
-- conexión Socket.IO;
-- configuración para localhost o una LAN;
-- tests y build desde la raíz.
+- salas en memoria;
+- jugadores estáticos sincronizados;
+- entrada y salida en tiempo real;
+- aislamiento entre salas;
+- reconexión;
+- tests, build y smoke test multicliente.
 
-Todavía **no** incluye jugadores, movimiento, disparos, vida, score ni mapa. Esas funcionalidades se agregarán después y durante la clase.
+Todavía **no** incluye movimiento, disparos, vida, daño, score ni mapa jugable. Esas features quedan reservadas para la clase.
 
 ## Requisitos
 
@@ -44,13 +46,53 @@ Esto levanta:
 - servidor en `http://localhost:3001`;
 - cliente Vite en `http://localhost:5173`.
 
-## Solo servidor — PC del profesor
+Prueba tres jugadores con tres pestañas:
+
+```text
+http://localhost:5173/?room=hackatec&name=Rafael
+http://localhost:5173/?room=hackatec&name=Ana
+http://localhost:5173/?room=hackatec&name=Luis
+```
+
+Todos deben ver los mismos jugadores.
+
+Si cierras una pestaña, ese jugador debe desaparecer de las demás sin refrescar.
+
+## Parámetros de entrada
+
+Sala:
+
+```text
+?room=hackatec
+```
+
+Nombre:
+
+```text
+?name=Ana
+```
+
+Combinados:
+
+```text
+?room=hackatec&name=Ana
+```
+
+Si no indicas sala se usa:
+
+```text
+classroom
+```
+
+Si no indicas nombre, el servidor genera uno.
+
+## PC del profesor — servidor central
 
 ```bash
 npm run dev:server
 ```
 
-El servidor escucha por defecto en:
+El servidor escucha en:
 
 ```text
 0.0.0.0:3001
@@ -62,7 +104,7 @@ Health check:
 http://localhost:3001/health
 ```
 
-Respuesta esperada:
+Respuesta:
 
 ```json
 {
@@ -71,7 +113,7 @@ Respuesta esperada:
 }
 ```
 
-## Solo cliente — PC del alumno
+## PC del alumno
 
 Copia:
 
@@ -85,7 +127,7 @@ como:
 apps/game/.env.local
 ```
 
-y cambia la URL:
+y configura:
 
 ```env
 VITE_SERVER_URL=http://IP_DEL_PROFESOR:3001
@@ -97,13 +139,17 @@ Después:
 npm run dev:game
 ```
 
+Abre, por ejemplo:
+
+```text
+http://localhost:5173/?room=hackatec&name=Ana
+```
+
 ## Encontrar la IP del profesor en Windows
 
 ```powershell
 ipconfig
 ```
-
-Busca la dirección IPv4 de la interfaz conectada al mismo Wi-Fi o LAN que los alumnos.
 
 Ejemplo:
 
@@ -111,27 +157,19 @@ Ejemplo:
 192.168.1.25
 ```
 
-Entonces el alumno puede probar primero:
+Desde otra computadora prueba primero:
 
 ```text
 http://192.168.1.25:3001/health
 ```
 
-y después configurar:
-
-```env
-VITE_SERVER_URL=http://192.168.1.25:3001
-```
-
-## Probar el puerto desde otra PC
+o:
 
 ```powershell
 Test-NetConnection 192.168.1.25 -Port 3001
 ```
 
-Si Windows muestra un aviso de Firewall para Node.js, permite la conexión en redes privadas.
-
-Consulta [docs/NETWORKING.md](docs/NETWORKING.md) para el flujo completo de red.
+Consulta [docs/NETWORKING.md](docs/NETWORKING.md) para el procedimiento completo.
 
 ## Scripts
 
@@ -144,38 +182,48 @@ npm test
 npm run check
 ```
 
-## Estructura
+## Arquitectura
 
 ```text
 apps/
-├── game/
-└── server/
+├── game/          Phaser + Socket.IO Client
+└── server/        Express + Socket.IO
 
 packages/
-└── shared/
+└── shared/        eventos y tipos compartidos
 ```
 
-- `apps/game`: cliente Phaser.
-- `apps/server`: servidor Express + Socket.IO.
-- `packages/shared`: tipos y eventos compartidos.
+Flujo de presencia:
 
-## Variables de entorno
+```text
+cliente
+  │
+  └── room:join
+         ↓
+      servidor
+         │
+         ├── room:state     → cliente que entra
+         └── player:joined  → resto de la sala
 
-Servidor:
-
-```env
-HOST=0.0.0.0
-PORT=3001
-CORS_ORIGIN=*
+disconnect
+    ↓
+servidor
+    ↓
+player:left
 ```
 
-Cliente:
+## Seguridad de estado
 
-```env
-VITE_SERVER_URL=http://localhost:3001
-```
+El servidor decide:
 
-Los archivos `.env` reales no se versionan.
+- quién pertenece a una sala;
+- el ID del jugador;
+- su posición inicial;
+- su color;
+- cuándo entra;
+- cuándo sale.
+
+El cliente solo solicita entrar y renderiza el estado recibido.
 
 ## Validación
 
@@ -183,22 +231,27 @@ Los archivos `.env` reales no se versionan.
 npm run check
 ```
 
-Ejecuta tests y build de todos los workspaces.
+El CI además:
 
-## Qué sigue
+1. arranca el servidor;
+2. comprueba `/health`;
+3. conecta múltiples clientes Socket.IO reales;
+4. comprueba join;
+5. comprueba snapshot;
+6. comprueba `player:joined`;
+7. comprueba aislamiento;
+8. comprueba `player:left`.
 
-La Fase 1 añadirá:
+## Lo que se construirá durante la clase
+
+La base termina intencionalmente con jugadores estáticos:
 
 ```text
-join room
-   ↓
-PlayerState
-   ↓
-estado inicial
-   ↓
-jugadores visibles
-   ↓
-player:joined / player:left
+movimiento   ❌
+disparos     ❌
+vida/daño    ❌
+score        ❌
+mapa         ❌
 ```
 
-Los jugadores seguirán estáticos. El movimiento será una feature para construir durante la clase.
+Esas funcionalidades serán desarrolladas mediante ramas, prompts, agentes, Pull Requests e integración.
