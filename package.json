@@ -1,0 +1,24 @@
+{
+  "name": "hackatec-multiplayer-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run build -w @hackatec/shared && concurrently -n server,game \"npm run dev -w @hackatec/server\" \"npm run dev -w @hackatec/game\"",
+    "dev:server": "npm run build -w @hackatec/shared && npm run dev -w @hackatec/server",
+    "dev:game": "npm run build -w @hackatec/shared && npm run dev -w @hackatec/game",
+    "build": "npm run build -w @hackatec/shared && npm run build -w @hackatec/server && npm run build -w @hackatec/game",
+    "test": "npm run test --workspaces --if-present",
+    "check": "npm test && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
