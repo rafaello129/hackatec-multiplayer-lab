@@ -1,0 +1,21 @@
+{
+  "name": "@hackatec/game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hackatec/shared": "workspace:*",
+    "phaser": "4.0.0",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "vite": "^6.3.1",
+    "vitest": "^5.0.1"
+  }
+}
