@@ -1,16 +1,12 @@
-import {
-    SOCKET_EVENTS,
-    type ConnectionReadyPayload,
-    type ConnectionStatus
-} from '@hackatec/shared';
 import { Scene, type GameObjects } from 'phaser';
 import type { Socket } from 'socket.io-client';
-import { createSocket, serverUrl } from '../../network/socket';
+import { getSocket, serverUrl } from '../../network/socket';
 
 export class BootScene extends Scene
 {
     private statusText!: GameObjects.Text;
     private socket?: Socket;
+    private started = false;
 
     constructor()
     {
@@ -19,94 +15,76 @@ export class BootScene extends Scene
 
     create()
     {
+        this.started = false;
         this.cameras.main.setBackgroundColor('#07111f');
 
-        this.add.text(512, 240, 'HACKATEC MULTIPLAYER LAB', {
+        this.add.text(512, 250, 'HACKATEC MULTIPLAYER LAB', {
             fontFamily: 'Arial Black',
             fontSize: 38,
             color: '#f8fafc',
             align: 'center'
         }).setOrigin(0.5);
 
-        this.add.text(512, 305, 'Fase 0 · Infraestructura y conexión', {
+        this.add.text(512, 315, 'Fase 1 · Entrando al servidor multijugador', {
             fontFamily: 'Arial',
             fontSize: 20,
             color: '#94a3b8'
         }).setOrigin(0.5);
 
-        this.statusText = this.add.text(512, 390, '', {
+        this.statusText = this.add.text(512, 395, 'Servidor: conectando…', {
             fontFamily: 'Arial Black',
             fontSize: 25,
             color: '#facc15',
             align: 'center'
         }).setOrigin(0.5);
 
-        this.add.text(512, 458, `Servidor: ${serverUrl}`, {
+        this.add.text(512, 460, `Servidor: ${serverUrl}`, {
             fontFamily: 'Arial',
             fontSize: 16,
             color: '#64748b'
         }).setOrigin(0.5);
 
-        this.add.text(512, 540, 'El gameplay comienza en la siguiente fase.', {
-            fontFamily: 'Arial',
-            fontSize: 17,
-            color: '#cbd5e1'
-        }).setOrigin(0.5);
-
-        this.setConnectionStatus('connecting');
-
-        const socket = createSocket();
-        this.socket = socket;
-
-        socket.on('connect', () =>
-        {
-            this.setConnectionStatus('connected');
-        });
-
-        socket.on(
-            SOCKET_EVENTS.CONNECTION_READY,
-            (payload: ConnectionReadyPayload) =>
-            {
-                console.log(
-                    `[game] server ready: ${payload.message} (${payload.socketId})`
-                );
-            }
-        );
-
-        socket.on('disconnect', () =>
-        {
-            this.setConnectionStatus('disconnected');
-        });
-
-        socket.on('connect_error', (error) =>
-        {
-            console.error('[game] connection error:', error.message);
-            this.setConnectionStatus('disconnected');
-        });
-
-        socket.connect();
+        this.socket = getSocket();
+        this.socket.on('connect', this.handleConnect);
+        this.socket.on('connect_error', this.handleConnectError);
 
         this.events.once('shutdown', () =>
         {
-            socket.disconnect();
+            this.socket?.off('connect', this.handleConnect);
+            this.socket?.off('connect_error', this.handleConnectError);
         });
+
+        if (this.socket.connected)
+        {
+            this.handleConnect();
+        }
+        else
+        {
+            this.socket.connect();
+        }
     }
 
-    private setConnectionStatus(status: ConnectionStatus)
+    private readonly handleConnect = () =>
     {
-        const labels: Record<ConnectionStatus, string> = {
-            connecting: 'Servidor: conectando…',
-            connected: 'Servidor: conectado',
-            disconnected: 'Servidor: desconectado'
-        };
+        this.statusText.setText('Servidor: conectado');
+        this.statusText.setColor('#4ade80');
 
-        const colors: Record<ConnectionStatus, string> = {
-            connecting: '#facc15',
-            connected: '#4ade80',
-            disconnected: '#fb7185'
-        };
+        if (this.started)
+        {
+            return;
+        }
 
-        this.statusText.setText(labels[status]);
-        this.statusText.setColor(colors[status]);
-    }
+        this.started = true;
+
+        this.time.delayedCall(180, () =>
+        {
+            this.scene.start('ArenaScene');
+        });
+    };
+
+    private readonly handleConnectError = () =>
+    {
+        this.statusText.setText('Servidor: desconectado');
+        this.statusText.setColor('#fb7185');
+    };
 }
