@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-build-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests and build
+        run: npm run check
+
+      - name: Start multiplayer server
+        run: |
+          npm run start -w @hackatec/server > /tmp/hackatec-server.log 2>&1 &
+          echo $! > /tmp/hackatec-server.pid
+
+      - name: Wait for health endpoint
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:3001/health > /tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 0.5
+          done
+
+          echo "Server did not become healthy"
+          cat /tmp/hackatec-server.log || true
+          exit 1
+
+      - name: Socket.IO smoke test
+        run: npm run smoke -w @hackatec/game
+
+      - name: Show server log on failure
+        if: failure()
+        run: cat /tmp/hackatec-server.log || true
