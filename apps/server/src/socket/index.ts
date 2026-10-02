@@ -12,7 +12,7 @@ import { RoomManager } from '../rooms/RoomManager.js';
 
 function socketRoom(roomId: string): string
 {
-    return `room:${roomId}`;
+    return 'room:' + roomId;
 }
 
 export function registerSocketHandlers(
@@ -22,7 +22,7 @@ export function registerSocketHandlers(
 {
     io.on('connection', (socket) =>
     {
-        console.log(`[socket] connected: ${socket.id}`);
+        console.log('[socket] connected: ' + socket.id);
 
         const payload: ConnectionReadyPayload = {
             message: 'connected',
@@ -65,7 +65,7 @@ export function registerSocketHandlers(
                     .emit(SOCKET_EVENTS.PLAYER_LEFT, leftPayload);
 
                 console.log(
-                    `[room] ${socket.id} left ${result.previous.roomId}`
+                    '[room] ' + socket.id + ' left ' + result.previous.roomId
                 );
             }
 
@@ -74,7 +74,8 @@ export function registerSocketHandlers(
             const statePayload: RoomStatePayload = {
                 roomId: result.roomId,
                 selfId: socket.id,
-                players: result.players
+                players: result.players,
+                map: result.map
             };
 
             socket.emit(SOCKET_EVENTS.ROOM_STATE, statePayload);
@@ -89,7 +90,8 @@ export function registerSocketHandlers(
                     .emit(SOCKET_EVENTS.PLAYER_JOINED, joinedPayload);
 
                 console.log(
-                    `[room] ${socket.id} joined ${result.roomId} as ${result.player.name}`
+                    '[room] ' + socket.id + ' joined ' + result.roomId +
+                    ' as ' + result.player.name
                 );
             }
         });
@@ -108,11 +110,13 @@ export function registerSocketHandlers(
                     .emit(SOCKET_EVENTS.PLAYER_LEFT, leftPayload);
 
                 console.log(
-                    `[room] ${socket.id} left ${left.roomId}`
+                    '[room] ' + socket.id + ' left ' + left.roomId
                 );
             }
 
-            console.log(`[socket] disconnected: ${socket.id} (${reason})`);
+            console.log(
+                '[socket] disconnected: ' + socket.id + ' (' + reason + ')'
+            );
         });
     });
 
