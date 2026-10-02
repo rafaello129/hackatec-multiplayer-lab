@@ -1,4 +1,5 @@
 import type {
+    GameMapState,
     PlayerState,
     RoomErrorCode
 } from '@hackatec/shared';
@@ -6,6 +7,10 @@ import {
     MAX_PLAYERS_PER_ROOM,
     PLAYER_COLORS
 } from '../game/constants.js';
+import {
+    createMapSeed,
+    generateMap
+} from '../game/mapGenerator.js';
 import { getSpawnPosition } from '../game/spawn.js';
 
 const ROOM_ID_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
@@ -21,6 +26,7 @@ export type JoinSuccess = {
     roomId: string;
     player: PlayerState;
     players: PlayerState[];
+    map: GameMapState;
     previous?: LeaveResult;
 };
 
@@ -52,12 +58,13 @@ export function normalizePlayerName(
         return normalized;
     }
 
-    return `Player-${socketId.slice(0, 4).toUpperCase()}`;
+    return 'Player-' + socketId.slice(0, 4).toUpperCase();
 }
 
 export class RoomManager
 {
     private readonly rooms = new Map<string, Map<string, PlayerState>>();
+    private readonly roomMaps = new Map<string, GameMapState>();
     private readonly socketRooms = new Map<string, string>();
 
     join(
@@ -88,7 +95,8 @@ export class RoomManager
                     ok: true,
                     roomId,
                     player: existingPlayer,
-                    players: [...currentRoom.values()]
+                    players: [...currentRoom.values()],
+                    map: this.getOrCreateMap(roomId)
                 };
             }
         }
@@ -116,6 +124,7 @@ export class RoomManager
             this.rooms.set(roomId, room);
         }
 
+        const map = this.getOrCreateMap(roomId);
         const spawnIndex = this.findAvailableSpawnIndex(room);
         const spawn = getSpawnPosition(spawnIndex);
         const player: PlayerState = {
@@ -134,6 +143,7 @@ export class RoomManager
             roomId,
             player,
             players: [...room.values()],
+            map,
             previous
         };
     }
@@ -162,6 +172,7 @@ export class RoomManager
         if (room.size === 0)
         {
             this.rooms.delete(roomId);
+            this.roomMaps.delete(roomId);
         }
 
         return {
@@ -175,6 +186,11 @@ export class RoomManager
         return [...(this.rooms.get(roomId)?.values() ?? [])];
     }
 
+    getMap(roomId: string): GameMapState | undefined
+    {
+        return this.roomMaps.get(roomId);
+    }
+
     getRoomId(socketId: string): string | undefined
     {
         return this.socketRooms.get(socketId);
@@ -183,6 +199,22 @@ export class RoomManager
     hasRoom(roomId: string): boolean
     {
         return this.rooms.has(roomId);
+    }
+
+    private getOrCreateMap(roomId: string): GameMapState
+    {
+        const currentMap = this.roomMaps.get(roomId);
+
+        if (currentMap)
+        {
+            return currentMap;
+        }
+
+        const map = generateMap(createMapSeed());
+
+        this.roomMaps.set(roomId, map);
+
+        return map;
     }
 
     private findAvailableSpawnIndex(room: Map<string, PlayerState>): number
