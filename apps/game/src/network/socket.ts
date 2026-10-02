@@ -1,12 +1,19 @@
-import { io } from 'socket.io-client';
+import { io, type Socket } from 'socket.io-client';
 import { normalizeServerUrl } from './config';
 
 export const serverUrl = normalizeServerUrl(import.meta.env.VITE_SERVER_URL);
 
-export function createSocket()
+let socket: Socket | undefined;
+
+export function getSocket(): Socket
 {
-    return io(serverUrl, {
-        autoConnect: false,
-        transports: ['websocket', 'polling']
-    });
+    if (!socket)
+    {
+        socket = io(serverUrl, {
+            autoConnect: false,
+            transports: ['websocket', 'polling']
+        });
+    }
+
+    return socket;
 }
