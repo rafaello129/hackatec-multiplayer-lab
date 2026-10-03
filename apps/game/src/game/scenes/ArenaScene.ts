@@ -171,10 +171,7 @@ export class ArenaScene extends Scene
 
     // === 3. REEMPLAZA TU processMovementAndDash COMPLETO POR ESTE ===
     private processMovementAndDash(input: PlayerInput, selfView: PlayerView): void {
-        // Asegurar posición inicial si llegara a valer 0
-        if (!this.localX || this.localX < 100) this.localX = 512;
-        if (!this.localY || this.localY < 100) this.localY = 438;
-
+       
         let vx = 0;
         let vy = 0;
 
