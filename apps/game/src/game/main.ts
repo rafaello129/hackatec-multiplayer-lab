@@ -7,6 +7,9 @@ const config: Types.Core.GameConfig = {
     width: 1024,
     height: 768,
     parent: 'game-container',
+    input: {
+      keyboard: true
+    },
     backgroundColor: '#07111f',
     scale: {
         mode: Scale.FIT,
@@ -18,8 +21,7 @@ const config: Types.Core.GameConfig = {
     ]
 };
 
-export function startGame(parent = 'game-container')
-{
+export function startGame(parent = 'game-container') {
     return new Game({
         ...config,
         parent

@@ -6,9 +6,10 @@ import {
     type PlayerLeftPayload,
     type PlayerState,
     type RoomErrorPayload,
-    type RoomStatePayload
+    type RoomStatePayload,
+    type PlayerInput
 } from '@hackatec/shared';
-import { Scene, type GameObjects } from 'phaser';
+import { Scene, type GameObjects, Input } from 'phaser';
 import type { Socket } from 'socket.io-client';
 import { PlayerView } from '../entities/PlayerView';
 import { getClientIdentity, type ClientIdentity } from '../../network/identity';
@@ -29,6 +30,25 @@ export class ArenaScene extends Scene
     private connectionText!: GameObjects.Text;
     private errorText!: GameObjects.Text;
 
+    // --- NUEVAS PROPIEDADES PARA CONTROLES Y DASH ---
+    private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+    private wasd!: {
+        up: Input.Keyboard.Key;
+        down: Input.Keyboard.Key;
+        left: Input.Keyboard.Key;
+        right: Input.Keyboard.Key;
+    };
+    private shiftKey!: Input.Keyboard.Key;
+    private localX: number = 512;
+    private localY: number = 438;
+    private lastDashTime: number = 0;
+    private dashCooldown: number = 4000; // 4 segundos en milisegundos
+    private playerSpeed: number = 5;
+    private isInvulnerable: boolean = false;
+    private mapWidth: number = 960;  // Ancho basado en el rectángulo de juego original
+    private mapHeight: number = 600; // Alto basado en el rectángulo de juego original
+    private playerRadius: number = 20;
+
     constructor()
     {
         super('ArenaScene');
@@ -43,6 +63,19 @@ export class ArenaScene extends Scene
 
         this.createInterface();
         this.attachSocketListeners();
+
+        // --- INICIALIZAR TECLADO GLOBALMENTE ---
+        if (this.input.keyboard) {
+            this.cursors = this.input.keyboard.createCursorKeys();
+            this.wasd = {
+                up: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.W),
+                down: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.S),
+                left: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.A),
+                right: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.D),
+            };
+            this.shiftKey = this.input.keyboard.addKey(Input.Keyboard.KeyCodes.SHIFT);
+            this.input.keyboard.enabled = true;
+        }
 
         this.events.once('shutdown', () =>
         {
@@ -92,7 +125,7 @@ export class ArenaScene extends Scene
             align: 'right'
         }).setOrigin(1, 0);
 
-        this.add.text(988, 68, 'Presencia sincronizada · sin movimiento todavía', {
+        this.add.text(988, 68, 'Presencia sincronizada · movimiento activo', {
             fontFamily: 'Arial',
             fontSize: 12,
             color: '#64748b',
@@ -111,11 +144,109 @@ export class ArenaScene extends Scene
             align: 'center'
         }).setOrigin(0.5).setVisible(false);
 
-        this.add.text(512, 730, 'Movimiento, disparos y combate se construirán durante la clase.', {
+        this.add.text(512, 730, 'Usa WASD para moverte y SHIFT para dash de invulnerabilidad.', {
             fontFamily: 'Arial',
             fontSize: 14,
             color: '#64748b'
         }).setOrigin(0.5);
+    }
+
+    // --- BUCLE DE ACTUALIZACIÓN DEL JUEGO (INPUT Y MOVIMIENTO) ---
+    public update(): void {
+        if (!this.selfId) return;
+
+        const selfView = this.playerViews.get(this.selfId);
+        if (!selfView) return;
+
+        const input: PlayerInput = {
+            up: this.cursors.up.isDown || this.wasd.up.isDown,
+            down: this.cursors.down.isDown || this.wasd.down.isDown,
+            left: this.cursors.left.isDown || this.wasd.left.isDown,
+            right: this.cursors.right.isDown || this.wasd.right.isDown,
+            shift: Input.Keyboard.JustDown(this.shiftKey),
+        };
+
+        this.processMovementAndDash(input, selfView);
+    }
+
+    // === 3. REEMPLAZA TU processMovementAndDash COMPLETO POR ESTE ===
+    private processMovementAndDash(input: PlayerInput, selfView: PlayerView): void {
+        // Asegurar posición inicial si llegara a valer 0
+        if (!this.localX || this.localX < 100) this.localX = 512;
+        if (!this.localY || this.localY < 100) this.localY = 438;
+
+        let vx = 0;
+        let vy = 0;
+
+        if (input.up) vy -= 1;
+        if (input.down) vy += 1;
+        if (input.left) vx -= 1;
+        if (input.right) vx += 1; // <--- AQUÍ: Debe sumar (+1) para ir a la derecha
+
+        if (vx !== 0 && vy !== 0) {
+            const normalizationFactor = 1 / Math.sqrt(2);
+            vx *= normalizationFactor;
+            vy *= normalizationFactor;
+        }
+
+        // --- VALIDAR SHIFT, INVULNERABILIDAD Y COOLDOWN DE 2.5 SEGUNDOS ---
+        const now = Date.now();
+        if (input.shift && !this.isInvulnerable && (now - this.lastDashTime >= this.dashCooldown)) {
+            this.lastDashTime = now;
+            this.triggerDashInvulnerability();
+        }
+
+        // Velocidad multiplicada por 1.5 si está activo el dash/invulnerabilidad
+        const currentSpeed = this.isInvulnerable ? this.playerSpeed * 1.5 : this.playerSpeed;
+
+        this.localX += vx * currentSpeed;
+        this.localY += vy * currentSpeed;
+
+        const safeMapWidth = this.mapWidth || 960;
+        const safeMapHeight = this.mapHeight || 600;
+
+        const minX = 512 - (safeMapWidth / 2) + this.playerRadius;
+        const maxX = 512 + (safeMapWidth / 2) - this.playerRadius;
+        const minY = 438 - (safeMapHeight / 2) + this.playerRadius;
+        const maxY = 438 + (safeMapHeight / 2) - this.playerRadius;
+
+        // Clamp correcto
+        this.localX = Math.min(maxX, Math.max(minX, this.localX));
+        this.localY = Math.min(maxY, Math.max(minY, this.localY));
+
+        selfView.update({
+            id: this.selfId,
+            name: this.identity.playerName ?? 'Jugador',
+            x: this.localX,
+            y: this.localY,
+            isInvulnerable: this.isInvulnerable,
+            velocity: { x: vx * currentSpeed, y: vy * currentSpeed },
+            angle: 0,
+            hp: 100,
+            maxHp: 100
+        } as any);
+
+        // Forzar color visual (magenta para dash, cian normal)
+        const container = (selfView as any).container || (selfView as any);
+        if (container && container.list) {
+            container.list.forEach((child: any) => {
+                if (child.setType || child.geom || child.isFilled !== undefined) {
+                    child.isFilled = true;
+                    child.fillColor = this.isInvulnerable ? 0xff00ff : 0x00ffff; 
+                }
+            });
+        }
+        if ((selfView as any).setTint) {
+            (selfView as any).setTint(this.isInvulnerable ? 0xff00ff : 0x00ffff);
+        }
+
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('player:movement', {
+                x: this.localX,
+                y: this.localY,
+                isInvulnerable: this.isInvulnerable,
+            });
+        }
     }
 
     private attachSocketListeners()
@@ -126,6 +257,13 @@ export class ArenaScene extends Scene
         this.socket.on(SOCKET_EVENTS.ROOM_ERROR, this.handleRoomError);
         this.socket.on(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.on(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
+        
+        this.socket.on('player:moved', (payload: any) => {
+            const view = this.playerViews.get(payload.id);
+            if (view && payload.id !== this.selfId) {
+                view.update(payload);
+            }
+        });
     }
 
     private detachSocketListeners()
@@ -136,6 +274,15 @@ export class ArenaScene extends Scene
         this.socket.off(SOCKET_EVENTS.ROOM_ERROR, this.handleRoomError);
         this.socket.off(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.off(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
+        this.socket.off('player:moved');
+    }
+
+    private triggerDashInvulnerability(): void {
+        this.isInvulnerable = true;
+
+        this.time.delayedCall(1000, () => {
+            this.isInvulnerable = false;
+        });
     }
 
     private joinRoom()
@@ -163,12 +310,20 @@ export class ArenaScene extends Scene
         this.syncPlayerViews();
     };
 
+   // === 2. REEMPLAZA TU handleRoomState COMPLETO POR ESTE ===
     private readonly handleRoomState = (payload: RoomStatePayload) =>
     {
         this.roomText.setText(`Sala: ${payload.roomId}`);
         this.selfId = payload.selfId;
         this.playerRegistry.replaceAll(payload.players);
         this.syncPlayerViews();
+
+        const myPlayerState = this.playerRegistry.get(this.selfId);
+        if (myPlayerState) {
+            if (myPlayerState.x) this.localX = myPlayerState.x;
+            if (myPlayerState.y) this.localY = myPlayerState.y;
+            this.upsertPlayerView(myPlayerState);
+        }
     };
 
     private readonly handleRoomError = (payload: RoomErrorPayload) =>
