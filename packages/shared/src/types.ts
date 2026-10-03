@@ -1,5 +1,19 @@
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
+export type PlayerAppearance = {
+    mode: 'color' | 'skin';
+    colorHex: string;
+};
+
+export type SetAppearancePayload = {
+    appearance: PlayerAppearance;
+};
+
+export type PlayerAppearanceChangedPayload = {
+    playerId: string;
+    appearance: PlayerAppearance;
+};  
+
 export type ConnectionReadyPayload = {
     message: string;
     socketId: string;
@@ -11,11 +25,13 @@ export type PlayerState = {
     x: number;
     y: number;
     color: number;
+    appearance: PlayerAppearance;
 };
 
 export type JoinRoomPayload = {
     roomId: string;
     playerName?: string;
+    profileId: string;
 };
 
 export type RoomStatePayload = {

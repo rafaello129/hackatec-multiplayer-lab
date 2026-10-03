@@ -9,7 +9,11 @@ function player(id: string, name: string): PlayerState
         name,
         x: 100,
         y: 200,
-        color: 0x4ade80
+        color: 0x4ade80,
+        appearance: {
+            mode: 'color',
+            colorHex: '#4ADE80'
+    }
     };
 }
 

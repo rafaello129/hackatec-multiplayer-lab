@@ -4,6 +4,7 @@ import {
     type JoinRoomPayload,
     type PlayerJoinedPayload,
     type PlayerLeftPayload,
+    type PlayerAppearanceChangedPayload,
     type PlayerState,
     type RoomErrorPayload,
     type RoomStatePayload
@@ -28,6 +29,7 @@ export class ArenaScene extends Scene
     private playerCountText!: GameObjects.Text;
     private connectionText!: GameObjects.Text;
     private errorText!: GameObjects.Text;
+    private colorInput!: HTMLInputElement;
 
     constructor()
     {
@@ -116,6 +118,62 @@ export class ArenaScene extends Scene
             fontSize: 14,
             color: '#64748b'
         }).setOrigin(0.5);
+        
+        this.colorInput = document.createElement('input');
+
+        this.colorInput.type = 'text';
+        this.colorInput.placeholder = '#RRGGBB';
+        this.colorInput.value = '#FFFFFF';
+        this.colorInput.maxLength = 7;
+
+        this.colorInput.style.position = 'absolute';
+        this.colorInput.style.left = '36px';
+        this.colorInput.style.top = '115px';
+        this.colorInput.style.width = '120px';
+        this.colorInput.style.padding = '6px';
+        this.colorInput.style.fontSize = '14px';
+        this.colorInput.style.fontFamily = 'Arial';
+        this.colorInput.style.backgroundColor = '#0f172a';
+        this.colorInput.style.color = '#f8fafc';
+        this.colorInput.style.border = '1px solid #334155';
+        this.colorInput.style.borderRadius = '4px';
+
+        document.body.appendChild(this.colorInput);
+        
+        const applyColorButton = document.createElement('button');
+
+        applyColorButton.textContent = 'Aplicar color';
+
+        applyColorButton.style.position = 'absolute';
+        applyColorButton.style.left = '165px';
+        applyColorButton.style.top = '115px';
+        applyColorButton.style.padding = '6px 10px';
+        applyColorButton.style.fontSize = '14px';
+        applyColorButton.style.fontFamily = 'Arial';
+        applyColorButton.style.backgroundColor = '#2563eb';
+        applyColorButton.style.color = '#ffffff';
+        applyColorButton.style.border = 'none';
+        applyColorButton.style.borderRadius = '4px';
+        applyColorButton.style.cursor = 'pointer';
+
+        document.body.appendChild(applyColorButton);
+
+        applyColorButton.addEventListener('click', () =>
+        {
+            const colorHex = this.colorInput.value.trim();
+
+            if (!/^#[0-9A-Fa-f]{6}$/.test(colorHex))
+            {
+                this.errorText
+                    .setText('Color inválido. Usa #RRGGBB.')
+                    .setVisible(true);
+
+                return;
+            }
+
+            this.errorText.setVisible(false);
+            this.setPlayerColor(colorHex);
+        });
     }
 
     private attachSocketListeners()
@@ -126,6 +184,10 @@ export class ArenaScene extends Scene
         this.socket.on(SOCKET_EVENTS.ROOM_ERROR, this.handleRoomError);
         this.socket.on(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.on(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
+        this.socket.on(
+            SOCKET_EVENTS.PLAYER_APPEARANCE_CHANGED,
+            this.handlePlayerAppearanceChanged
+        );
     }
 
     private detachSocketListeners()
@@ -136,17 +198,35 @@ export class ArenaScene extends Scene
         this.socket.off(SOCKET_EVENTS.ROOM_ERROR, this.handleRoomError);
         this.socket.off(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.off(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
+        this.socket.off(
+            SOCKET_EVENTS.PLAYER_APPEARANCE_CHANGED,
+            this.handlePlayerAppearanceChanged
+        );
     }
 
     private joinRoom()
     {
         const payload: JoinRoomPayload = {
             roomId: this.identity.roomId,
-            playerName: this.identity.playerName
+            playerName: this.identity.playerName,
+            profileId: this.identity.profileId
         };
-
+        
         this.errorText.setVisible(false);
         this.socket.emit(SOCKET_EVENTS.ROOM_JOIN, payload);
+    }
+
+    private setPlayerColor(colorHex: string)
+    {
+        this.socket.emit(
+            SOCKET_EVENTS.PROFILE_APPEARANCE_SET,
+            {
+                appearance: {
+                    mode: 'color',
+                    colorHex
+                }
+            }
+        );
     }
 
     private readonly handleConnect = () =>
@@ -168,6 +248,16 @@ export class ArenaScene extends Scene
         this.roomText.setText(`Sala: ${payload.roomId}`);
         this.selfId = payload.selfId;
         this.playerRegistry.replaceAll(payload.players);
+
+        const selfPlayer = payload.players.find(
+            (player) => player.id === payload.selfId
+        );
+
+        if (selfPlayer)
+        {
+            this.colorInput.value = selfPlayer.appearance.colorHex;
+        }
+
         this.syncPlayerViews();
     };
 
@@ -198,6 +288,26 @@ export class ArenaScene extends Scene
         }
 
         this.updatePlayerCount();
+    };
+    private readonly handlePlayerAppearanceChanged = (
+        payload: PlayerAppearanceChangedPayload) =>
+    {
+        const player = this.playerRegistry.get(payload.playerId);
+
+        if (!player)
+        {
+            return;
+        }
+
+        this.playerRegistry.add({
+            ...player,
+            appearance: payload.appearance
+        });
+
+        this.upsertPlayerView({
+            ...player,
+            appearance: payload.appearance
+        });
     };
 
     private syncPlayerViews()

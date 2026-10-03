@@ -123,7 +123,11 @@ export class RoomManager
             name: normalizePlayerName(playerName, socketId),
             x: spawn.x,
             y: spawn.y,
-            color: PLAYER_COLORS[spawnIndex % PLAYER_COLORS.length]
+            color: PLAYER_COLORS[spawnIndex % PLAYER_COLORS.length],
+            appearance: {
+                mode: 'color',
+                colorHex: '#FFFFFF'
+            }
         };
 
         room.set(socketId, player);

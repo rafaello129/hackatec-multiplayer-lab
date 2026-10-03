@@ -2,13 +2,16 @@ import {
     SOCKET_EVENTS,
     type ConnectionReadyPayload,
     type JoinRoomPayload,
+    type PlayerAppearanceChangedPayload,
     type PlayerJoinedPayload,
     type PlayerLeftPayload,
     type RoomErrorPayload,
-    type RoomStatePayload
+    type RoomStatePayload,
+    type SetAppearancePayload
 } from '@hackatec/shared';
 import type { Server } from 'socket.io';
 import { RoomManager } from '../rooms/RoomManager.js';
+import { ProfileService } from '../profiles/ProfileService.js';
 
 function socketRoom(roomId: string): string
 {
@@ -17,7 +20,8 @@ function socketRoom(roomId: string): string
 
 export function registerSocketHandlers(
     io: Server,
-    roomManager = new RoomManager()
+    roomManager = new RoomManager(),
+    profileService = new ProfileService()
 )
 {
     io.on('connection', (socket) =>
@@ -31,17 +35,24 @@ export function registerSocketHandlers(
 
         socket.emit(SOCKET_EVENTS.CONNECTION_READY, payload);
 
-        socket.on(SOCKET_EVENTS.ROOM_JOIN, (rawPayload: JoinRoomPayload) =>
-        {
+        socket.on(SOCKET_EVENTS.ROOM_JOIN, async (rawPayload: JoinRoomPayload) =>        {
             const roomId = typeof rawPayload?.roomId === 'string'
                 ? rawPayload.roomId.trim()
                 : '';
             const playerName = typeof rawPayload?.playerName === 'string'
                 ? rawPayload.playerName
                 : undefined;
+            const profileId = typeof rawPayload?.profileId === 'string'
+                ? rawPayload.profileId.trim()
+                : '';
+            socket.data.profileId = profileId;
+            const profile = await profileService.getProfile(profileId);
             const previousRoomId = roomManager.getRoomId(socket.id);
             const result = roomManager.join(roomId, socket.id, playerName);
-
+            if (result.ok)
+            {
+                result.player.appearance = profile.appearance;
+            }
             if (!result.ok)
             {
                 const errorPayload: RoomErrorPayload = {
@@ -93,7 +104,41 @@ export function registerSocketHandlers(
                 );
             }
         });
+        socket.on(
+            SOCKET_EVENTS.PROFILE_APPEARANCE_SET,
+            async (rawPayload: SetAppearancePayload) =>
+            {
+                const profileId = socket.data.profileId;
 
+                if (typeof profileId !== 'string' || !profileId)
+                {
+                    return;
+                }
+
+                try
+                {
+                    const profile = await profileService.setAppearance(
+                        profileId,
+                        rawPayload.appearance
+                    );
+
+                    const changedPayload: PlayerAppearanceChangedPayload = {
+                        playerId: socket.id,
+                        appearance: profile.appearance
+                    };
+
+                    io.to(socketRoom(roomManager.getRoomId(socket.id) ?? ''))
+                        .emit(
+                            SOCKET_EVENTS.PLAYER_APPEARANCE_CHANGED,
+                            changedPayload
+                        );
+                }
+                catch (error)
+                {
+                    console.error('[profile] failed to update appearance', error);
+                }
+            }
+        );
         socket.on('disconnect', (reason) =>
         {
             const left = roomManager.leave(socket.id);

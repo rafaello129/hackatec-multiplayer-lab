@@ -6,5 +6,8 @@ export const SOCKET_EVENTS = {
     ROOM_ERROR: 'room:error',
 
     PLAYER_JOINED: 'player:joined',
-    PLAYER_LEFT: 'player:left'
+    PLAYER_LEFT: 'player:left',
+    
+    PROFILE_APPEARANCE_SET: 'profile:appearance:set',
+    PLAYER_APPEARANCE_CHANGED: 'player:appearanceChanged'
 } as const;

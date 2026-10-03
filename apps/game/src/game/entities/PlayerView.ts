@@ -1,6 +1,11 @@
 import type { PlayerState } from '@hackatec/shared';
 import { GameObjects, Scene } from 'phaser';
 
+function hexToNumber(hex: string): number
+{
+    return Number.parseInt(hex.slice(1), 16);
+}
+
 export class PlayerView
 {
     readonly container: GameObjects.Container;
@@ -20,7 +25,7 @@ export class PlayerView
             0,
             42,
             42,
-            player.color,
+            hexToNumber(player.appearance.colorHex),
             1
         );
 
@@ -66,7 +71,9 @@ export class PlayerView
     update(player: PlayerState)
     {
         this.container.setPosition(player.x, player.y);
-        this.body.setFillStyle(player.color);
+        this.body.setFillStyle(
+            hexToNumber(player.appearance.colorHex)
+        );
         this.nameText.setText(player.name);
     }
 
