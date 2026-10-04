@@ -189,6 +189,50 @@ export class RoomManager
         return this.rooms.has(roomId);
     }
 
+    setPlayerName(
+        socketId: string,
+        name: string
+    ): boolean
+    {
+        const roomId = this.socketRooms.get(socketId);
+        const room = roomId
+            ? this.rooms.get(roomId)
+            : undefined;
+
+        const player = room?.get(socketId);
+
+        if (!player)
+        {
+            return false;
+        }
+
+        player.name = name;
+
+        return true;
+    }
+
+    setPlayerAppearance(
+        socketId: string,
+        appearance: PlayerState['appearance']
+    ): boolean
+    {
+        const roomId = this.socketRooms.get(socketId);
+        const room = roomId
+            ? this.rooms.get(roomId)
+            : undefined;
+
+        const player = room?.get(socketId);
+
+        if (!player)
+        {
+            return false;
+        }
+
+        player.appearance = appearance;
+
+        return true;
+    }
+
     private findAvailableSpawnIndex(room: Map<string, PlayerState>): number
     {
         for (let index = 0; index < MAX_PLAYERS_PER_ROOM; index += 1)

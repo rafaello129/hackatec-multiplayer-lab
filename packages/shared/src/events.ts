@@ -7,7 +7,10 @@ export const SOCKET_EVENTS = {
 
     PLAYER_JOINED: 'player:joined',
     PLAYER_LEFT: 'player:left',
-    
+
     PROFILE_APPEARANCE_SET: 'profile:appearance:set',
-    PLAYER_APPEARANCE_CHANGED: 'player:appearanceChanged'
+    PLAYER_APPEARANCE_CHANGED: 'player:appearanceChanged',
+
+    PROFILE_USERNAME_SET: 'profile:username:set',
+    PLAYER_USERNAME_CHANGED: 'player:usernameChanged'
 } as const;

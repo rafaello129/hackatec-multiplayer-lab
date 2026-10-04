@@ -29,6 +29,11 @@ export class ProfileRepository
 
         return profiles[profileId];
     }
+    
+    async getAll(): Promise<Record<string, PlayerProfile>>
+    {
+        return this.readProfiles();
+    }
 
     async save(profileId: string, profile: PlayerProfile): Promise<void>
     {

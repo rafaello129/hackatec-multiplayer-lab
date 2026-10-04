@@ -1,8 +1,24 @@
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
+export type ConnectionStatus =
+    | 'connecting'
+    | 'connected'
+    | 'disconnected';
+
+export type ConnectionReadyPayload = {
+    message: string;
+    socketId: string;
+};
+
+export type SkinAsset = {
+    id: string;
+    url: string;
+    width: number;
+    height: number;
+};
 
 export type PlayerAppearance = {
     mode: 'color' | 'skin';
     colorHex: string;
+    skin?: SkinAsset;
 };
 
 export type SetAppearancePayload = {
@@ -12,11 +28,15 @@ export type SetAppearancePayload = {
 export type PlayerAppearanceChangedPayload = {
     playerId: string;
     appearance: PlayerAppearance;
-};  
+};
 
-export type ConnectionReadyPayload = {
-    message: string;
-    socketId: string;
+export type SetUsernamePayload = {
+    username: string;
+};
+
+export type PlayerUsernameChangedPayload = {
+    playerId: string;
+    username: string;
 };
 
 export type PlayerState = {
