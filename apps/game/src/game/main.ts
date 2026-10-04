@@ -8,7 +8,8 @@ const config: Types.Core.GameConfig = {
     height: 768,
     parent: 'game-container',
     input: {
-      keyboard: true
+      keyboard: true,
+      gamepad: true
     },
     backgroundColor: '#07111f',
     scale: {

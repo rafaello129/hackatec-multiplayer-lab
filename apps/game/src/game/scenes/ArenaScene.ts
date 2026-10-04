@@ -56,6 +56,11 @@ export class ArenaScene extends Scene
 
     create()
     {
+        if (this.input.gamepad) {
+        this.input.gamepad.once('connected', (pad: Phaser.Input.Gamepad.Gamepad) => {
+            console.log('¡Mando conectado!', pad.id);
+        });
+    }
         this.cameras.main.setBackgroundColor('#07111f');
 
         this.identity = getClientIdentity(window.location.search);
@@ -151,19 +156,47 @@ export class ArenaScene extends Scene
         }).setOrigin(0.5);
     }
 
-    // --- BUCLE DE ACTUALIZACIÓN DEL JUEGO (INPUT Y MOVIMIENTO) ---
+  // --- BUCLE DE ACTUALIZACIÓN DEL JUEGO (INPUT Y MOVIMIENTO) ---
     public update(): void {
         if (!this.selfId) return;
 
         const selfView = this.playerViews.get(this.selfId);
         if (!selfView) return;
 
+        const pad = this.input.gamepad?.getPad(0);
+        
+        // --- DEPURACIÓN DEL MANDO ---
+        if (pad) {
+            // Imprime en la consola los valores de los joysticks y la cruceta para ver qué detecta
+            console.log(`Joystick X: ${pad.leftStick.x.toFixed(2)}, Y: ${pad.leftStick.y.toFixed(2)} | Arriba: ${pad.up} | Abajo: ${pad.down}`);
+        }
+        // ---------------------------
+
+        let isUp = this.cursors.up.isDown || this.wasd.up.isDown;
+        let isDown = this.cursors.down.isDown || this.wasd.down.isDown;
+        let isLeft = this.cursors.left.isDown || this.wasd.left.isDown;
+        let isRight = this.cursors.right.isDown || this.wasd.right.isDown;
+        let isShift = Input.Keyboard.JustDown(this.shiftKey);
+
+        if (pad) {
+            const threshold = 0.2; // Bajamos el umbral para que sea más sensible
+            const axisX = pad.leftStick.x;
+            const axisY = pad.leftStick.y;
+
+            isUp = isUp || pad.up || (axisY < -threshold);
+            isDown = isDown || pad.down || (axisY > threshold);
+            isLeft = isLeft || pad.left || (axisX < -threshold);
+            isRight = isRight || pad.right || (axisX > threshold);
+            const r1Pressed = pad.buttons[5] ? pad.buttons[5].pressed : false;
+            isShift = isShift || r1Pressed;
+        }
+
         const input: PlayerInput = {
-            up: this.cursors.up.isDown || this.wasd.up.isDown,
-            down: this.cursors.down.isDown || this.wasd.down.isDown,
-            left: this.cursors.left.isDown || this.wasd.left.isDown,
-            right: this.cursors.right.isDown || this.wasd.right.isDown,
-            shift: Input.Keyboard.JustDown(this.shiftKey),
+            up: isUp,
+            down: isDown,
+            left: isLeft,
+            right: isRight,
+            shift: isShift,
         };
 
         this.processMovementAndDash(input, selfView);
