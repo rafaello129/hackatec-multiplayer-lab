@@ -73,7 +73,7 @@ export class ArenaScene extends Scene
         this.input.keyboard?.on('keydown-TWO', this.machineGun);
         this.input.keyboard?.on('keydown-THREE', this.shotgun);
         this.healthBar = this.add.graphics().setDepth(8);
-        this.scoreboard = this.add.text(785, 155, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
+        this.scoreboard = this.add.text(765, 390, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
         this.profilePanel = new ProfilePanel((username, appearance) => this.socket.emit(SOCKET_EVENTS.PROFILE_SET, { username:username || undefined, appearance }));
         this.attachSocketListeners();
 
@@ -279,7 +279,7 @@ export class ArenaScene extends Scene
         };
         const player = this.playerRegistry.get(this.selfId);
         const pointer = this.input.activePointer;
-        const holding = pointer.isDown;
+        const holding = pointer.isDown && pointer.x < 765 && pointer.y > 155 && pointer.y < 715;
         const cooldown = this.weapon === 'machineGun' ? 100 : this.weapon === 'shotgun' ? 800 : 500;
         if (player && player.alive !== false && holding && time - this.lastShot >= cooldown &&
             (this.weapon === 'machineGun' || !this.fireHeld)) {
