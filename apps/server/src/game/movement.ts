@@ -1,5 +1,5 @@
 import type { GameMapState, PlayerInput, PlayerState } from '@hackatec/shared';
-import { ARENA_WIDTH, ARENA_HEIGHT } from './constants.js';
+import { ARENA_WIDTH } from './constants.js';
 
 const PLAYER_RADIUS = 21;
 const SPEED = 185;
@@ -48,8 +48,10 @@ function blocked(x: number, y: number, map: GameMapState): boolean {
 }
 
 export function advanceMovement(player: PlayerState, state: MovementRuntime, map: GameMapState, deltaMs: number, now: number): boolean {
+    if (player.alive === false) { player.isDashing = false; return false; }
     const input = now - state.lastInputAt <= INPUT_TIMEOUT_MS ? state.input : undefined;
     player.isDashing = now < state.dashUntil;
+    if ((player.immobilizedUntil ?? 0) > now) return false;
     if (!input) return false;
     let x = Number(input.right) - Number(input.left);
     let y = Number(input.down) - Number(input.up);
