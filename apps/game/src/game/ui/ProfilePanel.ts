@@ -29,7 +29,7 @@ export class ProfilePanel {
             } catch { status.textContent = 'Error al subir skin'; }
         });
         save.onclick = () => {
-            const appearance: PlayerAppearance = { mode: mode.value as 'color' | 'skin',colorHex:color.value.toUpperCase(),...(skin?{skin}:{}) };
+            const appearance: PlayerAppearance = { mode: mode.value as 'color' | 'skin',colorHex:color.value.toUpperCase(),...((skin ?? this.savedSkin)?{skin:skin ?? this.savedSkin}:{}) };
             onSave(username.value.trim(), appearance);
             status.textContent = 'Enviando cambios...';
         };
@@ -37,5 +37,16 @@ export class ProfilePanel {
         div.append(heading,username,color,mode,file,save,status);
         document.body.appendChild(div);
     }
+    setProfile(usernameValue: string, appearance: PlayerAppearance) {
+        const controls = this.element.querySelectorAll('input, select');
+        const name = controls[0] as HTMLInputElement;
+        const color = controls[1] as HTMLInputElement;
+        const mode = controls[2] as HTMLSelectElement;
+        name.value = usernameValue;
+        color.value = appearance.colorHex;
+        mode.value = appearance.mode;
+        this.savedSkin = appearance.skin;
+    }
+    private savedSkin?: PlayerAppearance['skin'];
     destroy(){this.element.remove();}
 }
