@@ -12,6 +12,12 @@ export type PlayerState = {
     y: number;
     color: number;
     isDashing?: boolean;
+    hp?: number;
+    maxHp?: number;
+    alive?: boolean;
+    kills?: number;
+    deaths?: number;
+    immobilizedUntil?: number;
 };
 
 export type JoinRoomPayload = {
@@ -55,4 +61,7 @@ export type PlayerInput = { up: boolean; down: boolean; left: boolean; right: bo
 export type PlayerInputPayload = { input: PlayerInput };
 export type PlayerMovedPayload = { player: PlayerState };
 
-export type PlayerMovedPayload = { player: PlayerState };
+export type WeaponType = 'pistol' | 'machineGun' | 'shotgun';
+export type ShootPayload = { angle: number; weapon: WeaponType };
+export type ProjectileState = { id: string; ownerId: string; x: number; y: number; vx: number; vy: number; weapon: WeaponType };
+export type CombatSnapshot = { players: PlayerState[]; projectiles: ProjectileState[] };
