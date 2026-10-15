@@ -1,12 +1,15 @@
 import {
     SOCKET_EVENTS,
     type ConnectionReadyPayload,
+    type PlayerInput,
+    type PlayerInputPayload,
     type PlayerJoinedPayload,
     type PlayerLeftPayload,
     type RoomErrorPayload,
     type RoomStatePayload
 } from '@hackatec/shared';
 import type { Server } from 'socket.io';
+import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
 import { RoomManager } from '../rooms/RoomManager.js';
 import { parseJoinPayload } from './validateJoinPayload.js';
 
@@ -20,6 +23,24 @@ export function registerSocketHandlers(
     roomManager = new RoomManager()
 )
 {
+    const movement = new Map<string, MovementRuntime>();
+    const tick = setInterval(() => {
+        const now = Date.now();
+        for (const [socketId, state] of movement) {
+            const player = roomManager.getPlayer(socketId);
+            const roomId = roomManager.getRoomId(socketId);
+            if (!player || !roomId) { movement.delete(socketId); continue; }
+            const map = roomManager.getMap(roomId);
+            if (!map) continue;
+            const wasDashing = player.isDashing;
+            const moved = advanceMovement(player, state, map, 50, now);
+            if (moved || wasDashing !== player.isDashing) {
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
+            }
+        }
+    }, 50);
+    tick.unref?.();
+
     io.on('connection', (socket) =>
     {
         console.log(`[socket] connected: ${socket.id}`);
@@ -77,12 +98,14 @@ export function registerSocketHandlers(
                 );
             }
 
+            movement.set(socket.id, createMovementRuntime());
             socket.join(socketRoom(result.roomId));
 
             const statePayload: RoomStatePayload = {
                 roomId: result.roomId,
                 selfId: socket.id,
-                players: result.players
+                players: result.players,
+                map: result.map
             };
 
             socket.emit(SOCKET_EVENTS.ROOM_STATE, statePayload);
@@ -102,7 +125,19 @@ export function registerSocketHandlers(
             }
         });
 
-        socket.on('disconnect', (reason) =>
+        socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) => {
+            if (!roomManager.getRoomId(socket.id)) return;
+            if (!raw || typeof raw !== 'object') return;
+            const input = (raw as Partial<PlayerInputPayload>).input;
+            if (!input || typeof input !== 'object') return;
+            const keys: (keyof PlayerInput)[] = ['up', 'down', 'left', 'right', 'dash'];
+            if (!keys.every(key => typeof input[key] === 'boolean')) return;
+            const state = movement.get(socket.id);
+            if (state) acceptMovementInput(state, input, Date.now());
+        });
+
+        socket.on('disconnect', (reason) => {
+            movement.delete(socket.id);
         {
             const left = roomManager.leave(socket.id);
 
