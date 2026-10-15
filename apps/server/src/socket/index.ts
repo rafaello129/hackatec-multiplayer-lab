@@ -102,6 +102,7 @@ export function registerSocketHandlers(
                 return;
             }
 
+            if (!socket.connected) { roomManager.leave(socket.id); return; }
             identities.set(socket.id, profileId);
             result.player.appearance = profile.appearance;
             if (profile.username) result.player.name = profile.username;
@@ -172,6 +173,7 @@ export function registerSocketHandlers(
             )) { socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok:false, message:'Apariencia inválida' }); return; }
             try {
                 const saved = await profiles.update(id, { ...(username ? { username } : {}), ...(appearance ? { appearance } : {}) });
+                if (!socket.connected || roomManager.getPlayer(socket.id) !== player || identities.get(socket.id) !== id) return;
                 if (saved.username) player.name = saved.username;
                 player.appearance = saved.appearance;
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
