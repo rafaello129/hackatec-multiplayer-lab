@@ -191,7 +191,7 @@ export function registerSocketHandlers(
             const keys: (keyof PlayerInput)[] = ['up', 'down', 'left', 'right', 'dash'];
             if (!keys.every(key => typeof input[key] === 'boolean')) return;
             const state = movement.get(socket.id);
-            if (state) acceptMovementInput(state, input, Date.now());
+            if (state) acceptMovementInput(state, input, Date.now(), roomManager.getPlayer(socket.id));
         });
 
         socket.on(SOCKET_EVENTS.PLAYER_SHOOT, (payload: unknown) => {
