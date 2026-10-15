@@ -10,6 +10,7 @@ import {
 } from '@hackatec/shared';
 import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
+import { CombatManager } from '../game/CombatManager.js';
 import { RoomManager } from '../rooms/RoomManager.js';
 import { parseJoinPayload } from './validateJoinPayload.js';
 
@@ -24,6 +25,8 @@ export function registerSocketHandlers(
 )
 {
     const movement = new Map<string, MovementRuntime>();
+    const combat = new CombatManager();
+    const rooms = new Set<string>();
     const tick = setInterval(() => {
         const now = Date.now();
         for (const [socketId, state] of movement) {
@@ -37,6 +40,14 @@ export function registerSocketHandlers(
             if (moved || wasDashing !== player.isDashing) {
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
             }
+            rooms.add(roomId);
+        }
+        for (const roomId of rooms) {
+            const map = roomManager.getMap(roomId);
+            if (!map) { rooms.delete(roomId); continue; }
+            const players = roomManager.getPlayers(roomId);
+            const projectiles = combat.step(roomId, players, map, 50, now);
+            io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players, projectiles });
         }
     }, 50);
     tick.unref?.();
@@ -98,7 +109,12 @@ export function registerSocketHandlers(
                 );
             }
 
-            movement.set(socket.id, createMovementRuntime());
+            if (previousRoomId && previousRoomId !== result.roomId) {
+                combat.leave(previousRoomId, socket.id, !roomManager.hasRoom(previousRoomId));
+                if (!roomManager.hasRoom(previousRoomId)) rooms.delete(previousRoomId);
+            }
+            if (!movement.has(socket.id) || previousRoomId !== result.roomId) movement.set(socket.id, createMovementRuntime());
+            rooms.add(result.roomId);
             socket.join(socketRoom(result.roomId));
 
             const statePayload: RoomStatePayload = {
@@ -136,13 +152,20 @@ export function registerSocketHandlers(
             if (state) acceptMovementInput(state, input, Date.now());
         });
 
+        socket.on(SOCKET_EVENTS.PLAYER_SHOOT, (payload: unknown) => {
+            const roomId = roomManager.getRoomId(socket.id);
+            const player = roomManager.getPlayer(socket.id);
+            if (roomId && player) combat.shoot(roomId, player, payload, Date.now());
+        });
+
         socket.on('disconnect', (reason) => {
             movement.delete(socket.id);
-        {
             const left = roomManager.leave(socket.id);
 
             if (left)
             {
+                combat.leave(left.roomId, socket.id, !roomManager.hasRoom(left.roomId));
+                if (!roomManager.hasRoom(left.roomId)) rooms.delete(left.roomId);
                 const leftPayload: PlayerLeftPayload = {
                     playerId: left.player.id
                 };
