@@ -117,3 +117,7 @@ La arquitectura está preparada para crecer, pero todavía no contiene:
 - scoreboard funcional.
 
 Eso es material de clase.
+
+## Plan de integración
+
+La rama `integration/full-game` conserva esta base durante la Fase 1. Consulta `docs/integration/PROTOCOL.md` para el protocolo vigente y los eventos futuros no operativos, y `docs/integration/BRANCH_INVENTORY.md` para la procedencia de funcionalidades. El contrato `GameSession` es solamente un punto de extensión: no ejecuta simulación ni modifica las salas actuales.
