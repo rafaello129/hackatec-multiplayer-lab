@@ -42,7 +42,7 @@ export class PlayerView
             strokeThickness: 4
         }).setOrigin(0.5);
 
-        this.skin = scene.add.image(0, 0, '__DEFAULT').setVisible(false);
+        this.skin = scene.add.image(0, 0, '__WHITE').setVisible(false);
         const children: GameObjects.GameObject[] = [
             this.body,
             this.skin,
@@ -73,6 +73,10 @@ export class PlayerView
         this.body.setFillStyle(color ? parseInt(color.slice(1),16) : player.color);
         const url = player.appearance?.mode === 'skin' ? player.appearance.skin?.url : undefined;
         if (!url) { this.skin.setVisible(false); this.body.setVisible(true); }
+        else if (url === this.currentSkin && this.scene.textures.exists('skin:' + url)) {
+            this.skin.setTexture('skin:' + url).setDisplaySize(42,42).setVisible(true);
+            this.body.setVisible(false);
+        }
         else if (url !== this.currentSkin) {
             this.currentSkin = url;
             const key = 'skin:' + url;
