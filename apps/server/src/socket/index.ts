@@ -102,7 +102,7 @@ export function registerSocketHandlers(
                 return;
             }
 
-            if (!socket.connected) { roomManager.leave(socket.id); return; }
+            if (!socket.connected) return;
             identities.set(socket.id, profileId);
             result.player.appearance = profile.appearance;
             if (profile.username) result.player.name = profile.username;
