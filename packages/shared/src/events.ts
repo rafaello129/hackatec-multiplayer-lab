@@ -10,5 +10,7 @@ export const SOCKET_EVENTS = {
     PLAYER_INPUT: 'player:input',
     PLAYER_MOVED: 'player:moved',
     PLAYER_SHOOT: 'player:shoot',
-    COMBAT_STATE: 'combat:state'
+    COMBAT_STATE: 'combat:state',
+    PROFILE_SET: 'profile:set',
+    PROFILE_RESULT: 'profile:result'
 } as const;
