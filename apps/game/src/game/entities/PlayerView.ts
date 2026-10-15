@@ -1,4 +1,5 @@
 import type { PlayerState } from '@hackatec/shared';
+import { serverUrl } from '../../network/socket';
 import { GameObjects, Scene } from 'phaser';
 
 export class PlayerView
@@ -80,7 +81,7 @@ export class PlayerView
         else if (url !== this.currentSkin) {
             this.currentSkin = url;
             const key = 'skin:' + url;
-            const fullUrl = new URL(url, import.meta.env.VITE_SERVER_URL || 'http://localhost:3001').href;
+            const fullUrl = new URL(url, serverUrl).href;
             if (this.scene.textures.exists(key)) { this.skin.setTexture(key).setDisplaySize(42,42).setVisible(true); this.body.setVisible(false); }
             else {
                 this.scene.load.image(key, fullUrl);
