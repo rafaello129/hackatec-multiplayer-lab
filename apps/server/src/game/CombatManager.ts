@@ -12,13 +12,13 @@ const overlaps = (x: number, y: number, radius: number, o: { x: number; y: numbe
     const dy = Math.max(Math.abs(y - o.y) - o.height / 2, 0);
     return dx * dx + dy * dy < radius * radius;
 };
-type Runtime = { projectiles: Map<string, ProjectileState>; cooldowns: Map<string, number>; invulnerable: Map<string, number>; cactus: Map<string, number>; respawn: Map<string, number>; projectileCounter: number };
+type Runtime = { projectiles: Map<string, ProjectileState>; cooldowns: Map<string, number>; invulnerable: Map<string, number>; cactus: Map<string, number>; traps: Map<string, Set<string>>; respawn: Map<string, number>; projectileCounter: number };
 export class CombatManager {
     private readonly rooms = new Map<string, Runtime>();
     private runtime(roomId: string): Runtime {
         let state = this.rooms.get(roomId);
         if (!state) {
-            state = { projectiles: new Map(), cooldowns: new Map(), invulnerable: new Map(), cactus: new Map(), respawn: new Map(), projectileCounter: 0 };
+            state = { projectiles: new Map(), cooldowns: new Map(), invulnerable: new Map(), cactus: new Map(), traps: new Map(), respawn: new Map(), projectileCounter: 0 };
             this.rooms.set(roomId, state);
         }
         return state;
@@ -27,7 +27,7 @@ export class CombatManager {
         if (roomEmpty) { this.rooms.delete(roomId); return; }
         const s = this.rooms.get(roomId);
         if (!s) return;
-        s.cooldowns.delete(playerId); s.invulnerable.delete(playerId); s.cactus.delete(playerId); s.respawn.delete(playerId);
+        s.cooldowns.delete(playerId); s.invulnerable.delete(playerId); s.cactus.delete(playerId); s.traps.delete(playerId); s.respawn.delete(playerId);
         for (const [id, p] of s.projectiles) if (p.ownerId === playerId) s.projectiles.delete(id);
     }
     shoot(roomId: string, player: PlayerState, payload: unknown, now: number): void {
@@ -51,6 +51,8 @@ export class CombatManager {
         player.hp = Math.max(0, (player.hp ?? 100) - amount);
         s.invulnerable.set(player.id, now + 1000);
         if (player.hp === 0) {
+            player.isDashing = false;
+            player.immobilizedUntil = 0;
             player.alive = false;
             player.deaths = (player.deaths ?? 0) + 1;
             if (attacker && attacker.id !== player.id) attacker.kills = (attacker.kills ?? 0) + 1;
@@ -63,22 +65,29 @@ export class CombatManager {
         for (const player of players) {
             if (player.alive === false) {
                 if (now >= (s.respawn.get(player.id) ?? Infinity)) {
-                    const spawn = getSpawnPosition(players.findIndex(p => p.id === player.id));
+                    const candidates = Array.from({length: 32}, (_, i) => getSpawnPosition(i));
+                    const spawn = candidates.find(point => !map.obstacles.some(o => o.type === 'wall' && overlaps(point.x, point.y, PLAYER_RADIUS, o)) && !players.some(other => other.id !== player.id && other.alive !== false && Math.hypot(other.x - point.x, other.y - point.y) < PLAYER_RADIUS * 2)) ?? getSpawnPosition(players.findIndex(p => p.id === player.id));
                     player.x = spawn.x; player.y = spawn.y;
                     player.hp = 100; player.alive = true; player.immobilizedUntil = 0;
+                    s.traps.delete(player.id);
                     s.invulnerable.set(player.id, now + 1000);
                     s.respawn.delete(player.id);
                 }
                 continue;
             }
+            const touching = new Set<string>();
             for (const obstacle of map.obstacles) {
                 if (obstacle.type === 'wall' || !overlaps(player.x, player.y, PLAYER_RADIUS, obstacle)) continue;
-                if (obstacle.type === 'trap' && !player.isDashing && (player.immobilizedUntil ?? 0) <= now) player.immobilizedUntil = now + 5000;
+                if (obstacle.type === 'trap') {
+                    touching.add(obstacle.id);
+                    if (!player.isDashing && !s.traps.get(player.id)?.has(obstacle.id)) player.immobilizedUntil = now + 5000;
+                }
                 if (obstacle.type === 'cactus' && now >= (s.cactus.get(player.id) ?? 0)) {
                     this.damage(roomId, player, obstacle.damage, now);
                     s.cactus.set(player.id, now + 1000);
                 }
             }
+            s.traps.set(player.id, touching);
         }
         const dt = Math.min(Math.max(dtMs, 0), 50) / 1000;
         for (const [id, p] of s.projectiles) {

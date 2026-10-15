@@ -25,11 +25,11 @@ export function createMovementRuntime(): MovementRuntime {
     };
 }
 
-export function acceptMovementInput(state: MovementRuntime, input: PlayerInput, now: number): void {
+export function acceptMovementInput(state: MovementRuntime, input: PlayerInput, now: number, player?: PlayerState): void {
     const dashPressed = input.dash && !state.input.dash;
     state.input = { ...input };
     state.lastInputAt = now;
-    if (dashPressed && now >= state.nextDashAt) {
+    if (dashPressed && now >= state.nextDashAt && player?.alive !== false && (player?.immobilizedUntil ?? 0) <= now) {
         state.dashUntil = now + DASH_MS;
         state.nextDashAt = now + DASH_COOLDOWN_MS;
     }
@@ -50,7 +50,7 @@ function blocked(x: number, y: number, map: GameMapState): boolean {
 export function advanceMovement(player: PlayerState, state: MovementRuntime, map: GameMapState, deltaMs: number, now: number): boolean {
     if (player.alive === false) { player.isDashing = false; return false; }
     const input = now - state.lastInputAt <= INPUT_TIMEOUT_MS ? state.input : undefined;
-    player.isDashing = now < state.dashUntil;
+    player.isDashing = now < state.dashUntil && (player.immobilizedUntil ?? 0) <= now;
     if ((player.immobilizedUntil ?? 0) > now) return false;
     if (!input) return false;
     let x = Number(input.right) - Number(input.left);
