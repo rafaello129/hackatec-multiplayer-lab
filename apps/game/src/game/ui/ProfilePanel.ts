@@ -35,7 +35,7 @@ export class ProfilePanel {
         };
         for (const control of [username,color,mode,file,save]) (control as HTMLElement).style.minHeight = '28px';
         div.append(heading,username,color,mode,file,save,status);
-        document.getElementById('game-container')?.appendChild(div);
+        document.body.appendChild(div);
     }
     destroy(){this.element.remove();}
 }
