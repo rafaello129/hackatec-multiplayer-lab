@@ -67,6 +67,9 @@ export class PlayerView
     {
         this.container.setPosition(player.x, player.y);
         this.body.setFillStyle(player.color);
+        this.container.setAlpha(player.alive === false ? 0.25 : player.isDashing ? 0.55 : 1);
+        this.body.setStrokeStyle(player.isDashing ? 3 : 2, player.isDashing ? 0xf0abfc : 0xffffff);
+
         this.nameText.setText(player.name);
     }
 
