@@ -11,6 +11,7 @@ export type PlayerState = {
     x: number;
     y: number;
     color: number;
+    isDashing?: boolean;
 };
 
 export type JoinRoomPayload = {
@@ -22,6 +23,7 @@ export type RoomStatePayload = {
     roomId: string;
     selfId: string;
     players: PlayerState[];
+    map: GameMapState;
 };
 
 export type PlayerJoinedPayload = {
@@ -40,3 +42,15 @@ export type RoomErrorPayload = {
     code: RoomErrorCode;
     message: string;
 };
+
+export type MapObstacleType = 'wall' | 'trap' | 'cactus';
+export type CactusSize = 'small' | 'medium' | 'large';
+export type BaseMapObstacle = { id: string; type: MapObstacleType; x: number; y: number; width: number; height: number };
+export type WallObstacle = BaseMapObstacle & { type: 'wall' };
+export type TrapObstacle = BaseMapObstacle & { type: 'trap' };
+export type CactusObstacle = BaseMapObstacle & { type: 'cactus'; size: CactusSize; damage: number };
+export type MapObstacle = WallObstacle | TrapObstacle | CactusObstacle;
+export type GameMapState = { seed: number; width: number; height: number; obstacles: MapObstacle[] };
+export type PlayerInput = { up: boolean; down: boolean; left: boolean; right: boolean; dash: boolean };
+export type PlayerInputPayload = { input: PlayerInput };
+export type PlayerMovedPayload = { player: PlayerState };
