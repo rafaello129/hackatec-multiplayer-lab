@@ -14,6 +14,7 @@ import {
 } from '@hackatec/shared';
 import { Scene, type GameObjects, Input, type Types } from 'phaser';
 import type { Socket } from 'socket.io-client';
+import { ProfilePanel } from '../ui/ProfilePanel';
 import { MapView } from '../map/MapView';
 import { PlayerView } from '../entities/PlayerView';
 import { getClientIdentity, type ClientIdentity } from '../../network/identity';
@@ -33,6 +34,9 @@ export class ArenaScene extends Scene
     private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
     private previousInput = '';
     private lastInputSent = 0;
+    private profilePanel?: ProfilePanel;
+    private scoreboard?: GameObjects.Text;
+    private healthBar?: GameObjects.Graphics;
     private weapon: WeaponType = 'pistol';
     private lastShot = 0;
     private fireHeld = false;
@@ -68,6 +72,9 @@ export class ArenaScene extends Scene
         this.input.keyboard?.on('keydown-ONE', this.pistol);
         this.input.keyboard?.on('keydown-TWO', this.machineGun);
         this.input.keyboard?.on('keydown-THREE', this.shotgun);
+        this.healthBar = this.add.graphics().setDepth(8);
+        this.scoreboard = this.add.text(785, 155, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
+        this.profilePanel = new ProfilePanel((username, appearance) => this.socket.emit(SOCKET_EVENTS.PROFILE_SET, { username:username || undefined, appearance }));
         this.attachSocketListeners();
 
         this.events.once('shutdown', () =>
@@ -75,6 +82,7 @@ export class ArenaScene extends Scene
             this.detachSocketListeners();
             this.clearPlayerViews();
             this.mapView?.destroy();
+            this.profilePanel?.destroy();
             this.input.keyboard?.off('keydown-ONE', this.pistol);
             this.input.keyboard?.off('keydown-TWO', this.machineGun);
             this.input.keyboard?.off('keydown-THREE', this.shotgun);
@@ -158,6 +166,7 @@ export class ArenaScene extends Scene
         this.socket.on(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.on(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
+        this.socket.on(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
     }
 
     private detachSocketListeners()
@@ -170,13 +179,15 @@ export class ArenaScene extends Scene
         this.socket.off(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.off(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
+        this.socket.off(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
     }
 
     private joinRoom()
     {
         const payload: JoinRoomPayload = {
             roomId: this.identity.roomId,
-            playerName: this.identity.playerName
+            playerName: this.identity.playerName,
+            profileId: this.identity.profileId
         };
 
         this.errorText.setVisible(false);
@@ -232,10 +243,21 @@ export class ArenaScene extends Scene
     private readonly machineGun = () => { this.weapon = 'machineGun'; };
     private readonly shotgun = () => { this.weapon = 'shotgun'; };
 
+    private readonly handleProfileResult = (result: {ok:boolean;message:string}) => {
+        if (!result.ok) this.errorText.setText(result.message).setVisible(true);
+        else this.errorText.setVisible(false);
+    };
+
     private readonly handleCombat = (state: CombatSnapshot) => {
         this.playerRegistry.replaceAll(state.players);
         this.syncPlayerViews();
         const self = state.players.find(player => player.id === this.selfId);
+        this.scoreboard?.setText('CLASIFICACIÓN\n' + [...state.players].sort((a,b)=>(b.kills??0)-(a.kills??0)).slice(0,8).map((p,i)=>`${i+1}. ${p.name}: ${p.kills??0} / ${p.deaths??0}`).join('\n'));
+        this.healthBar?.clear();
+        if (self) {
+            this.healthBar?.fillStyle(0x334155).fillRect(36, 127, 220, 12);
+            this.healthBar?.fillStyle((self.hp??100)>30 ? 0x22c55e : 0xef4444).fillRect(36,127,220*Math.max(0,Math.min(100,self.hp??100))/100,12);
+        }
         if (self) this.combatText?.setText(`HP: ${self.hp ?? 100} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
         this.bullets?.clear();
         this.bullets?.fillStyle(0xfacc15, 1);
