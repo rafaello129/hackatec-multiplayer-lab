@@ -10,7 +10,7 @@ import {
     type RoomErrorPayload,
     type RoomStatePayload
 } from '@hackatec/shared';
-import { Scene, type GameObjects, Input } from 'phaser';
+import { Scene, type GameObjects, Input, type Types } from 'phaser';
 import type { Socket } from 'socket.io-client';
 import { MapView } from '../map/MapView';
 import { PlayerView } from '../entities/PlayerView';
@@ -27,11 +27,10 @@ export class ArenaScene extends Scene
 
     private selfId = '';
     private mapView?: MapView;
-    private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
+    private cursors?: Types.Input.Keyboard.CursorKeys;
     private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
     private previousInput = '';
     private lastInputSent = 0;
-    private previousDash = false;
 
     private roomText!: GameObjects.Text;
     private playerCountText!: GameObjects.Text;
@@ -50,13 +49,13 @@ export class ArenaScene extends Scene
         this.identity = getClientIdentity(window.location.search);
         this.socket = getSocket();
 
-        this.mapView = new MapView(this);
         this.cursors = this.input.keyboard?.createCursorKeys();
         if (this.input.keyboard) {
             const k = Input.Keyboard.KeyCodes;
             this.keys = { w: this.input.keyboard.addKey(k.W), a: this.input.keyboard.addKey(k.A), s: this.input.keyboard.addKey(k.S), d: this.input.keyboard.addKey(k.D), shift: this.input.keyboard.addKey(k.SHIFT) };
         }
         this.createInterface();
+        this.mapView = new MapView(this);
         this.attachSocketListeners();
 
         this.events.once('shutdown', () =>
@@ -230,7 +229,6 @@ export class ArenaScene extends Scene
             this.previousInput = serialized;
             this.lastInputSent = time;
         }
-        this.previousDash = dashHeld;
     }
 
     private readonly handlePlayerLeft = (payload: PlayerLeftPayload) =>
