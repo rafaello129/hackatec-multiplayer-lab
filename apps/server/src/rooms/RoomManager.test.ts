@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_PLAYERS_PER_ROOM } from '../game/constants.js';
 import {
     isValidRoomId,
     normalizePlayerName,
@@ -112,15 +113,13 @@ describe('RoomManager', () =>
     {
         const manager = new RoomManager();
         manager.join('original', 'visitor', 'Ana');
-        for (let i = 0; i < 16; i += 1)
+        for (let i = 0; i < MAX_PLAYERS_PER_ROOM; i += 1)
         {
             manager.join('target', 'member-' + i, 'Member');
         }
         const result = manager.join('target', 'visitor', 'Ana');
-        if (!result.ok && result.code === 'ROOM_FULL')
-        {
-            expect(manager.getRoomId('visitor')).toBe('original');
-        }
+        expect(result).toMatchObject({ ok: false, code: 'ROOM_FULL' });
+        expect(manager.getRoomId('visitor')).toBe('original');
     });
 
 });
