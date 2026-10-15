@@ -65,7 +65,8 @@ export class CombatManager {
         for (const player of players) {
             if (player.alive === false) {
                 if (now >= (s.respawn.get(player.id) ?? Infinity)) {
-                    const spawn = getSpawnPosition(players.findIndex(p => p.id === player.id));
+                    const candidates = Array.from({length: 32}, (_, i) => getSpawnPosition(i));
+                    const spawn = candidates.find(point => !map.obstacles.some(o => o.type === 'wall' && overlaps(point.x, point.y, PLAYER_RADIUS, o)) && !players.some(other => other.id !== player.id && other.alive !== false && Math.hypot(other.x - point.x, other.y - point.y) < PLAYER_RADIUS * 2)) ?? getSpawnPosition(players.findIndex(p => p.id === player.id));
                     player.x = spawn.x; player.y = spawn.y;
                     player.hp = 100; player.alive = true; player.immobilizedUntil = 0;
                     s.traps.delete(player.id);
