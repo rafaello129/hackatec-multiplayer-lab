@@ -54,3 +54,5 @@ export type GameMapState = { seed: number; width: number; height: number; obstac
 export type PlayerInput = { up: boolean; down: boolean; left: boolean; right: boolean; dash: boolean };
 export type PlayerInputPayload = { input: PlayerInput };
 export type PlayerMovedPayload = { player: PlayerState };
+
+export type PlayerMovedPayload = { player: PlayerState };
