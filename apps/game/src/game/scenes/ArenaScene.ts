@@ -215,6 +215,8 @@ export class ArenaScene extends Scene
     {
         this.roomText.setText(`Sala: ${payload.roomId}`);
         this.selfId = payload.selfId;
+        const own = payload.players.find(player => player.id === payload.selfId);
+        if (own?.appearance) this.profilePanel?.setProfile(own.name, own.appearance);
         this.playerRegistry.replaceAll(payload.players);
         this.mapView?.render(payload.map);
         this.syncPlayerViews();
