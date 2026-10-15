@@ -41,7 +41,7 @@ export class ProfilePanel {
         const controls = this.element.querySelectorAll('input, select');
         const name = controls[0] as HTMLInputElement;
         const color = controls[1] as HTMLInputElement;
-        const mode = controls[2] as HTMLSelectElement;
+        const mode = controls[3] as HTMLSelectElement;
         name.value = usernameValue;
         color.value = appearance.colorHex;
         mode.value = appearance.mode;
