@@ -7,6 +7,8 @@ import {
     type PlayerState,
     type PlayerInput,
     type PlayerMovedPayload,
+    type CombatSnapshot,
+    type WeaponType,
     type RoomErrorPayload,
     type RoomStatePayload
 } from '@hackatec/shared';
@@ -31,6 +33,11 @@ export class ArenaScene extends Scene
     private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
     private previousInput = '';
     private lastInputSent = 0;
+    private weapon: WeaponType = 'pistol';
+    private lastShot = 0;
+    private fireHeld = false;
+    private bullets?: GameObjects.Graphics;
+    private combatText?: GameObjects.Text;
 
     private roomText!: GameObjects.Text;
     private playerCountText!: GameObjects.Text;
@@ -56,6 +63,11 @@ export class ArenaScene extends Scene
         }
         this.createInterface();
         this.mapView = new MapView(this);
+        this.bullets = this.add.graphics().setDepth(3);
+        this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(5);
+        this.input.keyboard?.on('keydown-ONE', this.pistol);
+        this.input.keyboard?.on('keydown-TWO', this.machineGun);
+        this.input.keyboard?.on('keydown-THREE', this.shotgun);
         this.attachSocketListeners();
 
         this.events.once('shutdown', () =>
@@ -63,6 +75,9 @@ export class ArenaScene extends Scene
             this.detachSocketListeners();
             this.clearPlayerViews();
             this.mapView?.destroy();
+            this.input.keyboard?.off('keydown-ONE', this.pistol);
+            this.input.keyboard?.off('keydown-TWO', this.machineGun);
+            this.input.keyboard?.off('keydown-THREE', this.shotgun);
         });
 
         if (this.socket.connected)
@@ -142,6 +157,7 @@ export class ArenaScene extends Scene
         this.socket.on(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.on(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.on(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
+        this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
     }
 
     private detachSocketListeners()
@@ -153,6 +169,7 @@ export class ArenaScene extends Scene
         this.socket.off(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.off(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.off(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
+        this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
     }
 
     private joinRoom()
@@ -179,6 +196,7 @@ export class ArenaScene extends Scene
         this.selfId = '';
         this.previousInput = '';
         this.mapView?.clear();
+        this.bullets?.clear();
         this.syncPlayerViews();
     };
 
@@ -210,6 +228,20 @@ export class ArenaScene extends Scene
         this.upsertPlayerView(payload.player);
     };
 
+    private readonly pistol = () => { this.weapon = 'pistol'; };
+    private readonly machineGun = () => { this.weapon = 'machineGun'; };
+    private readonly shotgun = () => { this.weapon = 'shotgun'; };
+
+    private readonly handleCombat = (state: CombatSnapshot) => {
+        this.playerRegistry.replaceAll(state.players);
+        this.syncPlayerViews();
+        const self = state.players.find(player => player.id === this.selfId);
+        if (self) this.combatText?.setText(`HP: ${self.hp ?? 100} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
+        this.bullets?.clear();
+        this.bullets?.fillStyle(0xfacc15, 1);
+        for (const projectile of state.projectiles) this.bullets?.fillCircle(projectile.x, projectile.y, 5);
+    };
+
     update(time: number) {
         if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors) return;
         const pad = this.input.gamepad?.getPad(0);
@@ -223,6 +255,18 @@ export class ArenaScene extends Scene
             right: this.keys.d.isDown || this.cursors.right.isDown || x > 0.2 || !!pad?.right,
             dash: dashHeld
         };
+        const player = this.playerRegistry.get(this.selfId);
+        const pointer = this.input.activePointer;
+        const holding = pointer.isDown;
+        const cooldown = this.weapon === 'machineGun' ? 100 : this.weapon === 'shotgun' ? 800 : 500;
+        if (player && player.alive !== false && holding && time - this.lastShot >= cooldown &&
+            (this.weapon === 'machineGun' || !this.fireHeld)) {
+            const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            const angle = Math.atan2(point.y - player.y, point.x - player.x);
+            this.socket.emit(SOCKET_EVENTS.PLAYER_SHOOT, { weapon: this.weapon, angle });
+            this.lastShot = time;
+        }
+        this.fireHeld = holding;
         const serialized = JSON.stringify(input);
         if (serialized !== this.previousInput || time - this.lastInputSent >= 100) {
             this.socket.emit(SOCKET_EVENTS.PLAYER_INPUT, { input });
