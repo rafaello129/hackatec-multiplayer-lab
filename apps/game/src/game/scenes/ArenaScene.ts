@@ -5,11 +5,17 @@ import {
     type PlayerJoinedPayload,
     type PlayerLeftPayload,
     type PlayerState,
+    type PlayerInput,
+    type PlayerMovedPayload,
+    type CombatSnapshot,
+    type WeaponType,
     type RoomErrorPayload,
     type RoomStatePayload
 } from '@hackatec/shared';
-import { Scene, type GameObjects } from 'phaser';
+import { Scene, type GameObjects, Input, type Types } from 'phaser';
 import type { Socket } from 'socket.io-client';
+import { ProfilePanel } from '../ui/ProfilePanel';
+import { MapView } from '../map/MapView';
 import { PlayerView } from '../entities/PlayerView';
 import { getClientIdentity, type ClientIdentity } from '../../network/identity';
 import { getSocket } from '../../network/socket';
@@ -23,6 +29,19 @@ export class ArenaScene extends Scene
     private readonly playerViews = new Map<string, PlayerView>();
 
     private selfId = '';
+    private mapView?: MapView;
+    private cursors?: Types.Input.Keyboard.CursorKeys;
+    private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
+    private previousInput = '';
+    private lastInputSent = 0;
+    private profilePanel?: ProfilePanel;
+    private scoreboard?: GameObjects.Text;
+    private healthBar?: GameObjects.Graphics;
+    private weapon: WeaponType = 'pistol';
+    private lastShot = 0;
+    private fireHeld = false;
+    private bullets?: GameObjects.Graphics;
+    private combatText?: GameObjects.Text;
 
     private roomText!: GameObjects.Text;
     private playerCountText!: GameObjects.Text;
@@ -41,13 +60,32 @@ export class ArenaScene extends Scene
         this.identity = getClientIdentity(window.location.search);
         this.socket = getSocket();
 
+        this.cursors = this.input.keyboard?.createCursorKeys();
+        if (this.input.keyboard) {
+            const k = Input.Keyboard.KeyCodes;
+            this.keys = { w: this.input.keyboard.addKey(k.W), a: this.input.keyboard.addKey(k.A), s: this.input.keyboard.addKey(k.S), d: this.input.keyboard.addKey(k.D), shift: this.input.keyboard.addKey(k.SHIFT) };
+        }
         this.createInterface();
+        this.mapView = new MapView(this);
+        this.bullets = this.add.graphics().setDepth(3);
+        this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(5);
+        this.input.keyboard?.on('keydown-ONE', this.pistol);
+        this.input.keyboard?.on('keydown-TWO', this.machineGun);
+        this.input.keyboard?.on('keydown-THREE', this.shotgun);
+        this.healthBar = this.add.graphics().setDepth(8);
+        this.scoreboard = this.add.text(785, 155, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
+        this.profilePanel = new ProfilePanel((username, appearance) => this.socket.emit(SOCKET_EVENTS.PROFILE_SET, { username:username || undefined, appearance }));
         this.attachSocketListeners();
 
         this.events.once('shutdown', () =>
         {
             this.detachSocketListeners();
             this.clearPlayerViews();
+            this.mapView?.destroy();
+            this.profilePanel?.destroy();
+            this.input.keyboard?.off('keydown-ONE', this.pistol);
+            this.input.keyboard?.off('keydown-TWO', this.machineGun);
+            this.input.keyboard?.off('keydown-THREE', this.shotgun);
         });
 
         if (this.socket.connected)
@@ -92,7 +130,7 @@ export class ArenaScene extends Scene
             align: 'right'
         }).setOrigin(1, 0);
 
-        this.add.text(988, 68, 'Presencia sincronizada · sin movimiento todavía', {
+        this.add.text(988, 68, 'Mapa compartido · movimiento sincronizado', {
             fontFamily: 'Arial',
             fontSize: 12,
             color: '#64748b',
@@ -111,7 +149,7 @@ export class ArenaScene extends Scene
             align: 'center'
         }).setOrigin(0.5).setVisible(false);
 
-        this.add.text(512, 730, 'Movimiento, disparos y combate se construirán durante la clase.', {
+        this.add.text(512, 730, 'WASD / flechas para moverse · SHIFT para dash', {
             fontFamily: 'Arial',
             fontSize: 14,
             color: '#64748b'
@@ -126,6 +164,9 @@ export class ArenaScene extends Scene
         this.socket.on(SOCKET_EVENTS.ROOM_ERROR, this.handleRoomError);
         this.socket.on(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.on(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
+        this.socket.on(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
+        this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
+        this.socket.on(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
     }
 
     private detachSocketListeners()
@@ -136,13 +177,17 @@ export class ArenaScene extends Scene
         this.socket.off(SOCKET_EVENTS.ROOM_ERROR, this.handleRoomError);
         this.socket.off(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.off(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
+        this.socket.off(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
+        this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
+        this.socket.off(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
     }
 
     private joinRoom()
     {
         const payload: JoinRoomPayload = {
             roomId: this.identity.roomId,
-            playerName: this.identity.playerName
+            playerName: this.identity.playerName,
+            profileId: this.identity.profileId
         };
 
         this.errorText.setVisible(false);
@@ -160,6 +205,9 @@ export class ArenaScene extends Scene
         this.setConnectionStatus('disconnected');
         this.playerRegistry.replaceAll([]);
         this.selfId = '';
+        this.previousInput = '';
+        this.mapView?.clear();
+        this.bullets?.clear();
         this.syncPlayerViews();
     };
 
@@ -168,6 +216,7 @@ export class ArenaScene extends Scene
         this.roomText.setText(`Sala: ${payload.roomId}`);
         this.selfId = payload.selfId;
         this.playerRegistry.replaceAll(payload.players);
+        this.mapView?.render(payload.map);
         this.syncPlayerViews();
     };
 
@@ -184,6 +233,69 @@ export class ArenaScene extends Scene
         this.upsertPlayerView(payload.player);
         this.updatePlayerCount();
     };
+
+    private readonly handlePlayerMoved = (payload: PlayerMovedPayload) => {
+        this.playerRegistry.add(payload.player);
+        this.upsertPlayerView(payload.player);
+    };
+
+    private readonly pistol = () => { this.weapon = 'pistol'; };
+    private readonly machineGun = () => { this.weapon = 'machineGun'; };
+    private readonly shotgun = () => { this.weapon = 'shotgun'; };
+
+    private readonly handleProfileResult = (result: {ok:boolean;message:string}) => {
+        if (!result.ok) this.errorText.setText(result.message).setVisible(true);
+        else this.errorText.setVisible(false);
+    };
+
+    private readonly handleCombat = (state: CombatSnapshot) => {
+        this.playerRegistry.replaceAll(state.players);
+        this.syncPlayerViews();
+        const self = state.players.find(player => player.id === this.selfId);
+        this.scoreboard?.setText('CLASIFICACIÓN\n' + [...state.players].sort((a,b)=>(b.kills??0)-(a.kills??0)).slice(0,8).map((p,i)=>`${i+1}. ${p.name}: ${p.kills??0} / ${p.deaths??0}`).join('\n'));
+        this.healthBar?.clear();
+        if (self) {
+            this.healthBar?.fillStyle(0x334155).fillRect(36, 127, 220, 12);
+            this.healthBar?.fillStyle((self.hp??100)>30 ? 0x22c55e : 0xef4444).fillRect(36,127,220*Math.max(0,Math.min(100,self.hp??100))/100,12);
+        }
+        if (self) this.combatText?.setText(`HP: ${self.hp ?? 100} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
+        this.bullets?.clear();
+        this.bullets?.fillStyle(0xfacc15, 1);
+        for (const projectile of state.projectiles) this.bullets?.fillCircle(projectile.x, projectile.y, 5);
+    };
+
+    update(time: number) {
+        if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors) return;
+        const pad = this.input.gamepad?.getPad(0);
+        const x = pad?.leftStick.x ?? 0;
+        const y = pad?.leftStick.y ?? 0;
+        const dashHeld = this.keys.shift.isDown || !!pad?.buttons[5]?.pressed;
+        const input: PlayerInput = {
+            up: this.keys.w.isDown || this.cursors.up.isDown || y < -0.2 || !!pad?.up,
+            down: this.keys.s.isDown || this.cursors.down.isDown || y > 0.2 || !!pad?.down,
+            left: this.keys.a.isDown || this.cursors.left.isDown || x < -0.2 || !!pad?.left,
+            right: this.keys.d.isDown || this.cursors.right.isDown || x > 0.2 || !!pad?.right,
+            dash: dashHeld
+        };
+        const player = this.playerRegistry.get(this.selfId);
+        const pointer = this.input.activePointer;
+        const holding = pointer.isDown;
+        const cooldown = this.weapon === 'machineGun' ? 100 : this.weapon === 'shotgun' ? 800 : 500;
+        if (player && player.alive !== false && holding && time - this.lastShot >= cooldown &&
+            (this.weapon === 'machineGun' || !this.fireHeld)) {
+            const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            const angle = Math.atan2(point.y - player.y, point.x - player.x);
+            this.socket.emit(SOCKET_EVENTS.PLAYER_SHOOT, { weapon: this.weapon, angle });
+            this.lastShot = time;
+        }
+        this.fireHeld = holding;
+        const serialized = JSON.stringify(input);
+        if (serialized !== this.previousInput || time - this.lastInputSent >= 100) {
+            this.socket.emit(SOCKET_EVENTS.PLAYER_INPUT, { input });
+            this.previousInput = serialized;
+            this.lastInputSent = time;
+        }
+    }
 
     private readonly handlePlayerLeft = (payload: PlayerLeftPayload) =>
     {

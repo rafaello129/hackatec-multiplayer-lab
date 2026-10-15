@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import express from 'express';
 import { Server } from 'socket.io';
 import { getAllowedOrigins, getServerConfig } from './config/env.js';
+import { uploadSkin, skinsUploadHandler } from './http/skins.js';
 import { healthHandler } from './http/health.js';
 import { registerSocketHandlers } from './socket/index.js';
 
@@ -38,6 +39,8 @@ app.use((request, response, next) =>
 });
 
 app.get('/health', healthHandler);
+app.use('/skins', express.static('storage/skins'));
+app.post('/api/skins', uploadSkin, skinsUploadHandler);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {

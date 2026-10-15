@@ -7,7 +7,7 @@ describe('client identity', () =>
     {
         expect(
             getClientIdentity('?room=hackatec&name=Ana')
-        ).toEqual({
+        ).toMatchObject({
             roomId: 'hackatec',
             playerName: 'Ana'
         });
@@ -15,7 +15,7 @@ describe('client identity', () =>
 
     it('uses a classroom room by default', () =>
     {
-        expect(getClientIdentity('')).toEqual({
+        expect(getClientIdentity('')).toMatchObject({
             roomId: DEFAULT_ROOM_ID,
             playerName: undefined
         });
@@ -23,7 +23,7 @@ describe('client identity', () =>
 
     it('treats a blank name as absent', () =>
     {
-        expect(getClientIdentity('?name=%20%20')).toEqual({
+        expect(getClientIdentity('?name=%20%20')).toMatchObject({
             roomId: DEFAULT_ROOM_ID,
             playerName: undefined
         });
