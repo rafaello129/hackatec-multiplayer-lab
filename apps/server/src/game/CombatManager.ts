@@ -36,7 +36,7 @@ export class CombatManager {
         if (request.weapon !== 'pistol' && request.weapon !== 'machineGun' && request.weapon !== 'shotgun') return;
         if (typeof request.angle !== 'number' || !Number.isFinite(request.angle)) return;
         const config = WEAPONS[request.weapon], s = this.runtime(roomId);
-        const key = player.id + ':' + request.weapon;
+        const key = player.id;
         if (now < (s.cooldowns.get(key) ?? 0)) return;
         s.cooldowns.set(key, now + config.cooldown);
         for (const offset of config.spread) {
