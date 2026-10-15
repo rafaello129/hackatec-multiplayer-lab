@@ -3,6 +3,8 @@ import {
     type ConnectionReadyPayload,
     type PlayerInput,
     type PlayerInputPayload,
+    type ProfileUpdatePayload,
+    type PlayerAppearance,
     type PlayerJoinedPayload,
     type PlayerLeftPayload,
     type RoomErrorPayload,
@@ -11,6 +13,7 @@ import {
 import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
 import { CombatManager } from '../game/CombatManager.js';
+import { ProfileStore } from '../profiles/ProfileStore.js';
 import { RoomManager } from '../rooms/RoomManager.js';
 import { parseJoinPayload } from './validateJoinPayload.js';
 
@@ -26,6 +29,8 @@ export function registerSocketHandlers(
 {
     const movement = new Map<string, MovementRuntime>();
     const combat = new CombatManager();
+    const profiles = new ProfileStore();
+    const identities = new Map<string,string>();
     const rooms = new Set<string>();
     const tick = setInterval(() => {
         const now = Date.now();
@@ -63,7 +68,7 @@ export function registerSocketHandlers(
 
         socket.emit(SOCKET_EVENTS.CONNECTION_READY, payload);
 
-        socket.on(SOCKET_EVENTS.ROOM_JOIN, (rawPayload: unknown) =>
+        socket.on(SOCKET_EVENTS.ROOM_JOIN, async (rawPayload: unknown) =>
         {
             const parsed = parseJoinPayload(rawPayload);
 
@@ -80,6 +85,11 @@ export function registerSocketHandlers(
             const roomId = parsed.value.roomId.trim();
             const playerName = parsed.value.playerName;
             const previousRoomId = roomManager.getRoomId(socket.id);
+            const suppliedId = (rawPayload as { profileId?: unknown }).profileId;
+            const profileId = typeof suppliedId === 'string' && /^[a-zA-Z0-9_-]{8,80}$/.test(suppliedId) ? suppliedId : socket.id;
+            let profile;
+            try { profile = await profiles.get(profileId); }
+            catch { profile = { appearance: { mode: 'color' as const, colorHex: '#60A5FA' } }; }
             const result = roomManager.join(roomId, socket.id, playerName);
 
             if (!result.ok)
@@ -93,6 +103,9 @@ export function registerSocketHandlers(
                 return;
             }
 
+            identities.set(socket.id, profileId);
+            result.player.appearance = profile.appearance;
+            if (profile.username) result.player.name = profile.username;
             if (result.previous)
             {
                 socket.leave(socketRoom(result.previous.roomId));
@@ -141,6 +154,34 @@ export function registerSocketHandlers(
             }
         });
 
+        socket.on(SOCKET_EVENTS.PROFILE_SET, async (raw: unknown) => {
+            const player = roomManager.getPlayer(socket.id);
+            const roomId = roomManager.getRoomId(socket.id);
+            const id = identities.get(socket.id);
+            if (!player || !roomId || !id || !raw || typeof raw !== 'object') return;
+            const value = raw as ProfileUpdatePayload;
+            const username = value.username;
+            const appearance = value.appearance;
+            if (username !== undefined && (typeof username !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{2,15}$/.test(username))) {
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok:false, message:'Username inválido (3-16 caracteres)' }); return;
+            }
+            if (appearance !== undefined && (
+                !appearance || typeof appearance !== 'object' ||
+                (appearance.mode !== 'color' && appearance.mode !== 'skin') ||
+                typeof appearance.colorHex !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(appearance.colorHex) ||
+                (appearance.mode === 'skin' && (!appearance.skin || !/^\/skins\/[a-f0-9-]+\.(png|jpg|webp)$/.test(appearance.skin.url)))
+            )) { socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok:false, message:'Apariencia inválida' }); return; }
+            try {
+                const saved = await profiles.update(id, { ...(username ? { username } : {}), ...(appearance ? { appearance } : {}) });
+                if (saved.username) player.name = saved.username;
+                player.appearance = saved.appearance;
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, {ok:true,message:'Perfil guardado'});
+            } catch (error) {
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, {ok:false,message:error instanceof Error ? error.message : 'No se pudo guardar'});
+            }
+        });
+
         socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) => {
             if (!roomManager.getRoomId(socket.id)) return;
             if (!raw || typeof raw !== 'object') return;
@@ -160,6 +201,7 @@ export function registerSocketHandlers(
 
         socket.on('disconnect', (reason) => {
             movement.delete(socket.id);
+            identities.delete(socket.id);
             const left = roomManager.leave(socket.id);
 
             if (left)
