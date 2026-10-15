@@ -4,7 +4,6 @@ import {
     type PlayerInput,
     type PlayerInputPayload,
     type ProfileUpdatePayload,
-    type PlayerAppearance,
     type PlayerJoinedPayload,
     type PlayerLeftPayload,
     type RoomErrorPayload,
@@ -13,7 +12,7 @@ import {
 import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
 import { CombatManager } from '../game/CombatManager.js';
-import { ProfileStore } from '../profiles/ProfileStore.js';
+import { ProfileStore, type Profile } from '../profiles/ProfileStore.js';
 import { RoomManager } from '../rooms/RoomManager.js';
 import { parseJoinPayload } from './validateJoinPayload.js';
 
@@ -87,7 +86,7 @@ export function registerSocketHandlers(
             const previousRoomId = roomManager.getRoomId(socket.id);
             const suppliedId = (rawPayload as { profileId?: unknown }).profileId;
             const profileId = typeof suppliedId === 'string' && /^[a-zA-Z0-9_-]{8,80}$/.test(suppliedId) ? suppliedId : socket.id;
-            let profile;
+            let profile: Profile;
             try { profile = await profiles.get(profileId); }
             catch { profile = { appearance: { mode: 'color' as const, colorHex: '#60A5FA' } }; }
             const result = roomManager.join(roomId, socket.id, playerName);
