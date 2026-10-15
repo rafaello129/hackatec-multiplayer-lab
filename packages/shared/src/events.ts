@@ -8,5 +8,7 @@ export const SOCKET_EVENTS = {
     PLAYER_JOINED: 'player:joined',
     PLAYER_LEFT: 'player:left',
     PLAYER_INPUT: 'player:input',
-    PLAYER_MOVED: 'player:moved'
+    PLAYER_MOVED: 'player:moved',
+    PLAYER_SHOOT: 'player:shoot',
+    COMBAT_STATE: 'combat:state'
 } as const;
