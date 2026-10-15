@@ -1,7 +1,6 @@
 import {
     SOCKET_EVENTS,
     type ConnectionReadyPayload,
-    type JoinRoomPayload,
     type PlayerJoinedPayload,
     type PlayerLeftPayload,
     type RoomErrorPayload,
@@ -9,6 +8,7 @@ import {
 } from '@hackatec/shared';
 import type { Server } from 'socket.io';
 import { RoomManager } from '../rooms/RoomManager.js';
+import { parseJoinPayload } from './validateJoinPayload.js';
 
 function socketRoom(roomId: string): string
 {
@@ -31,14 +31,22 @@ export function registerSocketHandlers(
 
         socket.emit(SOCKET_EVENTS.CONNECTION_READY, payload);
 
-        socket.on(SOCKET_EVENTS.ROOM_JOIN, (rawPayload: JoinRoomPayload) =>
+        socket.on(SOCKET_EVENTS.ROOM_JOIN, (rawPayload: unknown) =>
         {
-            const roomId = typeof rawPayload?.roomId === 'string'
-                ? rawPayload.roomId.trim()
-                : '';
-            const playerName = typeof rawPayload?.playerName === 'string'
-                ? rawPayload.playerName
-                : undefined;
+            const parsed = parseJoinPayload(rawPayload);
+
+            if (!parsed.ok)
+            {
+                const errorPayload: RoomErrorPayload = {
+                    code: 'INVALID_ROOM',
+                    message: parsed.message
+                };
+                socket.emit(SOCKET_EVENTS.ROOM_ERROR, errorPayload);
+                return;
+            }
+
+            const roomId = parsed.value.roomId.trim();
+            const playerName = parsed.value.playerName;
             const previousRoomId = roomManager.getRoomId(socket.id);
             const result = roomManager.join(roomId, socket.id, playerName);
 
