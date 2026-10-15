@@ -97,4 +97,30 @@ describe('RoomManager', () =>
             expect(third.player.x).not.toBe(second.player.x);
         }
     });
+    it('rejects overlong room IDs without altering current membership', () =>
+    {
+        const manager = new RoomManager();
+        manager.join('valid', 'socket-a', 'Ana');
+        expect(manager.join('a'.repeat(33), 'socket-a', 'Ana')).toMatchObject({
+            ok: false,
+            code: 'INVALID_ROOM'
+        });
+        expect(manager.getRoomId('socket-a')).toBe('valid');
+    });
+
+    it('does not evict a current player when target room is full', () =>
+    {
+        const manager = new RoomManager();
+        manager.join('original', 'visitor', 'Ana');
+        for (let i = 0; i < 16; i += 1)
+        {
+            manager.join('target', 'member-' + i, 'Member');
+        }
+        const result = manager.join('target', 'visitor', 'Ana');
+        if (!result.ok && result.code === 'ROOM_FULL')
+        {
+            expect(manager.getRoomId('visitor')).toBe('original');
+        }
+    });
+
 });
