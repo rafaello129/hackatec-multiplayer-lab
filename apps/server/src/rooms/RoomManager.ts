@@ -129,7 +129,8 @@ export class RoomManager
             name: normalizePlayerName(playerName, socketId),
             x: spawn.x,
             y: spawn.y,
-            color: PLAYER_COLORS[spawnIndex % PLAYER_COLORS.length]
+            color: PLAYER_COLORS[spawnIndex % PLAYER_COLORS.length],
+            hp: 100, maxHp: 100, alive: true, kills: 0, deaths: 0
         };
 
         room.set(socketId, player);
