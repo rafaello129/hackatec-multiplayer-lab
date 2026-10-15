@@ -18,11 +18,13 @@ export type PlayerState = {
     kills?: number;
     deaths?: number;
     immobilizedUntil?: number;
+    appearance?: PlayerAppearance;
 };
 
 export type JoinRoomPayload = {
     roomId: string;
     playerName?: string;
+    profileId?: string;
 };
 
 export type RoomStatePayload = {
@@ -65,3 +67,7 @@ export type WeaponType = 'pistol' | 'machineGun' | 'shotgun';
 export type ShootPayload = { angle: number; weapon: WeaponType };
 export type ProjectileState = { id: string; ownerId: string; x: number; y: number; vx: number; vy: number; weapon: WeaponType };
 export type CombatSnapshot = { players: PlayerState[]; projectiles: ProjectileState[] };
+
+export type SkinAsset = { id: string; url: string; width: number; height: number };
+export type PlayerAppearance = { mode: 'color' | 'skin'; colorHex: string; skin?: SkinAsset };
+export type ProfileUpdatePayload = { username?: string; appearance?: PlayerAppearance };
