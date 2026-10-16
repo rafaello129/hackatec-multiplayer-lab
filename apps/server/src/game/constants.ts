@@ -11,5 +11,5 @@ export const PLAYER_COLORS = [
     0xa3e635
 ] as const;
 
-export const ARENA_WIDTH = 1024;
-export const ARENA_HEIGHT = 768;
+export const ARENA_WIDTH = 2304;
+export const ARENA_HEIGHT = 1536;

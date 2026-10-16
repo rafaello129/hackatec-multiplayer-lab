@@ -1,30 +1,11 @@
 import { ARENA_HEIGHT, ARENA_WIDTH } from './constants.js';
+export type SpawnPosition = { x:number; y:number };
 
-export type SpawnPosition = {
-    x: number;
-    y: number;
-};
-
-const COLUMNS = 8;
-const HORIZONTAL_MARGIN = 100;
-const TOP_MARGIN = 190;
-const BOTTOM_MARGIN = 90;
-
-export function getSpawnPosition(index: number): SpawnPosition
-{
-    const safeIndex = Math.max(0, Math.floor(index));
-    const column = safeIndex % COLUMNS;
-    const row = Math.floor(safeIndex / COLUMNS);
-
-    const usableWidth = ARENA_WIDTH - (HORIZONTAL_MARGIN * 2);
-    const usableHeight = ARENA_HEIGHT - TOP_MARGIN - BOTTOM_MARGIN;
-
-    const columnGap = usableWidth / Math.max(1, COLUMNS - 1);
-    const rowCount = 4;
-    const rowGap = usableHeight / Math.max(1, rowCount - 1);
-
-    return {
-        x: Math.round(HORIZONTAL_MARGIN + (column * columnGap)),
-        y: Math.round(TOP_MARGIN + (Math.min(row, rowCount - 1) * rowGap))
-    };
+/** Alternate distant edges; each pad has two exits into the outer trail. */
+export function getSpawnPosition(index:number): SpawnPosition {
+    const safeIndex=Math.min(31,Math.max(0,Math.floor(index)));
+    const slot=Math.floor(safeIndex/4), edge=safeIndex%4;
+    if(edge===0) return {x:220+slot*260,y:130};
+    if(edge===1) return {x:ARENA_WIDTH-220-slot*260,y:ARENA_HEIGHT-130};
+    return {x:edge===2 ? 140 : ARENA_WIDTH-140,y:edge===2 ? 300+slot*134 : ARENA_HEIGHT-300-slot*134};
 }

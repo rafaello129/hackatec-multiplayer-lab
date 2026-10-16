@@ -12,7 +12,8 @@ import {
     type RoomErrorPayload,
     type RoomStatePayload
 } from '@hackatec/shared';
-import { Scene, type GameObjects, Input, type Types } from 'phaser';
+import { Scene, type GameObjects, Input, type Types, type Cameras } from 'phaser';
+import type { GameMapState } from '@hackatec/shared';
 import type { Socket } from 'socket.io-client';
 import { ProfilePanel } from '../ui/ProfilePanel';
 import { MapView } from '../map/MapView';
@@ -20,6 +21,8 @@ import { PlayerView } from '../entities/PlayerView';
 import { getClientIdentity, type ClientIdentity } from '../../network/identity';
 import { getSocket } from '../../network/socket';
 import { PlayerRegistry } from '../../state/PlayerRegistry';
+import { loadArenaSprites, prepareArenaSprites } from '../assets';
+import { LessonOverlay } from '../../classroom/LessonOverlay';
 
 export class ArenaScene extends Scene
 {
@@ -29,6 +32,10 @@ export class ArenaScene extends Scene
     private readonly playerViews = new Map<string, PlayerView>();
 
     private selfId = '';
+    private worldCamera!: Cameras.Scene2D.Camera;
+    private level?: GameMapState;
+    private minimap?: GameObjects.Graphics;
+    private lessonOverlay?: LessonOverlay;
     private mapView?: MapView;
     private cursors?: Types.Input.Keyboard.CursorKeys;
     private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
@@ -40,6 +47,7 @@ export class ArenaScene extends Scene
     private weapon: WeaponType = 'pistol';
     private lastShot = 0;
     private fireHeld = false;
+    private editingProfile = false;
     private bullets?: GameObjects.Graphics;
     private combatText?: GameObjects.Text;
 
@@ -53,8 +61,14 @@ export class ArenaScene extends Scene
         super('ArenaScene');
     }
 
+    preload()
+    {
+        loadArenaSprites(this);
+    }
+
     create()
     {
+        prepareArenaSprites(this);
         this.cameras.main.setBackgroundColor('#07111f');
 
         this.identity = getClientIdentity(window.location.search);
@@ -68,21 +82,33 @@ export class ArenaScene extends Scene
         this.createInterface();
         this.mapView = new MapView(this);
         this.bullets = this.add.graphics().setDepth(3);
-        this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(5);
+        this.combatText = this.add.text(355, 66, '', { fontFamily: 'monospace', fontSize: 12, color: '#e7ddc6', lineSpacing: 8 }).setDepth(5);
         this.input.keyboard?.on('keydown-ONE', this.pistol);
         this.input.keyboard?.on('keydown-TWO', this.machineGun);
         this.input.keyboard?.on('keydown-THREE', this.shotgun);
         this.healthBar = this.add.graphics().setDepth(8);
-        this.scoreboard = this.add.text(765, 390, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
-        this.profilePanel = new ProfilePanel((username, appearance) => this.socket.emit(SOCKET_EVENTS.PROFILE_SET, { username:username || undefined, appearance }));
+        this.scoreboard = this.add.text(650, 23, '', { fontFamily:'monospace',fontSize:10,color:'#bac9bc',lineSpacing:5 }).setDepth(8);
+        this.worldCamera = this.cameras.add(0,155,1024,560).setBackgroundColor('#b88958');
+        this.worldCamera.ignore(this.children.list.filter(child => child !== this.mapView?.container && child !== this.bullets));
+        this.cameras.main.ignore([this.mapView.container, this.bullets]);
+        this.minimap = this.add.graphics().setDepth(10);
+        this.worldCamera.ignore(this.minimap);
+        this.lessonOverlay = new LessonOverlay(this, this.worldCamera);
+        this.profilePanel = new ProfilePanel(
+            (username, appearance) => this.socket.emit(SOCKET_EVENTS.PROFILE_SET, { username:username || undefined, appearance }),
+            this.handleProfileFocus
+        );
+        this.profilePanel.setConnected(false);
         this.attachSocketListeners();
 
         this.events.once('shutdown', () =>
         {
             this.detachSocketListeners();
+            this.lessonOverlay?.destroy();
             this.clearPlayerViews();
             this.mapView?.destroy();
             this.profilePanel?.destroy();
+            this.handleProfileFocus(false);
             this.input.keyboard?.off('keydown-ONE', this.pistol);
             this.input.keyboard?.off('keydown-TWO', this.machineGun);
             this.input.keyboard?.off('keydown-THREE', this.shotgun);
@@ -91,7 +117,10 @@ export class ArenaScene extends Scene
         if (this.socket.connected)
         {
             this.setConnectionStatus('connected');
-            this.joinRoom();
+            const initialState = this.registry.get('initialRoomState') as RoomStatePayload | undefined;
+            this.registry.remove('initialRoomState');
+            if (initialState && this.registry.get('initialSocketId') === this.socket.id) this.handleRoomState(initialState);
+            else this.joinRoom();
         }
         else
         {
@@ -102,60 +131,16 @@ export class ArenaScene extends Scene
 
     private createInterface()
     {
-        this.add.rectangle(512, 64, 984, 96, 0x0f172a, 0.96)
-            .setStrokeStyle(1, 0x334155, 0.8);
-
-        this.add.text(36, 28, 'HACKATEC MULTIPLAYER LAB', {
-            fontFamily: 'Arial Black',
-            fontSize: 20,
-            color: '#f8fafc'
-        });
-
-        this.roomText = this.add.text(36, 68, `Sala: ${this.identity.roomId}`, {
-            fontFamily: 'Arial',
-            fontSize: 16,
-            color: '#cbd5e1'
-        });
-
-        this.playerCountText = this.add.text(512, 45, 'Players: 0', {
-            fontFamily: 'Arial Black',
-            fontSize: 18,
-            color: '#f8fafc'
-        }).setOrigin(0.5);
-
-        this.connectionText = this.add.text(988, 30, '', {
-            fontFamily: 'Arial Black',
-            fontSize: 14,
-            color: '#facc15',
-            align: 'right'
-        }).setOrigin(1, 0);
-
-        this.add.text(988, 68, 'Mapa compartido · movimiento sincronizado', {
-            fontFamily: 'Arial',
-            fontSize: 12,
-            color: '#64748b',
-            align: 'right'
-        }).setOrigin(1, 0);
-
-        this.add.rectangle(512, 438, 960, 600, 0x020617, 0.38)
-            .setStrokeStyle(1, 0x1e293b, 0.9);
-
-        this.errorText = this.add.text(512, 134, '', {
-            fontFamily: 'Arial',
-            fontSize: 16,
-            color: '#fda4af',
-            backgroundColor: '#4c0519cc',
-            padding: { x: 10, y: 5 },
-            align: 'center'
-        }).setOrigin(0.5).setVisible(false);
-
-        this.add.text(512, 730, 'WASD / flechas para moverse · SHIFT para dash', {
-            fontFamily: 'Arial',
-            fontSize: 14,
-            color: '#64748b'
-        }).setOrigin(0.5);
+        this.cameras.main.setBackgroundColor('#151f20');
+        this.add.text(28, 23, 'DUST / ARENA', { fontFamily:'Arial Black', fontSize:30, color:'#f1e5c9' });
+        this.roomText = this.add.text(29, 62, 'CAÑÓN ROJO  /  TRES RUTAS', { fontFamily:'monospace', fontSize:11, color:'#9bafa8' });
+        this.playerCountText = this.add.text(29, 85, '', {fontFamily:'monospace',fontSize:12,color:'#9bafa8'});
+        this.connectionText = this.add.text(994, 129, '', {fontFamily:'monospace',fontSize:11,color:'#a3c8a3'}).setOrigin(1,0);
+        this.add.text(29, 129, 'CAMPO ABIERTO  /  TODOS CONTRA TODOS', {fontFamily:'monospace',fontSize:11,color:'#9bafa8'});
+        this.errorText = this.add.text(512, 152, '', {fontFamily:'Arial',fontSize:13,color:'#fff0df',backgroundColor:'#813c32',padding:{x:12,y:8}}).setOrigin(0.5).setDepth(20).setVisible(false);
+        this.add.text(28, 741, 'WASD  mover     SHIFT  dash     CLIC  disparar     1 / 2 / 3  armas', {fontFamily:'monospace',fontSize:11,color:'#a5b6ad'});
+        this.add.text(994, 741, 'HACKATEC  /  MULTIPLAYER', {fontFamily:'monospace',fontSize:10,color:'#73877c'}).setOrigin(1,0);
     }
-
     private attachSocketListeners()
     {
         this.socket.on('connect', this.handleConnect);
@@ -203,6 +188,11 @@ export class ArenaScene extends Scene
     private readonly handleDisconnect = () =>
     {
         this.setConnectionStatus('disconnected');
+        this.lessonOverlay?.reset();
+        this.worldCamera.stopFollow();
+        this.minimap?.clear();
+        this.level = undefined;
+        this.profilePanel?.setConnected(false);
         this.playerRegistry.replaceAll([]);
         this.selfId = '';
         this.previousInput = '';
@@ -213,13 +203,23 @@ export class ArenaScene extends Scene
 
     private readonly handleRoomState = (payload: RoomStatePayload) =>
     {
-        this.roomText.setText(`Sala: ${payload.roomId}`);
+        this.lessonOverlay?.reset();
+        this.level = payload.map;
+        this.worldCamera.setBounds(0,0,payload.map.width,payload.map.height);
         this.selfId = payload.selfId;
+        this.profilePanel?.setConnected(true);
         const own = payload.players.find(player => player.id === payload.selfId);
         if (own?.appearance) this.profilePanel?.setProfile(own.name, own.appearance);
         this.playerRegistry.replaceAll(payload.players);
         this.mapView?.render(payload.map);
         this.syncPlayerViews();
+        // Recovery may deliver combat snapshots before room:state, creating the
+        // view before selfId is known. Bind follow after identity is established.
+        const ownView = this.playerViews.get(this.selfId);
+        if (own && ownView) {
+            this.worldCamera.startFollow(ownView.container, true, 0.15, 0.15);
+            this.worldCamera.centerOn(own.x,own.y);
+        }
     };
 
     private readonly handleRoomError = (payload: RoomErrorPayload) =>
@@ -246,28 +246,61 @@ export class ArenaScene extends Scene
     private readonly shotgun = () => { this.weapon = 'shotgun'; };
 
     private readonly handleProfileResult = (result: {ok:boolean;message:string}) => {
+        this.profilePanel?.setResult(result.message);
         if (!result.ok) this.errorText.setText(result.message).setVisible(true);
         else this.errorText.setVisible(false);
+    };
+
+    private readonly handleProfileFocus = (focused: boolean) => {
+        this.editingProfile = focused;
+        const keyboard = this.input.keyboard;
+        if (keyboard) {
+            keyboard.resetKeys();
+            keyboard.enabled = !focused;
+            if (focused) keyboard.disableGlobalCapture();
+            else keyboard.enableGlobalCapture();
+        }
+        this.fireHeld = false;
     };
 
     private readonly handleCombat = (state: CombatSnapshot) => {
         this.playerRegistry.replaceAll(state.players);
         this.syncPlayerViews();
         const self = state.players.find(player => player.id === this.selfId);
-        this.scoreboard?.setText('CLASIFICACIÓN\n' + [...state.players].sort((a,b)=>(b.kills??0)-(a.kills??0)).slice(0,8).map((p,i)=>`${i+1}. ${p.name}: ${p.kills??0} / ${p.deaths??0}`).join('\n'));
+        this.scoreboard?.setText('LÍDERES                   B / M\n' + [...state.players].sort((a,b)=>(b.kills??0)-(a.kills??0)).slice(0,3).map((p,i)=>`${i+1}. ${p.name}: ${p.kills??0} / ${p.deaths??0}`).join('\n'));
         this.healthBar?.clear();
         if (self) {
-            this.healthBar?.fillStyle(0x334155).fillRect(36, 127, 220, 12);
-            this.healthBar?.fillStyle((self.hp??100)>30 ? 0x22c55e : 0xef4444).fillRect(36,127,220*Math.max(0,Math.min(100,self.hp??100))/100,12);
+            this.healthBar?.fillStyle(0x334155).fillRect(355, 37, 260, 8);
+            this.healthBar?.fillStyle((self.hp??100)>30 ? 0x22c55e : 0xef4444).fillRect(355,37,260*Math.max(0,Math.min(100,self.hp??100))/100,8);
         }
-        if (self) this.combatText?.setText(`HP: ${self.hp ?? 100} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
+        if (self) this.combatText?.setText(`VIDA ${self.hp ?? 100}     BAJAS ${self.kills ?? 0} / ${self.deaths ?? 0}\n${({pistol: '[1] PISTOLA', machineGun: '[2] AMETRALLADORA', shotgun: '[3] ESCOPETA'})[this.weapon]}${self.alive === false ? ' · REAPARECIENDO…' : ''}`);
         this.bullets?.clear();
         this.bullets?.fillStyle(0xfacc15, 1);
         for (const projectile of state.projectiles) this.bullets?.fillCircle(projectile.x, projectile.y, 5);
     };
 
-    update(time: number) {
+    update(time: number, delta: number) {
+        this.updateNavigation();
+        if (this.level && this.selfId) {
+            const pointer = this.input.activePointer;
+            const overField = pointer.x >= 0 && pointer.x <= 1024 && pointer.y > 155 && pointer.y < 715;
+            this.lessonOverlay?.update({
+                time, delta, selfId: this.selfId, players: this.playerRegistry.getAll(),
+                map: this.level, weapon: this.weapon, editingProfile: this.editingProfile,
+                pointer: overField && !this.editingProfile ? this.worldCamera.getWorldPoint(pointer.x, pointer.y) : null
+            });
+        }
         if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors) return;
+        if (this.editingProfile) {
+            const input: PlayerInput = { up:false, down:false, left:false, right:false, dash:false };
+            const serialized = JSON.stringify(input);
+            if (serialized !== this.previousInput) {
+                this.socket.emit(SOCKET_EVENTS.PLAYER_INPUT, { input });
+                this.previousInput = serialized;
+            }
+            this.fireHeld = false;
+            return;
+        }
         const pad = this.input.gamepad?.getPad(0);
         const x = pad?.leftStick.x ?? 0;
         const y = pad?.leftStick.y ?? 0;
@@ -281,11 +314,12 @@ export class ArenaScene extends Scene
         };
         const player = this.playerRegistry.get(this.selfId);
         const pointer = this.input.activePointer;
-        const holding = pointer.isDown && pointer.x < 765 && pointer.y > 155 && pointer.y < 715;
+        const holding = pointer.isDown && pointer.downElement === this.game.canvas &&
+            pointer.x >= 0 && pointer.x <= 1024 && pointer.y > 155 && pointer.y < 715;
         const cooldown = this.weapon === 'machineGun' ? 100 : this.weapon === 'shotgun' ? 800 : 500;
         if (player && player.alive !== false && holding && time - this.lastShot >= cooldown &&
             (this.weapon === 'machineGun' || !this.fireHeld)) {
-            const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            const point = this.worldCamera.getWorldPoint(pointer.x, pointer.y);
             const angle = Math.atan2(point.y - player.y, point.x - player.x);
             this.socket.emit(SOCKET_EVENTS.PLAYER_SHOOT, { weapon: this.weapon, angle });
             this.lastShot = time;
@@ -354,6 +388,32 @@ export class ArenaScene extends Scene
         );
 
         this.playerViews.set(player.id, view);
+        view.container.setDepth(1);
+        this.cameras.main.ignore(view.container);
+        if (player.id === this.selfId) this.worldCamera.startFollow(view.container, true, 0.15, 0.15);
+    }
+
+    private updateNavigation(): void {
+        const map=this.level,self=this.playerRegistry.get(this.selfId),g=this.minimap;
+        if(!map||!self||!g) return;
+        const zone=map.zones?.find(z=>self.x>=z.x&&self.x<z.x+z.width&&self.y>=z.y&&self.y<z.y+z.height);
+        this.roomText.setText(zone?.name ?? 'CAÑÓN ROJO');
+        const x=856,y=20,w=144,h=96,sx=w/map.width,sy=h/map.height;
+        g.clear().fillStyle(0x0c1714,0.95).fillRect(x-4,y-4,w+8,h+8);
+        g.fillStyle(0xb88958).fillRect(x,y,w,h);
+        g.fillStyle(0x78442d);
+        for(const obstacle of map.obstacles) if(obstacle.type==='wall') {
+            g.fillRect(x+(obstacle.x-obstacle.width/2)*sx,y+(obstacle.y-obstacle.height/2)*sy,obstacle.width*sx,obstacle.height*sy);
+        }
+        for(const obstacle of map.obstacles) {
+            if(obstacle.type==='cactus') {
+                g.fillStyle(0x24572b).fillCircle(x+obstacle.x*sx,y+obstacle.y*sy,1.6);
+            } else if(obstacle.type==='trap') {
+                g.lineStyle(2,0x704020).lineBetween(x+(obstacle.x-obstacle.width/2)*sx,y+obstacle.y*sy,x+(obstacle.x+obstacle.width/2)*sx,y+obstacle.y*sy);
+            }
+        }
+        g.lineStyle(1,0xf5e4b6,0.6).strokeRect(x+this.worldCamera.scrollX*sx,y+this.worldCamera.scrollY*sy,1024*sx,560*sy);
+        g.fillStyle(0xd5ed8b).fillCircle(x+self.x*sx,y+self.y*sy,3);
     }
 
     private clearPlayerViews()
@@ -369,15 +429,15 @@ export class ArenaScene extends Scene
 
     private updatePlayerCount()
     {
-        this.playerCountText.setText(`Players: ${this.playerRegistry.size}`);
+        this.playerCountText.setText(`${this.playerRegistry.size} PILOTOS EN EL CAMPO`);
     }
 
     private setConnectionStatus(status: ConnectionStatus)
     {
         const labels: Record<ConnectionStatus, string> = {
-            connecting: '● CONNECTING',
-            connected: '● CONNECTED',
-            disconnected: '● DISCONNECTED'
+            connecting: '● CONECTANDO',
+            connected: '● EN LÍNEA',
+            disconnected: '● RECONECTANDO'
         };
 
         const colors: Record<ConnectionStatus, string> = {

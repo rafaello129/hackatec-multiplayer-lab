@@ -6,6 +6,13 @@ export type ClientIdentity = {
 
 export const DEFAULT_ROOM_ID = 'classroom';
 
+function createProfileId(): string
+{
+    // getRandomValues is also available on HTTP LAN origins, unlike randomUUID.
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export function getClientIdentity(search: string): ClientIdentity
 {
     const params = new URLSearchParams(search);
@@ -16,10 +23,10 @@ export function getClientIdentity(search: string): ClientIdentity
     try {
         profileId = localStorage.getItem('hackatec-profile-id') ?? '';
         if (!profileId) {
-            profileId = crypto.randomUUID();
+            profileId = createProfileId();
             localStorage.setItem('hackatec-profile-id', profileId);
         }
-    } catch { profileId = crypto.randomUUID(); }
+    } catch { profileId ||= createProfileId(); }
     return {
         profileId,
         roomId,

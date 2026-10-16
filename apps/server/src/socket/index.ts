@@ -15,6 +15,7 @@ import { CombatManager } from '../game/CombatManager.js';
 import { ProfileStore, type Profile } from '../profiles/ProfileStore.js';
 import { RoomManager } from '../rooms/RoomManager.js';
 import { parseJoinPayload } from './validateJoinPayload.js';
+import { SessionStore } from './SessionStore.js';
 
 function socketRoom(roomId: string): string
 {
@@ -23,7 +24,8 @@ function socketRoom(roomId: string): string
 
 export function registerSocketHandlers(
     io: Server,
-    roomManager = new RoomManager()
+    roomManager = new RoomManager(),
+    sessions = new SessionStore()
 )
 {
     const movement = new Map<string, MovementRuntime>();
@@ -31,8 +33,20 @@ export function registerSocketHandlers(
     const profiles = new ProfileStore();
     const identities = new Map<string,string>();
     const rooms = new Set<string>();
+    const removePlayer = (playerId: string) => {
+        movement.delete(playerId);
+        identities.delete(playerId);
+        sessions.remove(playerId);
+        const left = roomManager.leave(playerId);
+        if (!left) return;
+        combat.leave(left.roomId, playerId, !roomManager.hasRoom(left.roomId));
+        if (!roomManager.hasRoom(left.roomId)) rooms.delete(left.roomId);
+        const payload: PlayerLeftPayload = { playerId };
+        io.to(socketRoom(left.roomId)).emit(SOCKET_EVENTS.PLAYER_LEFT, payload);
+    };
     const tick = setInterval(() => {
         const now = Date.now();
+        for (const playerId of sessions.expired(now)) removePlayer(playerId);
         for (const [socketId, state] of movement) {
             const player = roomManager.getPlayer(socketId);
             const roomId = roomManager.getRoomId(socketId);
@@ -55,20 +69,35 @@ export function registerSocketHandlers(
         }
     }, 50);
     tick.unref?.();
+    io.engine.on('close', () => clearInterval(tick));
 
     io.on('connection', (socket) =>
     {
-        console.log(`[socket] connected: ${socket.id}`);
+        const { session, recovered } = sessions.open(socket.handshake.auth?.sessionToken, socket.id, Date.now());
+        const playerId = session.playerId;
+        const retained = roomManager.getPlayer(playerId);
+        const retainedRoom = roomManager.getRoomId(playerId);
+        if (recovered && retained && retainedRoom) {
+            retained.connected = true;
+            socket.join(socketRoom(retainedRoom));
+            socket.to(socketRoom(retainedRoom)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player: retained });
+        }
+        let joinAttempt = 0;
+        console.log(`[socket] connected: ${playerId}`);
 
         const payload: ConnectionReadyPayload = {
             message: 'connected',
-            socketId: socket.id
+            socketId: socket.id,
+            sessionToken: session.token,
+            recovered: recovered && Boolean(retained),
+            recoveryWindowMs: sessions.windowMs
         };
 
         socket.emit(SOCKET_EVENTS.CONNECTION_READY, payload);
 
         socket.on(SOCKET_EVENTS.ROOM_JOIN, async (rawPayload: unknown) =>
         {
+            const attempt = ++joinAttempt;
             const parsed = parseJoinPayload(rawPayload);
 
             if (!parsed.ok)
@@ -83,13 +112,15 @@ export function registerSocketHandlers(
 
             const roomId = parsed.value.roomId.trim();
             const playerName = parsed.value.playerName;
-            const previousRoomId = roomManager.getRoomId(socket.id);
             const suppliedId = (rawPayload as { profileId?: unknown }).profileId;
-            const profileId = typeof suppliedId === 'string' && /^[a-zA-Z0-9_-]{8,80}$/.test(suppliedId) ? suppliedId : socket.id;
+            const profileId = identities.get(playerId) ??
+                (typeof suppliedId === 'string' && /^[a-zA-Z0-9_-]{8,80}$/.test(suppliedId) ? suppliedId : playerId);
             let profile: Profile;
             try { profile = await profiles.get(profileId); }
             catch { profile = { appearance: { mode: 'color' as const, colorHex: '#60A5FA' } }; }
-            const result = roomManager.join(roomId, socket.id, playerName);
+            if (!socket.connected || session.socketId !== socket.id || attempt !== joinAttempt) return;
+            const previousRoomId = roomManager.getRoomId(playerId);
+            const result = roomManager.join(roomId, playerId, playerName);
 
             if (!result.ok)
             {
@@ -103,9 +134,12 @@ export function registerSocketHandlers(
             }
 
             if (!socket.connected) return;
-            identities.set(socket.id, profileId);
-            result.player.appearance = profile.appearance;
-            if (profile.username) result.player.name = profile.username;
+            identities.set(playerId, profileId);
+            result.player.connected = true;
+            if (previousRoomId !== roomId) {
+                result.player.appearance = profile.appearance;
+                if (!playerName?.trim() && profile.username) result.player.name = profile.username;
+            }
             if (result.previous)
             {
                 socket.leave(socketRoom(result.previous.roomId));
@@ -118,21 +152,21 @@ export function registerSocketHandlers(
                     .emit(SOCKET_EVENTS.PLAYER_LEFT, leftPayload);
 
                 console.log(
-                    `[room] ${socket.id} left ${result.previous.roomId}`
+                    `[room] ${playerId} left ${result.previous.roomId}`
                 );
             }
 
             if (previousRoomId && previousRoomId !== result.roomId) {
-                combat.leave(previousRoomId, socket.id, !roomManager.hasRoom(previousRoomId));
+                combat.leave(previousRoomId, playerId, !roomManager.hasRoom(previousRoomId));
                 if (!roomManager.hasRoom(previousRoomId)) rooms.delete(previousRoomId);
             }
-            if (!movement.has(socket.id) || previousRoomId !== result.roomId) movement.set(socket.id, createMovementRuntime());
+            if (!movement.has(playerId) || previousRoomId !== result.roomId) movement.set(playerId, createMovementRuntime());
             rooms.add(result.roomId);
             socket.join(socketRoom(result.roomId));
 
             const statePayload: RoomStatePayload = {
                 roomId: result.roomId,
-                selfId: socket.id,
+                selfId: playerId,
                 players: result.players,
                 map: result.map
             };
@@ -149,15 +183,15 @@ export function registerSocketHandlers(
                     .emit(SOCKET_EVENTS.PLAYER_JOINED, joinedPayload);
 
                 console.log(
-                    `[room] ${socket.id} joined ${result.roomId} as ${result.player.name}`
+                    `[room] ${playerId} joined ${result.roomId} as ${result.player.name}`
                 );
             }
         });
 
         socket.on(SOCKET_EVENTS.PROFILE_SET, async (raw: unknown) => {
-            const player = roomManager.getPlayer(socket.id);
-            const roomId = roomManager.getRoomId(socket.id);
-            const id = identities.get(socket.id);
+            const player = roomManager.getPlayer(playerId);
+            const roomId = roomManager.getRoomId(playerId);
+            const id = identities.get(playerId);
             if (!player || !roomId || !id || !raw || typeof raw !== 'object') return;
             const value = raw as ProfileUpdatePayload;
             const username = value.username;
@@ -173,7 +207,7 @@ export function registerSocketHandlers(
             )) { socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok:false, message:'Apariencia inválida' }); return; }
             try {
                 const saved = await profiles.update(id, { ...(username ? { username } : {}), ...(appearance ? { appearance } : {}) });
-                if (!socket.connected || roomManager.getPlayer(socket.id) !== player || identities.get(socket.id) !== id) return;
+                if (!socket.connected || roomManager.getPlayer(playerId) !== player || identities.get(playerId) !== id) return;
                 if (saved.username) player.name = saved.username;
                 player.appearance = saved.appearance;
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
@@ -184,44 +218,42 @@ export function registerSocketHandlers(
         });
 
         socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) => {
-            if (!roomManager.getRoomId(socket.id)) return;
+            if (!roomManager.getRoomId(playerId)) return;
             if (!raw || typeof raw !== 'object') return;
             const input = (raw as Partial<PlayerInputPayload>).input;
             if (!input || typeof input !== 'object') return;
             const keys: (keyof PlayerInput)[] = ['up', 'down', 'left', 'right', 'dash'];
             if (!keys.every(key => typeof input[key] === 'boolean')) return;
-            const state = movement.get(socket.id);
-            if (state) acceptMovementInput(state, input, Date.now(), roomManager.getPlayer(socket.id));
+            const state = movement.get(playerId);
+            if (state) acceptMovementInput(state, input, Date.now(), roomManager.getPlayer(playerId));
         });
 
         socket.on(SOCKET_EVENTS.PLAYER_SHOOT, (payload: unknown) => {
-            const roomId = roomManager.getRoomId(socket.id);
-            const player = roomManager.getPlayer(socket.id);
+            const roomId = roomManager.getRoomId(playerId);
+            const player = roomManager.getPlayer(playerId);
             if (roomId && player) combat.shoot(roomId, player, payload, Date.now());
         });
 
         socket.on('disconnect', (reason) => {
-            movement.delete(socket.id);
-            identities.delete(socket.id);
-            const left = roomManager.leave(socket.id);
-
-            if (left)
-            {
-                combat.leave(left.roomId, socket.id, !roomManager.hasRoom(left.roomId));
-                if (!roomManager.hasRoom(left.roomId)) rooms.delete(left.roomId);
-                const leftPayload: PlayerLeftPayload = {
-                    playerId: left.player.id
-                };
-
-                io.to(socketRoom(left.roomId))
-                    .emit(SOCKET_EVENTS.PLAYER_LEFT, leftPayload);
-
-                console.log(
-                    `[room] ${socket.id} left ${left.roomId}`
-                );
+            if (session.socketId !== socket.id) return;
+            const player = roomManager.getPlayer(playerId);
+            const roomId = roomManager.getRoomId(playerId);
+            const temporary = ['transport close', 'transport error', 'ping timeout', 'forced close'].includes(reason);
+            if (temporary && player && roomId && sessions.suspend(playerId, socket.id, Date.now())) {
+                player.connected = false;
+                player.isDashing = false;
+                const state = movement.get(playerId);
+                if (state) {
+                    state.input = { up:false, down:false, left:false, right:false, dash:false };
+                    state.lastInputAt = 0;
+                    state.dashUntil = 0;
+                }
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
+            } else {
+                removePlayer(playerId);
             }
 
-            console.log(`[socket] disconnected: ${socket.id} (${reason})`);
+            console.log(`[socket] disconnected: ${playerId} (${reason})`);
         });
     });
 

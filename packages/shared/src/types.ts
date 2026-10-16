@@ -3,11 +3,18 @@ export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 export type ConnectionReadyPayload = {
     message: string;
     socketId: string;
+    /** Private bearer credential: only sent to its own connection. */
+    sessionToken?: string;
+    recovered?: boolean;
+    recoveryWindowMs?: number;
 };
+
+export const RECONNECTION_WINDOW_MS = 30_000;
 
 export type PlayerState = {
     id: string;
     name: string;
+    connected?: boolean;
     x: number;
     y: number;
     color: number;
@@ -58,7 +65,9 @@ export type WallObstacle = BaseMapObstacle & { type: 'wall' };
 export type TrapObstacle = BaseMapObstacle & { type: 'trap' };
 export type CactusObstacle = BaseMapObstacle & { type: 'cactus'; size: CactusSize; damage: number };
 export type MapObstacle = WallObstacle | TrapObstacle | CactusObstacle;
-export type GameMapState = { seed: number; width: number; height: number; obstacles: MapObstacle[] };
+export type MapZone = { id: string; name: string; x: number; y: number; width: number; height: number };
+export type MapTrail = { width: number; points: { x: number; y: number }[] };
+export type GameMapState = { seed: number; width: number; height: number; obstacles: MapObstacle[]; zones?: MapZone[]; trails?: MapTrail[] };
 export type PlayerInput = { up: boolean; down: boolean; left: boolean; right: boolean; dash: boolean };
 export type PlayerInputPayload = { input: PlayerInput };
 export type PlayerMovedPayload = { player: PlayerState };

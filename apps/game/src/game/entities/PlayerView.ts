@@ -1,6 +1,7 @@
 import type { PlayerState } from '@hackatec/shared';
 import { serverUrl } from '../../network/socket';
 import { GameObjects, Scene } from 'phaser';
+import { SHIP_TEXTURE } from '../assets';
 
 export class PlayerView
 {
@@ -9,6 +10,7 @@ export class PlayerView
     private readonly body: GameObjects.Rectangle;
     private readonly scene: Scene;
     private readonly skin: GameObjects.Image;
+    private readonly ship: GameObjects.Image;
     private currentSkin = '';
     private readonly nameText: GameObjects.Text;
     private readonly selfText?: GameObjects.Text;
@@ -35,24 +37,27 @@ export class PlayerView
             isSelf ? 1 : 0.55
         );
 
-        this.nameText = scene.add.text(0, -40, player.name, {
+        this.nameText = scene.add.text(0, -33, player.name, {
             fontFamily: 'Arial',
-            fontSize: 15,
-            color: '#f8fafc',
-            stroke: '#020617',
-            strokeThickness: 4
+            fontSize: 12,
+            color: '#fff7e4',
+            stroke: '#343a2d',
+            strokeThickness: 3
         }).setOrigin(0.5);
 
         this.skin = scene.add.image(0, 0, '__WHITE').setVisible(false);
+        this.ship = scene.add.image(0, 0, SHIP_TEXTURE).setDisplaySize(42, 42);
+        this.ship.setVisible(scene.textures.exists(SHIP_TEXTURE));
         const children: GameObjects.GameObject[] = [
             this.body,
+            this.ship,
             this.skin,
             this.nameText
         ];
 
         if (isSelf)
         {
-            this.selfText = scene.add.text(0, 38, 'YOU', {
+            this.selfText = scene.add.text(0, 30, 'TÚ', {
                 fontFamily: 'Arial Black',
                 fontSize: 11,
                 color: '#7dd3fc',
@@ -71,9 +76,13 @@ export class PlayerView
     {
         this.container.setPosition(player.x, player.y);
         const color = player.appearance?.colorHex;
-        this.body.setFillStyle(color ? parseInt(color.slice(1),16) : player.color);
+        this.body.setFillStyle(color ? parseInt(color.slice(1),16) : player.color, 0);
+        this.body.setStrokeStyle(0);
         const url = player.appearance?.mode === 'skin' ? player.appearance.skin?.url : undefined;
-        if (!url) { this.skin.setVisible(false); this.body.setVisible(true); }
+        const hasShip = this.scene.textures.exists(SHIP_TEXTURE);
+        this.ship.setVisible(!url && hasShip);
+        if (!hasShip && !url) this.body.setFillStyle(color ? parseInt(color.slice(1),16) : player.color);
+        if (!url) { this.currentSkin = ''; this.skin.setVisible(false); this.body.setVisible(true); }
         else if (url === this.currentSkin && this.scene.textures.exists('skin:' + url)) {
             this.skin.setTexture('skin:' + url).setDisplaySize(42,42).setVisible(true);
             this.body.setVisible(false);
@@ -89,10 +98,11 @@ export class PlayerView
                 this.scene.load.start();
             }
         }
-        this.container.setAlpha(player.alive === false ? 0.25 : player.isDashing ? 0.55 : 1);
-        this.body.setStrokeStyle(player.isDashing ? 3 : 2, player.isDashing ? 0xf0abfc : 0xffffff);
+        this.container.setAlpha(player.alive === false ? 0.25 : player.connected === false ? 0.5 : player.isDashing ? 0.55 : 1);
+        if (player.isDashing) this.body.setStrokeStyle(3, 0xf0abfc);
 
-        this.nameText.setText(player.name);
+        this.nameText.setText(player.name + (player.connected === false ? ' · reconectando' : ''));
+        this.nameText.setColor(color ?? '#fff7e4');
     }
 
     destroy()

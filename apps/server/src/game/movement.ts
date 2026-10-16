@@ -1,5 +1,4 @@
 import type { GameMapState, PlayerInput, PlayerState } from '@hackatec/shared';
-import { ARENA_WIDTH } from './constants.js';
 
 const PLAYER_RADIUS = 21;
 const SPEED = 185;
@@ -36,8 +35,8 @@ export function acceptMovementInput(state: MovementRuntime, input: PlayerInput, 
 }
 
 function blocked(x: number, y: number, map: GameMapState): boolean {
-    if (x < PLAYER_RADIUS || x > ARENA_WIDTH - PLAYER_RADIUS ||
-        y < 155 + PLAYER_RADIUS || y > 715 - PLAYER_RADIUS) return true;
+    if (x < PLAYER_RADIUS || x > map.width - PLAYER_RADIUS ||
+        y < PLAYER_RADIUS || y > map.height - PLAYER_RADIUS) return true;
 
     return map.obstacles.some(obstacle => {
         if (obstacle.type !== 'wall') return false;

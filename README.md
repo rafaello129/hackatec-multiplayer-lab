@@ -2,9 +2,11 @@
 
 Base educativa para construir colaborativamente un videojuego web 2D multijugador usando **TypeScript, Phaser, Socket.IO, Git, prompts y agentes de programación**.
 
+Para la siguiente clase: [seis ejercicios independientes con funciones vacías e integración preparada](docs/CLASSROOM.md). Cada alumno trabaja en su propia carpeta.
+
 ## Estado
 
-**Fase 2 — Classroom Ready**
+**Laboratorio jugable — lobby e invitaciones**
 
 La base ya incluye:
 
@@ -13,7 +15,11 @@ La base ya incluye:
 - servidor Node + Express + Socket.IO;
 - contratos compartidos;
 - salas en memoria;
-- jugadores estáticos sincronizados;
+- lobby para crear o entrar a salas e invitar jugadores;
+- movimiento, dash y jugadores sincronizados;
+- armas, daño, bajas y respawn;
+- mapas con paredes, trampas y cactus;
+- perfiles, skins y clasificación;
 - entrada y salida en tiempo real;
 - aislamiento entre salas;
 - reconexión;
@@ -27,7 +33,7 @@ La base ya incluye:
 - plantillas de Issue y Pull Request;
 - guía operativa del profesor.
 
-> La ausencia de movimiento, disparos, daño y score es intencional. Esas features son el contenido práctico de la clase.
+> El desarrollo sigue siendo incremental: cada nueva función debe tener alcance y validación propios.
 
 ## Requisitos
 
@@ -54,7 +60,11 @@ Levanta:
 - servidor en `http://localhost:3001`;
 - cliente Vite en `http://localhost:5173`.
 
-Prueba tres jugadores:
+Abre `http://localhost:5173/` para elegir nombre y sala. **Crear sala nueva** genera un código; **Entrar a la sala** crea la sala si está vacía o te une a sus jugadores. En la partida, **Invitar** permite copiar un enlace y **Volver al lobby** cierra tu conexión actual al navegar.
+
+Las invitaciones contienen solo `?room=...`: cada invitado elige su propio nombre. Los enlaces anteriores con sala y nombre siguen entrando directamente. Para invitar a otro equipo por LAN, abre primero el cliente mediante la IP accesible del host y configura `VITE_SERVER_URL` según la sección de networking.
+
+Prueba tres jugadores con enlaces directos:
 
 ```text
 http://localhost:5173/?room=hackatec&name=Rafael
@@ -190,15 +200,15 @@ Cada Pull Request hacia `main` ejecuta:
 
 Un PR con CI fallando no está listo para merge.
 
-## Features reservadas para los alumnos
+## Próximas funciones
 
 ```text
-movimiento sincronizado  ❌
-disparos                  ❌
-vida / daño               ❌
-respawn / kills           ❌
-mapa / obstáculos         ❌
-HUD / scoreboard          ❌
+reconexión con continuidad de partida
+rondas y resultados
+tutorial y feedback de combate
+controles táctiles
+equipos y espectadores
+herramientas del profesor
 ```
 
 Se desarrollarán en ramas separadas mediante Issues, prompts, agentes y Pull Requests.

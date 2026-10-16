@@ -97,7 +97,7 @@ export class CombatManager {
             let hit = false;
             for (let i = 0; i < segments && !hit; i++) {
                 p.x += p.vx * dt / segments; p.y += p.vy * dt / segments;
-                if (p.x < 0 || p.x > map.width || p.y < 155 || p.y > 715 ||
+                if (p.x < 0 || p.x > map.width || p.y < 0 || p.y > map.height ||
                     map.obstacles.some(o => o.type === 'wall' && overlaps(p.x, p.y, PROJECTILE_RADIUS, o))) { hit = true; break; }
                 for (const target of players) {
                     if (target.id === p.ownerId || target.alive === false) continue;
