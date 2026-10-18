@@ -20,7 +20,7 @@ export class PlayerView
             0,
             42,
             42,
-            player.color,
+            0x3b82f6,
             1
         );
 
@@ -66,8 +66,112 @@ export class PlayerView
     update(player: PlayerState)
     {
         this.container.setPosition(player.x, player.y);
-        this.body.setFillStyle(player.color);
+        this.body.setFillStyle(0x3b82f6);
         this.nameText.setText(player.name);
+    }
+
+    playSpin()
+    {
+        this.container.scene.tweens.killTweensOf(this.body);
+
+        this.body.x = 0;
+        this.body.y = 0;
+        this.body.scaleX = 1;
+        this.body.scaleY = 1;
+        this.body.angle = 0;
+
+        this.container.scene.tweens.add({
+            targets: this.body,
+            angle: 360,
+            duration: 700,
+            ease: 'Power2',
+            onComplete: () => {
+                this.body.angle = 0;
+            }
+        });
+    }
+
+   playJump()
+    {
+        this.container.scene.tweens.killTweensOf(this.body);
+
+        this.body.x = 0;
+        this.body.y = 0;
+        this.body.angle = 0;
+        this.body.scaleX = 1;
+        this.body.scaleY = 1;
+
+        this.container.scene.tweens.add({
+            targets: this.body,
+            y: -30,
+            duration: 160,
+            yoyo: true,
+            repeat: 1,
+            ease: 'Quad.easeOut',
+            onComplete: () => {
+                this.body.x = 0;
+                this.body.y = 0;
+                this.body.angle = 0;
+                this.body.scaleX = 1;
+                this.body.scaleY = 1;
+            }
+        });
+    }
+
+    playCrouch()
+    {
+        this.container.scene.tweens.killTweensOf(this.body);
+
+        this.body.x = 0;
+        this.body.y = 0;
+        this.body.angle = 0;
+        this.body.scaleX = 1;
+        this.body.scaleY = 1;
+
+        this.container.scene.tweens.add({
+            targets: this.body,
+            scaleX: 1.3,
+            scaleY: 0.45,
+            y: 10,
+            duration: 140,
+            yoyo: true,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                this.body.x = 0;
+                this.body.y = 0;
+                this.body.angle = 0;
+                this.body.scaleX = 1;
+                this.body.scaleY = 1;
+            }
+        });
+    }
+
+    playShake()
+    {
+        this.container.scene.tweens.killTweensOf(this.body);
+
+        this.body.x = 0;
+        this.body.y = 0;
+        this.body.angle = 0;
+        this.body.scaleX = 1;
+        this.body.scaleY = 1;
+
+        this.container.scene.tweens.add({
+            targets: this.body,
+            x: -22,
+            angle: -12,
+            duration: 50,
+            yoyo: true,
+            repeat: 9,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                this.body.x = 0;
+                this.body.y = 0;
+                this.body.angle = 0;
+                this.body.scaleX = 1;
+                this.body.scaleY = 1;
+            }
+        });
     }
 
     destroy()

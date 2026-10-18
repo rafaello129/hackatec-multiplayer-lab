@@ -434,14 +434,36 @@ private createInterface()
         const selfView = this.playerViews.get(this.selfId);
         if (!selfView) return;
 
-        // --- SOPORTE DE EMOTES (Tecla C) ---
-        if (this.input.keyboard && Input.Keyboard.JustDown(this.input.keyboard.addKey(Input.Keyboard.KeyCodes.C))) {
-            this.tweens.add({
-                targets: selfView as any,
-                angle: (selfView as any).angle + 360,
-                duration: 1000,
-                ease: 'Power2'
-            });
+        // --- EMOTES ---
+        if (this.input.keyboard) {
+
+            // C = Giro 360°
+            if (Input.Keyboard.JustDown(
+                this.input.keyboard.addKey(Input.Keyboard.KeyCodes.C)
+            )) {
+                selfView.playSpin();
+            }
+
+            // V = Salto
+            if (Input.Keyboard.JustDown(
+                this.input.keyboard.addKey(Input.Keyboard.KeyCodes.V)
+            )) {
+                selfView.playJump();
+            }
+
+            // B = Agacharse
+            if (Input.Keyboard.JustDown(
+                this.input.keyboard.addKey(Input.Keyboard.KeyCodes.B)
+            )) {
+                selfView.playCrouch();
+            }
+
+            // N = Sacudida
+            if (Input.Keyboard.JustDown(
+                this.input.keyboard.addKey(Input.Keyboard.KeyCodes.N)
+            )) {
+                selfView.playShake();
+            }
         }
 
         const input: PlayerInput = {
