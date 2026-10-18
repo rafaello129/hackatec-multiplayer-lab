@@ -11,6 +11,14 @@ const config: Types.Core.GameConfig = {
       keyboard: true
     },
     backgroundColor: '#07111f',
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { x: 0, y: 0 },
+            debug: false
+        }
+    },
+
     scale: {
         mode: Scale.FIT,
         autoCenter: Scale.CENTER_BOTH

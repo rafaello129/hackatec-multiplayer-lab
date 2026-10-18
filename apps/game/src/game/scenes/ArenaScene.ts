@@ -18,12 +18,20 @@ import { PlayerRegistry } from '../../state/PlayerRegistry';
 
 export class ArenaScene extends Scene
 {
+    private timeRemaining: number = 300;
+    private timerText!: Phaser.GameObjects.Text;
+    private gameTimer?: Phaser.Time.TimerEvent;
+    private currentMode: string = 'normal';
+    private playerTeam: 'none' | 'red' | 'blue' = 'none';
+    private zombieGroup!: Phaser.Physics.Arcade.Group;
+    private zombieSpawnTimer?: Phaser.Time.TimerEvent;
     private socket!: Socket;
     private identity!: ClientIdentity;
     private readonly playerRegistry = new PlayerRegistry();
     private readonly playerViews = new Map<string, PlayerView>();
-
     private selfId = '';
+    
+    // ... tus demás propiedades ...
 
     private roomText!: GameObjects.Text;
     private playerCountText!: GameObjects.Text;
@@ -38,6 +46,7 @@ export class ArenaScene extends Scene
         left: Input.Keyboard.Key;
         right: Input.Keyboard.Key;
     };
+    
     private shiftKey!: Input.Keyboard.Key;
     private localX: number = 512;
     private localY: number = 438;
@@ -53,13 +62,17 @@ export class ArenaScene extends Scene
     {
         super('ArenaScene');
     }
-
-    create()
-    {
+   
+  
+    public create(): void {
         this.cameras.main.setBackgroundColor('#07111f');
 
         this.identity = getClientIdentity(window.location.search);
         this.socket = getSocket();
+
+        this.zombieGroup = this.physics.add.group({
+            maxSize: 100
+        });
 
         this.createInterface();
         this.attachSocketListeners();
@@ -77,25 +90,286 @@ export class ArenaScene extends Scene
             this.input.keyboard.enabled = true;
         }
 
-        this.events.once('shutdown', () =>
-        {
+        this.events.once('shutdown', () => {
             this.detachSocketListeners();
             this.clearPlayerViews();
         });
 
-        if (this.socket.connected)
-        {
+        if (this.socket.connected) {
             this.setConnectionStatus('connected');
             this.joinRoom();
-        }
-        else
-        {
+        } else {
             this.setConnectionStatus('connecting');
             this.socket.connect();
         }
+
+        // --- REFERENCIA FIJA A LA ESCENA ---
+        const mainScene = this;
+
+        // --- 1. REGISTRO DE TEXTURA ZOMBI BOT ---
+        if (!mainScene.textures.exists('zombie_bot_skin')) {
+            const zG = mainScene.make.graphics({ x: 0, y: 0 }, false);
+            zG.fillStyle(0x10b981, 1);
+            zG.fillRect(0, 0, 32, 32);
+            zG.lineStyle(3, 0x065f46, 1);
+            zG.strokeRect(0, 0, 32, 32);
+            zG.generateTexture('zombie_bot_skin', 32, 32);
+            zG.destroy();
+        }
+
+        // --- 2. TEMPORIZADOR GLOBAL (Justo abajo de Players: 1 en X: 512, Y: 78) ---
+        if (!mainScene.gameTimer) {
+            mainScene.timeRemaining = 300;
+            mainScene.timerText = mainScene.add.text(512, 78, 'Tiempo: 05:00', {
+                fontFamily: 'Arial Black',
+                fontSize: 18,
+                color: '#facc15'
+            }).setOrigin(0.5, 0.5).setDepth(300);
+
+            mainScene.gameTimer = mainScene.time.addEvent({
+                delay: 1000,
+                callback: () => {
+                    if (mainScene.timeRemaining > 0) {
+                        mainScene.timeRemaining--;
+                        const minutes = Math.floor(mainScene.timeRemaining / 60);
+                        const seconds = mainScene.timeRemaining % 60;
+                        const fm = minutes.toString().padStart(2, '0');
+                        const fs = seconds.toString().padStart(2, '0');
+                        mainScene.timerText.setText(`Tiempo: ${fm}:${fs}`);
+                    } else {
+                        mainScene.timerText.setText('Tiempo: 00:00');
+                    }
+                },
+                callbackScope: mainScene,
+                loop: true
+            });
+        }
+
+        // --- 3. BOTÓN MENÚ MODOS (En X: 700, Y: 47, espacio perfecto entre Players y Connected) ---
+        const menuButton = mainScene.add.text(700, 47, '⚙️ Menú Modos', {
+            fontSize: 16,
+            fontFamily: 'Arial Black',
+            backgroundColor: '#0f172a',
+            color: '#facc15',
+            padding: { x: 14, y: 8 }
+        }).setOrigin(0.5, 0.5).setInteractive().setDepth(300).setVisible(false);
+
+        const resetTimer = () => {
+            mainScene.timeRemaining = 300;
+            if (mainScene.timerText) {
+                mainScene.timerText.setText('Tiempo: 05:00');
+            }
+        };
+
+        // --- 4. CONSTRUCTOR DEL MENÚ DE JUEGO ---
+        const createGameMenu = () => {
+            const bg = mainScene.add.rectangle(512, 384, 1024, 768, 0x000000, 0.85).setDepth(400);
+
+            const title = mainScene.add.text(512, 180, 'SELECCIONA EL MODO DE JUEGO', {
+                fontFamily: 'Arial Black',
+                fontSize: 28,
+                color: '#ffffff'
+            }).setOrigin(0.5).setDepth(401);
+
+            const btnNormal = mainScene.add.text(512, 270, ' Modo Normal (Clásico) ', {
+                fontSize: 22,
+                backgroundColor: '#1e293b',
+                color: '#38bdf8',
+                padding: { x: 20, y: 10 }
+            }).setOrigin(0.5).setInteractive().setDepth(401);
+
+            const btnTeam = mainScene.add.text(512, 350, ' Modo Equipos (Team) ', {
+                fontSize: 22,
+                backgroundColor: '#1e293b',
+                color: '#4ade80',
+                padding: { x: 20, y: 10 }
+            }).setOrigin(0.5).setInteractive().setDepth(401);
+
+            const btnZombie = mainScene.add.text(512, 430, ' Modo Zombis (Bots) ', {
+                fontSize: 22,
+                backgroundColor: '#1e293b',
+                color: '#f87171',
+                padding: { x: 20, y: 10 }
+            }).setOrigin(0.5).setInteractive().setDepth(401);
+
+            let btnRed: Phaser.GameObjects.Text;
+            let btnBlue: Phaser.GameObjects.Text;
+
+            const destroyMenu = () => {
+                bg.destroy();
+                title.destroy();
+                btnNormal.destroy();
+                btnTeam.destroy();
+                btnZombie.destroy();
+                if (btnRed) btnRed.destroy();
+                if (btnBlue) btnBlue.destroy();
+                menuButton.setVisible(true);
+            };
+
+            btnNormal.on('pointerdown', () => {
+                if (mainScene.currentMode !== 'normal') {
+                    resetTimer();
+                }
+                mainScene.currentMode = 'normal';
+                mainScene.playerTeam = 'none';
+                mainScene.zombieGroup?.clear(true, true);
+                destroyMenu();
+                console.log("Modo Normal activo");
+            });
+
+            btnTeam.on('pointerdown', () => {
+                const prevMode = mainScene.currentMode;
+                mainScene.currentMode = 'team';
+                
+                if (prevMode !== 'team') {
+                    resetTimer();
+                }
+
+                title.setText('ELIGE TU EQUIPO');
+                btnNormal.setVisible(false);
+                btnTeam.setVisible(false);
+                btnZombie.setVisible(false);
+
+                btnRed = mainScene.add.text(512, 310, ' 🔴 Equipo Rojo ', {
+                    fontSize: 22,
+                    backgroundColor: '#7f1d1d',
+                    color: '#fca5a5',
+                    padding: { x: 20, y: 10 }
+                }).setOrigin(0.5).setInteractive().setDepth(401);
+
+                btnBlue = mainScene.add.text(512, 400, ' 🔵 Equipo Azul ', {
+                    fontSize: 22,
+                    backgroundColor: '#1e3a8a',
+                    color: '#93c5fd',
+                    padding: { x: 20, y: 10 }
+                }).setOrigin(0.5).setInteractive().setDepth(401);
+
+                btnRed.on('pointerdown', () => {
+                    mainScene.playerTeam = 'red';
+                    mainScene.zombieGroup?.clear(true, true);
+                    destroyMenu();
+                    console.log("Modo Equipo activo - Bando: ROJO");
+                });
+
+                btnBlue.on('pointerdown', () => {
+                    mainScene.playerTeam = 'blue';
+                    mainScene.zombieGroup?.clear(true, true);
+                    destroyMenu();
+                    console.log("Modo Equipo activo - Bando: AZUL");
+                });
+            });
+
+           btnZombie.on('pointerdown', () => {
+                if (mainScene.currentMode !== 'zombie') {
+                    resetTimer();
+                }
+                mainScene.currentMode = 'zombie';
+                mainScene.playerTeam = 'none';
+                destroyMenu();
+
+                console.log("Modo Zombis activo");
+
+                // Llamada segura utilizando la referencia fija a la escena
+                mainScene.startZombieSpawner();
+            });
+        };
+
+        menuButton.on('pointerdown', () => {
+            menuButton.setVisible(false);
+            createGameMenu();
+        });
+
+        // Desplegar menú al inicio
+        createGameMenu();
     }
 
-    private createInterface()
+    private spawnZombieBot(): void {
+
+    // Distancia mínima y máxima del jugador
+    const minDistance = 250;
+    const maxDistance = 450;
+
+    // Ángulo aleatorio alrededor del jugador
+    const angle = Math.random() * Math.PI * 2;
+
+    // Distancia aleatoria
+    const distance =
+        minDistance + Math.random() * (maxDistance - minDistance);
+
+    // Posición aleatoria alrededor del jugador
+    const spawnX = this.localX + Math.cos(angle) * distance;
+    const spawnY = this.localY + Math.sin(angle) * distance;
+
+    const zombie = this.zombieGroup.create(
+        spawnX,
+        spawnY,
+        'zombie_bot_skin'
+    ) as Phaser.Physics.Arcade.Sprite;
+
+    zombie.setAlpha(1);
+    zombie.setScale(2);
+    zombie.setPosition(spawnX, spawnY);
+    zombie.setDepth(100);
+    zombie.setVisible(true);
+    zombie.setActive(true);
+    zombie.setCollideWorldBounds(true);
+
+    console.log('Zombi creado:', {
+        x: zombie.x,
+        y: zombie.y,
+        total: this.zombieGroup.countActive()
+    });
+}
+
+private startZombieSpawner(): void {
+    if (this.zombieSpawnTimer) {
+        this.zombieSpawnTimer.remove(false);
+    }
+
+    const spawnNextZombie = () => {
+
+        // Máximo 30 zombis activos
+        const activeZombies = this.zombieGroup
+            ? this.zombieGroup.getChildren().filter(
+                child => child.active
+            ).length
+            : 0;
+
+        if (activeZombies < 30 && this.currentMode === 'zombie') {
+            this.spawnZombieBot();
+        }
+
+        // Tiempo transcurrido
+        const elapsed = 300 - this.timeRemaining;
+
+        // Cooldown según el tiempo de partida
+        let cooldown = 1000;
+
+        if (elapsed >= 240) {
+            cooldown = 250;
+        } else if (elapsed >= 180) {
+            cooldown = 350;
+        } else if (elapsed >= 120) {
+            cooldown = 500;
+        } else if (elapsed >= 60) {
+            cooldown = 750;
+        }
+
+        // Programar el siguiente zombi
+        if (this.currentMode === 'zombie') {
+            this.zombieSpawnTimer = this.time.delayedCall(
+                cooldown,
+                spawnNextZombie
+            );
+        }
+    };
+
+    // Primer zombi
+    spawnNextZombie();
+}
+
+private createInterface()
+
     {
         this.add.rectangle(512, 64, 984, 96, 0x0f172a, 0.96)
             .setStrokeStyle(1, 0x334155, 0.8);
@@ -151,12 +425,24 @@ export class ArenaScene extends Scene
         }).setOrigin(0.5);
     }
 
+    
+
     // --- BUCLE DE ACTUALIZACIÓN DEL JUEGO (INPUT Y MOVIMIENTO) ---
-    public update(): void {
+    public update(time: number, delta: number): void {
         if (!this.selfId) return;
 
         const selfView = this.playerViews.get(this.selfId);
         if (!selfView) return;
+
+        // --- SOPORTE DE EMOTES (Tecla C) ---
+        if (this.input.keyboard && Input.Keyboard.JustDown(this.input.keyboard.addKey(Input.Keyboard.KeyCodes.C))) {
+            this.tweens.add({
+                targets: selfView as any,
+                angle: (selfView as any).angle + 360,
+                duration: 1000,
+                ease: 'Power2'
+            });
+        }
 
         const input: PlayerInput = {
             up: this.cursors.up.isDown || this.wasd.up.isDown,
@@ -167,7 +453,42 @@ export class ArenaScene extends Scene
         };
 
         this.processMovementAndDash(input, selfView);
-    }
+
+        // --- MOVIMIENTO DE TODOS LOS ZOMBIS ---
+if (this.currentMode === 'zombie' && this.zombieGroup) {
+
+    this.zombieGroup.children.forEach((child: Phaser.GameObjects.GameObject) => {
+
+        const zombie = child as Phaser.Physics.Arcade.Sprite;
+
+        if (!zombie.active) {
+            return true;
+        }
+
+        const dx = this.localX - zombie.x;
+        const dy = this.localY - zombie.y;
+
+        const distance = Math.hypot(dx, dy);
+
+        if (distance > 1) {
+            this.physics.moveTo(
+                zombie,
+                this.localX,
+                this.localY,
+                140
+            );
+        } else {
+            zombie.setVelocity(0, 0);
+        }
+
+        if (!this.isInvulnerable && distance < 35) {
+            console.log("¡Contacto con Zombi!");
+        }
+
+        return true;
+    });
+}
+    } // <-- Cierra el método update()
 
     // === 3. REEMPLAZA TU processMovementAndDash COMPLETO POR ESTE ===
     private processMovementAndDash(input: PlayerInput, selfView: PlayerView): void {
@@ -427,4 +748,4 @@ export class ArenaScene extends Scene
         this.connectionText.setText(labels[status]);
         this.connectionText.setColor(colors[status]);
     }
-}
+} // <-- Esta es la llave final que cierra la clase ArenaScene
