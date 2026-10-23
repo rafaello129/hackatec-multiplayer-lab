@@ -1,3 +1,39 @@
+export interface PlayerInput {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  shift: boolean;
+}
+
+export interface PlayerState {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  velocity: number;
+  angle: number;
+  isInvulnerable: boolean;
+}
+export interface PlayerInput {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  shift: boolean;
+}
+
+export interface PlayerState {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  velocity: number;
+  angle: number;
+  hp: number;
+  maxHp: number;
+  isInvulnerable: boolean;
+}
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
 export type ConnectionReadyPayload = {
@@ -5,6 +41,7 @@ export type ConnectionReadyPayload = {
     socketId: string;
 };
 
+<<<<<<< HEAD
 export type PlayerState = {
     id: string;
     name: string;
@@ -21,6 +58,8 @@ export type PlayerState = {
     appearance?: PlayerAppearance;
 };
 
+=======
+>>>>>>> Emotes-Modos
 export type JoinRoomPayload = {
     roomId: string;
     playerName?: string;
@@ -51,6 +90,7 @@ export type RoomErrorPayload = {
     message: string;
 };
 
+<<<<<<< HEAD
 export type MapObstacleType = 'wall' | 'trap' | 'cactus';
 export type CactusSize = 'small' | 'medium' | 'large';
 export type BaseMapObstacle = { id: string; type: MapObstacleType; x: number; y: number; width: number; height: number };
@@ -71,3 +111,24 @@ export type CombatSnapshot = { players: PlayerState[]; projectiles: ProjectileSt
 export type SkinAsset = { id: string; url: string; width: number; height: number };
 export type PlayerAppearance = { mode: 'color' | 'skin'; colorHex: string; skin?: SkinAsset };
 export type ProfileUpdatePayload = { username?: string; appearance?: PlayerAppearance };
+=======
+export interface PlayerInput {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  shift: boolean;
+}
+
+export interface PlayerState {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  velocity: number;
+  angle: number;
+  hp: number;
+  maxHp: number;
+  isInvulnerable: boolean;
+}
+>>>>>>> Emotes-Modos

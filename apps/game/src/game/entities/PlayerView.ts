@@ -25,7 +25,7 @@ export class PlayerView
             0,
             42,
             42,
-            player.color,
+            0x3b82f6,
             1
         );
 
@@ -70,29 +70,112 @@ export class PlayerView
     update(player: PlayerState)
     {
         this.container.setPosition(player.x, player.y);
-        const color = player.appearance?.colorHex;
-        this.body.setFillStyle(color ? parseInt(color.slice(1),16) : player.color);
-        const url = player.appearance?.mode === 'skin' ? player.appearance.skin?.url : undefined;
-        if (!url) { this.skin.setVisible(false); this.body.setVisible(true); }
-        else if (url === this.currentSkin && this.scene.textures.exists('skin:' + url)) {
-            this.skin.setTexture('skin:' + url).setDisplaySize(42,42).setVisible(true);
-            this.body.setVisible(false);
-        }
-        else if (url !== this.currentSkin) {
-            this.currentSkin = url;
-            const key = 'skin:' + url;
-            const fullUrl = new URL(url, serverUrl).href;
-            if (this.scene.textures.exists(key)) { this.skin.setTexture(key).setDisplaySize(42,42).setVisible(true); this.body.setVisible(false); }
-            else {
-                this.scene.load.image(key, fullUrl);
-                this.scene.load.once('filecomplete-image-' + key, () => { if (this.currentSkin === url) { this.skin.setTexture(key).setDisplaySize(42,42).setVisible(true); this.body.setVisible(false); } });
-                this.scene.load.start();
-            }
-        }
-        this.container.setAlpha(player.alive === false ? 0.25 : player.isDashing ? 0.55 : 1);
-        this.body.setStrokeStyle(player.isDashing ? 3 : 2, player.isDashing ? 0xf0abfc : 0xffffff);
-
+        this.body.setFillStyle(0x3b82f6);
         this.nameText.setText(player.name);
+    }
+
+    playSpin()
+    {
+        this.container.scene.tweens.killTweensOf(this.body);
+
+        this.body.x = 0;
+        this.body.y = 0;
+        this.body.scaleX = 1;
+        this.body.scaleY = 1;
+        this.body.angle = 0;
+
+        this.container.scene.tweens.add({
+            targets: this.body,
+            angle: 360,
+            duration: 700,
+            ease: 'Power2',
+            onComplete: () => {
+                this.body.angle = 0;
+            }
+        });
+    }
+
+   playJump()
+    {
+        this.container.scene.tweens.killTweensOf(this.body);
+
+        this.body.x = 0;
+        this.body.y = 0;
+        this.body.angle = 0;
+        this.body.scaleX = 1;
+        this.body.scaleY = 1;
+
+        this.container.scene.tweens.add({
+            targets: this.body,
+            y: -30,
+            duration: 160,
+            yoyo: true,
+            repeat: 1,
+            ease: 'Quad.easeOut',
+            onComplete: () => {
+                this.body.x = 0;
+                this.body.y = 0;
+                this.body.angle = 0;
+                this.body.scaleX = 1;
+                this.body.scaleY = 1;
+            }
+        });
+    }
+
+    playCrouch()
+    {
+        this.container.scene.tweens.killTweensOf(this.body);
+
+        this.body.x = 0;
+        this.body.y = 0;
+        this.body.angle = 0;
+        this.body.scaleX = 1;
+        this.body.scaleY = 1;
+
+        this.container.scene.tweens.add({
+            targets: this.body,
+            scaleX: 1.3,
+            scaleY: 0.45,
+            y: 10,
+            duration: 140,
+            yoyo: true,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                this.body.x = 0;
+                this.body.y = 0;
+                this.body.angle = 0;
+                this.body.scaleX = 1;
+                this.body.scaleY = 1;
+            }
+        });
+    }
+
+    playShake()
+    {
+        this.container.scene.tweens.killTweensOf(this.body);
+
+        this.body.x = 0;
+        this.body.y = 0;
+        this.body.angle = 0;
+        this.body.scaleX = 1;
+        this.body.scaleY = 1;
+
+        this.container.scene.tweens.add({
+            targets: this.body,
+            x: -22,
+            angle: -12,
+            duration: 50,
+            yoyo: true,
+            repeat: 9,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                this.body.x = 0;
+                this.body.y = 0;
+                this.body.angle = 0;
+                this.body.scaleX = 1;
+                this.body.scaleY = 1;
+            }
+        });
     }
 
     destroy()
