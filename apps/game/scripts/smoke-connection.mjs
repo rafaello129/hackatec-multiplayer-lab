@@ -37,6 +37,47 @@ async function createAccount(label) {
     return { username, cookie: setCookie.split(';')[0] };
 }
 
+
+async function loginAccount(username) {
+    const response = await fetch(`${url}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    });
+    const body = await response.json();
+    assert(response.status === 200, `could not log in smoke account: ${body.error}`);
+    const setCookie = response.headers.get('set-cookie');
+    assert(Boolean(setCookie), 'login did not issue a session cookie');
+    return setCookie.split(';')[0];
+}
+
+async function verifyAuthApi(account) {
+    const sessionResponse = await fetch(`${url}/api/auth/session`, {
+        headers: { Cookie: account.cookie },
+        cache: 'no-store'
+    });
+    const session = await sessionResponse.json();
+    assert(sessionResponse.status === 200, 'registered account session could not be recovered');
+    assert(session.account?.username === account.username, 'session endpoint returned the wrong account');
+
+    const wrongPasswordResponse = await fetch(`${url}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: account.username, password: 'Wrong-password-123!' })
+    });
+    const wrongPassword = await wrongPasswordResponse.json();
+    const missingUserResponse = await fetch(`${url}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: `Missing${suffix}`, password: 'Wrong-password-123!' })
+    });
+    const missingUser = await missingUserResponse.json();
+    assert(wrongPasswordResponse.status === 401 && missingUserResponse.status === 401,
+        'invalid credentials should return the same status');
+    assert(wrongPassword.error === missingUser.error,
+        'login errors must not reveal whether a username exists');
+}
+
 async function verifyUnauthenticatedSocketIsRejected() {
     const socket = io(url, { transports: ['websocket', 'polling'], timeout: 5000 });
     sockets.push(socket);
@@ -95,6 +136,8 @@ async function main() {
     const alphaAccount = await createAccount('Alpha');
     const betaAccount = await createAccount('Beta');
     const gammaAccount = await createAccount('Gamma');
+    await verifyAuthApi(alphaAccount);
+    const betaLoginCookie = await loginAccount(betaAccount.username);
 
     const alpha = await connectClient('alpha', alphaAccount.cookie);
     const alphaState = await joinRoom(alpha, 'hackatec');
@@ -103,7 +146,7 @@ async function main() {
     assert(alphaState.players[0]?.name === alphaAccount.username, 'server did not use the authenticated username');
 
     const alphaSawJoin = waitFor(alpha, 'player:joined');
-    const beta = await connectClient('beta', betaAccount.cookie);
+    const beta = await connectClient('beta', betaLoginCookie);
     const betaState = await joinRoom(beta, 'hackatec');
     const joined = await alphaSawJoin;
 
