@@ -1,6 +1,6 @@
 import './style.css';
 import { startGame } from './game/main';
-import { serverUrl } from './network/socket';
+import { getSocket, serverUrl } from './network/socket';
 
 type AuthResponse = {
     account?: { id: string; username: string };
@@ -10,11 +10,30 @@ type AuthResponse = {
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
 let gameStarted = false;
+let gameInstance: ReturnType<typeof startGame> | undefined;
 function launchGame(): void {
     if (gameStarted) return;
     gameStarted = true;
     document.querySelector('#auth-screen')?.remove();
-    startGame();
+    gameInstance = startGame();
+    const logout = document.createElement('button');
+    logout.id = 'session-logout';
+    logout.className = 'session-logout';
+    logout.textContent = 'Cerrar sesión';
+    logout.addEventListener('click', async () => {
+        logout.disabled = true;
+        try {
+            await fetch(`${serverUrl}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+        } finally {
+            gameInstance?.destroy(true);
+            gameInstance = undefined;
+            getSocket().disconnect();
+            logout.remove();
+            gameStarted = false;
+            renderAuth('Sesión cerrada.');
+        }
+    });
+    app.append(logout);
 }
 
 function renderAuth(message = ''): void {
