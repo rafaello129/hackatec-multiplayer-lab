@@ -55,7 +55,7 @@ export type PlayerLeftPayload = {
     playerId: string;
 };
 
-export type RoomErrorCode = 'INVALID_ROOM' | 'ROOM_FULL';
+export type RoomErrorCode = 'INVALID_ROOM' | 'ROOM_FULL' | 'AUTH_REQUIRED';
 
 export type RoomErrorPayload = {
     code: RoomErrorCode;
