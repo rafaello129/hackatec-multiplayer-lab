@@ -10,14 +10,9 @@ import {
     type CombatSnapshot,
     type WeaponType,
     type RoomErrorPayload,
-    type RoomStatePayload,
-    type PlayerInput
+    type RoomStatePayload
 } from '@hackatec/shared';
-<<<<<<< HEAD
-import { Scene, type GameObjects, Input, type Types } from 'phaser';
-=======
 import { Scene, type GameObjects, Input } from 'phaser';
->>>>>>> Emotes-Modos
 import type { Socket } from 'socket.io-client';
 import { ProfilePanel } from '../ui/ProfilePanel';
 import { MapView } from '../map/MapView';
@@ -40,9 +35,7 @@ export class ArenaScene extends Scene
     private readonly playerRegistry = new PlayerRegistry();
     private readonly playerViews = new Map<string, PlayerView>();
     private selfId = '';
-<<<<<<< HEAD
     private mapView?: MapView;
-    private cursors?: Types.Input.Keyboard.CursorKeys;
     private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
     private previousInput = '';
     private lastInputSent = 0;
@@ -54,10 +47,6 @@ export class ArenaScene extends Scene
     private fireHeld = false;
     private bullets?: GameObjects.Graphics;
     private combatText?: GameObjects.Text;
-=======
-    
-    // ... tus demás propiedades ...
->>>>>>> Emotes-Modos
 
     private roomText!: GameObjects.Text;
     private playerCountText!: GameObjects.Text;
@@ -96,18 +85,12 @@ export class ArenaScene extends Scene
         this.identity = getClientIdentity(window.location.search);
         this.socket = getSocket();
 
-<<<<<<< HEAD
         this.cursors = this.input.keyboard?.createCursorKeys();
         if (this.input.keyboard) {
             const k = Input.Keyboard.KeyCodes;
             this.keys = { w: this.input.keyboard.addKey(k.W), a: this.input.keyboard.addKey(k.A), s: this.input.keyboard.addKey(k.S), d: this.input.keyboard.addKey(k.D), shift: this.input.keyboard.addKey(k.SHIFT) };
         }
-=======
-        this.zombieGroup = this.physics.add.group({
-            maxSize: 100
-        });
-
->>>>>>> Emotes-Modos
+        this.zombieGroup = this.physics.add.group({ maxSize: 100 });
         this.createInterface();
         this.mapView = new MapView(this);
         this.bullets = this.add.graphics().setDepth(3);
@@ -447,11 +430,7 @@ private createInterface()
             align: 'right'
         }).setOrigin(1, 0);
 
-<<<<<<< HEAD
         this.add.text(988, 68, 'Mapa compartido · movimiento sincronizado', {
-=======
-        this.add.text(988, 68, 'Presencia sincronizada · movimiento activo', {
->>>>>>> Emotes-Modos
             fontFamily: 'Arial',
             fontSize: 12,
             color: '#64748b',
@@ -470,11 +449,7 @@ private createInterface()
             align: 'center'
         }).setOrigin(0.5).setVisible(false);
 
-<<<<<<< HEAD
         this.add.text(512, 730, 'WASD / flechas para moverse · SHIFT para dash', {
-=======
-        this.add.text(512, 730, 'Usa WASD para moverte y SHIFT para dash de invulnerabilidad.', {
->>>>>>> Emotes-Modos
             fontFamily: 'Arial',
             fontSize: 14,
             color: '#64748b'
@@ -653,19 +628,9 @@ if (this.currentMode === 'zombie' && this.zombieGroup) {
         this.socket.on(SOCKET_EVENTS.ROOM_ERROR, this.handleRoomError);
         this.socket.on(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.on(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
-<<<<<<< HEAD
         this.socket.on(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.on(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
-=======
-        
-        this.socket.on('player:moved', (payload: any) => {
-            const view = this.playerViews.get(payload.id);
-            if (view && payload.id !== this.selfId) {
-                view.update(payload);
-            }
-        });
->>>>>>> Emotes-Modos
     }
 
     private detachSocketListeners()
@@ -676,21 +641,9 @@ if (this.currentMode === 'zombie' && this.zombieGroup) {
         this.socket.off(SOCKET_EVENTS.ROOM_ERROR, this.handleRoomError);
         this.socket.off(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.off(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
-<<<<<<< HEAD
         this.socket.off(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.off(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
-=======
-        this.socket.off('player:moved');
-    }
-
-    private triggerDashInvulnerability(): void {
-        this.isInvulnerable = true;
-
-        this.time.delayedCall(1000, () => {
-            this.isInvulnerable = false;
-        });
->>>>>>> Emotes-Modos
     }
 
     private joinRoom()
