@@ -62,7 +62,7 @@ http://localhost:5173/?room=hackatec&name=Ana
 http://localhost:5173/?room=hackatec&name=Luis
 ```
 
-Todos deben ver los mismos jugadores. Al cerrar una pestaña, ese jugador desaparece de las demás sin refrescar.
+Antes de entrar, cada jugador debe crear una cuenta o iniciar sesión. El nombre visible proviene de la cuenta, no del parámetro `name`. Todos deben ver los mismos jugadores. Al cerrar una pestaña, ese jugador desaparece de las demás sin refrescar.
 
 ## PC del profesor — servidor central
 
@@ -171,6 +171,7 @@ No trabajar directamente sobre `main`.
 
 ## Documentación
 
+- [Autenticación y sesiones](docs/AUTHENTICATION.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Operación de clase](docs/CLASSROOM.md)
 - [Networking LAN](docs/NETWORKING.md)
