@@ -1,39 +1,32 @@
 export interface PlayerInput {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
-  shift: boolean;
+    up: boolean;
+    down: boolean;
+    left: boolean;
+    right: boolean;
+    /** Keyboard dash state; older client code may still use shift. */
+    dash?: boolean;
+    shift?: boolean;
 }
 
 export interface PlayerState {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  velocity: number;
-  angle: number;
-  isInvulnerable: boolean;
-}
-export interface PlayerInput {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
-  shift: boolean;
+    id: string;
+    name: string;
+    x: number;
+    y: number;
+    color?: number;
+    velocity?: number;
+    angle?: number;
+    hp?: number;
+    maxHp?: number;
+    isInvulnerable?: boolean;
+    isDashing?: boolean;
+    alive?: boolean;
+    kills?: number;
+    deaths?: number;
+    immobilizedUntil?: number;
+    appearance?: PlayerAppearance;
 }
 
-export interface PlayerState {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  velocity: number;
-  angle: number;
-  hp: number;
-  maxHp: number;
-  isInvulnerable: boolean;
-}
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
 export type ConnectionReadyPayload = {
@@ -41,25 +34,6 @@ export type ConnectionReadyPayload = {
     socketId: string;
 };
 
-<<<<<<< HEAD
-export type PlayerState = {
-    id: string;
-    name: string;
-    x: number;
-    y: number;
-    color: number;
-    isDashing?: boolean;
-    hp?: number;
-    maxHp?: number;
-    alive?: boolean;
-    kills?: number;
-    deaths?: number;
-    immobilizedUntil?: number;
-    appearance?: PlayerAppearance;
-};
-
-=======
->>>>>>> Emotes-Modos
 export type JoinRoomPayload = {
     roomId: string;
     playerName?: string;
@@ -81,54 +55,44 @@ export type PlayerLeftPayload = {
     playerId: string;
 };
 
-export type RoomErrorCode =
-    | 'INVALID_ROOM'
-    | 'ROOM_FULL';
+export type RoomErrorCode = 'INVALID_ROOM' | 'ROOM_FULL';
 
 export type RoomErrorPayload = {
     code: RoomErrorCode;
     message: string;
 };
 
-<<<<<<< HEAD
 export type MapObstacleType = 'wall' | 'trap' | 'cactus';
 export type CactusSize = 'small' | 'medium' | 'large';
-export type BaseMapObstacle = { id: string; type: MapObstacleType; x: number; y: number; width: number; height: number };
+export type BaseMapObstacle = {
+    id: string;
+    type: MapObstacleType;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
 export type WallObstacle = BaseMapObstacle & { type: 'wall' };
 export type TrapObstacle = BaseMapObstacle & { type: 'trap' };
 export type CactusObstacle = BaseMapObstacle & { type: 'cactus'; size: CactusSize; damage: number };
 export type MapObstacle = WallObstacle | TrapObstacle | CactusObstacle;
 export type GameMapState = { seed: number; width: number; height: number; obstacles: MapObstacle[] };
-export type PlayerInput = { up: boolean; down: boolean; left: boolean; right: boolean; dash: boolean };
 export type PlayerInputPayload = { input: PlayerInput };
 export type PlayerMovedPayload = { player: PlayerState };
 
 export type WeaponType = 'pistol' | 'machineGun' | 'shotgun';
 export type ShootPayload = { angle: number; weapon: WeaponType };
-export type ProjectileState = { id: string; ownerId: string; x: number; y: number; vx: number; vy: number; weapon: WeaponType };
+export type ProjectileState = {
+    id: string;
+    ownerId: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    weapon: WeaponType;
+};
 export type CombatSnapshot = { players: PlayerState[]; projectiles: ProjectileState[] };
 
 export type SkinAsset = { id: string; url: string; width: number; height: number };
 export type PlayerAppearance = { mode: 'color' | 'skin'; colorHex: string; skin?: SkinAsset };
 export type ProfileUpdatePayload = { username?: string; appearance?: PlayerAppearance };
-=======
-export interface PlayerInput {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
-  shift: boolean;
-}
-
-export interface PlayerState {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  velocity: number;
-  angle: number;
-  hp: number;
-  maxHp: number;
-  isInvulnerable: boolean;
-}
->>>>>>> Emotes-Modos
