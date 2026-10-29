@@ -8,7 +8,7 @@ export class ProfilePanel {
         this.element = div;
         div.style.cssText = 'position:absolute;right:12px;top:125px;z-index:20;background:#0f172aee;color:white;border:1px solid #334155;padding:12px;border-radius:10px;font:13px Arial;display:grid;gap:7px;width:210px';
         const heading = document.createElement('strong'); heading.textContent = 'Personalización';
-        const username = document.createElement('input'); username.placeholder = 'Username (3-16)'; username.maxLength = 16;
+        const username = document.createElement('input'); username.placeholder = 'Cuenta'; username.maxLength = 16; username.readOnly = true; username.title = 'El nombre de usuario pertenece a tu cuenta.';
         const color = document.createElement('input'); color.type = 'color'; color.value = '#60a5fa';
         const file = document.createElement('input'); file.type = 'file'; file.accept = 'image/png,image/jpeg,image/webp';
         file.style.width = '195px';
@@ -22,7 +22,7 @@ export class ProfilePanel {
             status.textContent = 'Subiendo skin...';
             const form = new FormData(); form.append('skin',file.files[0]);
             try {
-                const response = await fetch(serverUrl + '/api/skins', {method:'POST',body:form});
+                const response = await fetch(serverUrl + '/api/skins', {method:'POST',body:form,credentials:'include'});
                 if (!response.ok) throw new Error('No se pudo subir');
                 skin = await response.json() as NonNullable<PlayerAppearance['skin']>;
                 mode.value = 'skin'; status.textContent = 'Skin cargada';
