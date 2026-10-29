@@ -28,6 +28,7 @@ El archivo anterior `storage/profiles.json` no se importa ni se elimina automát
 - Nombre: 3–16 caracteres ASCII, empieza con una letra y continúa con letras, números o guion bajo.
 - Contraseña: 8–128 caracteres.
 - Los nombres se comparan sin distinguir mayúsculas/minúsculas.
+- El nombre de usuario se puede cambiar desde la personalización del perfil; el identificador permanente de la cuenta no cambia.
 
 Rutas HTTP:
 
