@@ -58,7 +58,7 @@ async function verifyUnauthenticatedSocketIsRejected() {
 
 async function connectClient(label, cookie) {
     const socket = io(url, {
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         timeout: 5000,
         extraHeaders: { Cookie: cookie },
         withCredentials: true
