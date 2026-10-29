@@ -12,6 +12,10 @@ import { registerSocketHandlers } from './socket/index.js';
 
 const config = getServerConfig();
 const app = express();
+if (process.env.NODE_ENV === 'production' && config.corsOrigin === '*') {
+    throw new Error('En producción, configura CORS_ORIGIN con los orígenes exactos del cliente.');
+}
+
 const accounts = new AccountStore();
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 const MAX_LOGIN_ATTEMPTS = 8;
@@ -45,6 +49,25 @@ function clearSessionCookie(response: Response): void {
     response.setHeader('Set-Cookie',
         `${SESSION_COOKIE}=; HttpOnly; SameSite=${sameSite}; Path=/; Max-Age=0${secure}`);
 }
+
+
+const requireTrustedOrigin: RequestHandler = (request, response, next) => {
+    const origin = request.headers.origin;
+    if (!origin) {
+        if (process.env.NODE_ENV === 'production') {
+            response.status(403).json({ error: 'Origen no permitido.' });
+            return;
+        }
+        next();
+        return;
+    }
+    const allowed = getAllowedOrigins(config.corsOrigin);
+    if (allowed !== '*' && !allowed.includes(origin)) {
+        response.status(403).json({ error: 'Origen no permitido.' });
+        return;
+    }
+    next();
+};
 
 function accountResponse(account: { id: string; username: string; appearance: unknown }) {
     return { id: account.id, username: account.username, appearance: account.appearance };
@@ -80,7 +103,7 @@ app.use((request, response, next) => {
 
 app.get('/health', healthHandler);
 
-app.post('/api/auth/register', async (request: Request, response: Response) => {
+app.post('/api/auth/register', requireTrustedOrigin, async (request: Request, response: Response) => {
     const credentials = validateCredentials(request.body);
     if (!credentials) {
         response.status(400).json({ error: 'Usuario o contraseña inválidos. El usuario debe tener 3-16 caracteres y la contraseña al menos 8.' });
@@ -102,7 +125,7 @@ app.post('/api/auth/register', async (request: Request, response: Response) => {
     }
 });
 
-app.post('/api/auth/login', async (request: Request, response: Response) => {
+app.post('/api/auth/login', requireTrustedOrigin, async (request: Request, response: Response) => {
     const ip = request.ip || request.socket.remoteAddress || 'unknown';
     const now = Date.now();
     const current = loginAttempts.get(ip);
@@ -147,7 +170,7 @@ app.get('/api/auth/session', (request: Request, response: Response) => {
     response.json({ account: accountResponse(account) });
 });
 
-app.post('/api/auth/logout', (request: Request, response: Response) => {
+app.post('/api/auth/logout', requireTrustedOrigin, (request: Request, response: Response) => {
     accounts.revokeSession(readCookie(request.headers.cookie, SESSION_COOKIE));
     clearSessionCookie(response);
     response.status(204).end();
@@ -162,7 +185,7 @@ const requireAuthenticatedUpload: RequestHandler = (request, response, next) => 
     }
     next();
 };
-app.post('/api/skins', requireAuthenticatedUpload, uploadSkin, skinsUploadHandler);
+app.post('/api/skins', requireTrustedOrigin, requireAuthenticatedUpload, uploadSkin, skinsUploadHandler);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
