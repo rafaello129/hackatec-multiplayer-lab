@@ -12,7 +12,7 @@ import {
 import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
 import { CombatManager } from '../game/CombatManager.js';
-import { AccountStore, SESSION_COOKIE, type Account } from '../auth/AccountStore.js';
+import { AccountStore, normalizeUsername, SESSION_COOKIE, type Account } from '../auth/AccountStore.js';
 import { getAllowedOrigins } from '../config/env.js';
 import { RoomManager } from '../rooms/RoomManager.js';
 import { parseJoinPayload } from './validateJoinPayload.js';
@@ -202,6 +202,12 @@ export function registerSocketHandlers(
             const value = raw as ProfileUpdatePayload;
             const username = value.username;
             const appearance = value.appearance;
+            const currentAccount = accounts.getAccountById(userId);
+            if (currentAccount?.isOwner && username !== undefined &&
+                (typeof username !== 'string' || normalizeUsername(username.trim()) !== 'gueta')) {
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'El nombre Gueta está reservado para esta cuenta.' });
+                return;
+            }
             if (username !== undefined && (typeof username !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{2,15}$/.test(username.trim()))) {
                 socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'Username inválido (3-16 caracteres)' });
                 return;
