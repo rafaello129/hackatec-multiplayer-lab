@@ -30,6 +30,13 @@ describe('AccountStore', () => {
         expect(() => store.createAccount('gUeTa', '$argon2id$another-hash')).toThrow(/UNIQUE constraint failed/);
     });
 
+
+    it('keeps reserved-owner status on the server-side account record', () => {
+        const owner = store.createAccount('Gueta', '$argon2id$test-hash', true);
+        expect(owner.isOwner).toBe(true);
+        expect(store.getAccountById(owner.id)?.isOwner).toBe(true);
+    });
+
     it('stores only a hash of the session token and resolves the live session', () => {
         const account = store.createAccount('Gueta', '$argon2id$test-hash');
         const token = store.createSession(account.id);
