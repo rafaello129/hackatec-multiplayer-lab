@@ -89,7 +89,7 @@ app.post('/api/auth/register', async (request: Request, response: Response) => {
         setSessionCookie(response, token);
         response.status(201).json({ account: accountResponse(account) });
     } catch (error) {
-        if (error && typeof error === 'object' && 'code' in error && error.code === 'ERR_SQLITE_ERROR') {
+        if (error instanceof Error && error.message.includes('UNIQUE constraint failed: accounts.username_key')) {
             response.status(409).json({ error: 'Ese nombre de usuario no está disponible.' });
             return;
         }
