@@ -8,12 +8,14 @@ export type Account = {
     id: string;
     username: string;
     appearance: PlayerAppearance;
+    isOwner: boolean;
 };
 
 type AccountRow = {
     id: string;
     username: string;
     password_hash: string;
+    is_owner: number;
 };
 
 type ProfileRow = {
@@ -45,6 +47,7 @@ export class AccountStore {
                 username TEXT NOT NULL,
                 username_key TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
+                is_owner INTEGER NOT NULL DEFAULT 0,
                 created_at INTEGER NOT NULL
             );
             CREATE TABLE IF NOT EXISTS profiles (
@@ -72,17 +75,21 @@ export class AccountStore {
                 created_at INTEGER NOT NULL
             );
         `);
+        const accountColumns = this.db.prepare('PRAGMA table_info(accounts)').all() as Array<{ name: string }>;
+        if (!accountColumns.some(column => column.name === 'is_owner')) {
+            this.db.exec('ALTER TABLE accounts ADD COLUMN is_owner INTEGER NOT NULL DEFAULT 0');
+        }
     }
 
-    createAccount(username: string, passwordHash: string): Account {
+    createAccount(username: string, passwordHash: string, isOwner = false): Account {
         const id = randomBytes(16).toString('hex');
         const now = Date.now();
         const usernameKey = normalizeUsername(username);
         this.db.exec('BEGIN IMMEDIATE');
         try {
             this.db.prepare(
-                'INSERT INTO accounts (id, username, username_key, password_hash, created_at) VALUES (?, ?, ?, ?, ?)'
-            ).run(id, username, usernameKey, passwordHash, now);
+                'INSERT INTO accounts (id, username, username_key, password_hash, is_owner, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+            ).run(id, username, usernameKey, passwordHash, isOwner ? 1 : 0, now);
             this.db.prepare(
                 'INSERT INTO profiles (user_id, appearance_json) VALUES (?, ?)'
             ).run(id, JSON.stringify(DEFAULT_APPEARANCE));
@@ -94,21 +101,21 @@ export class AccountStore {
             this.db.exec('ROLLBACK');
             throw error;
         }
-        return { id, username, appearance: { ...DEFAULT_APPEARANCE } };
+        return { id, username, appearance: { ...DEFAULT_APPEARANCE }, isOwner };
     }
 
     findAccountByUsername(username: string): (AccountRow & { username_key: string }) | undefined {
         return this.db.prepare(
-            'SELECT id, username, username_key, password_hash FROM accounts WHERE username_key = ?'
+            'SELECT id, username, username_key, password_hash, is_owner FROM accounts WHERE username_key = ?'
         ).get(normalizeUsername(username)) as (AccountRow & { username_key: string }) | undefined;
     }
 
     getAccountById(id: string): Account | undefined {
         const row = this.db.prepare(
-            'SELECT a.id, a.username, p.appearance_json FROM accounts a JOIN profiles p ON p.user_id = a.id WHERE a.id = ?'
-        ).get(id) as ({ id: string; username: string; appearance_json: string } | undefined);
+            'SELECT a.id, a.username, a.is_owner, p.appearance_json FROM accounts a JOIN profiles p ON p.user_id = a.id WHERE a.id = ?'
+        ).get(id) as ({ id: string; username: string; is_owner: number; appearance_json: string } | undefined);
         if (!row) return undefined;
-        return { id: row.id, username: row.username, appearance: this.parseAppearance(row.appearance_json) };
+        return { id: row.id, username: row.username, appearance: this.parseAppearance(row.appearance_json), isOwner: row.is_owner === 1 };
     }
 
     createSession(userId: string): string {
