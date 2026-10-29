@@ -42,6 +42,7 @@ export function registerSocketHandlers(
             return;
         }
         socket.data.account = account;
+        socket.data.sessionToken = decodedToken;
         next();
     });
     const rooms = new Set<string>();
@@ -72,6 +73,16 @@ export function registerSocketHandlers(
 
     io.on('connection', (socket) =>
     {
+        socket.use((_packet, next) => {
+            const sessionToken = socket.data.sessionToken as string | undefined;
+            if (!accounts.getAccountBySessionToken(sessionToken)) {
+                socket.disconnect(true);
+                next(new Error('UNAUTHORIZED'));
+                return;
+            }
+            next();
+        });
+
         console.log(`[socket] connected: ${socket.id}`);
 
         const payload: ConnectionReadyPayload = {
