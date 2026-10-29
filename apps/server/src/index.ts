@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 import argon2 from 'argon2';
 import { createServer } from 'node:http';
-import express, { type Request, type Response } from 'express';
+import express, { type Request, type RequestHandler, type Response } from 'express';
 import { Server } from 'socket.io';
 import { getAllowedOrigins, getServerConfig } from './config/env.js';
 import { AccountStore, SESSION_COOKIE, SESSION_TTL_MS } from './auth/AccountStore.js';
@@ -31,15 +31,19 @@ function readCookie(cookieHeader: string | undefined, name: string): string | un
 }
 
 function setSessionCookie(response: Response, token: string): void {
-    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    const production = process.env.NODE_ENV === 'production';
+    const secure = production ? '; Secure' : '';
+    const sameSite = production ? 'None' : 'Lax';
     response.setHeader('Set-Cookie',
-        `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}${secure}`);
+        `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=${sameSite}; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}${secure}`);
 }
 
 function clearSessionCookie(response: Response): void {
-    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    const production = process.env.NODE_ENV === 'production';
+    const secure = production ? '; Secure' : '';
+    const sameSite = production ? 'None' : 'Lax';
     response.setHeader('Set-Cookie',
-        `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`);
+        `${SESSION_COOKIE}=; HttpOnly; SameSite=${sameSite}; Path=/; Max-Age=0${secure}`);
 }
 
 function accountResponse(account: { id: string; username: string; appearance: unknown }) {
@@ -150,7 +154,15 @@ app.post('/api/auth/logout', (request: Request, response: Response) => {
 });
 
 app.use('/skins', express.static('storage/skins'));
-app.post('/api/skins', uploadSkin, skinsUploadHandler);
+const requireAuthenticatedUpload: RequestHandler = (request, response, next) => {
+    const token = readCookie(request.headers.cookie, SESSION_COOKIE);
+    if (!accounts.getAccountBySessionToken(token)) {
+        response.status(401).json({ error: 'Inicia sesión para subir una skin.' });
+        return;
+    }
+    next();
+};
+app.post('/api/skins', requireAuthenticatedUpload, uploadSkin, skinsUploadHandler);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
