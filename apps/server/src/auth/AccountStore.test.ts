@@ -39,6 +39,25 @@ describe('AccountStore', () => {
         expect(store.getAccountBySessionToken(token)).toBeUndefined();
     });
 
+
+    it('updates username and appearance without changing the permanent account id', () => {
+        const account = store.createAccount('Gueta', '$argon2id$test-hash');
+        const updated = store.updateProfile(account.id, {
+            username: 'Gueta_2',
+            appearance: { mode: 'color', colorHex: '#FFFFFF' }
+        });
+        expect(updated?.id).toBe(account.id);
+        expect(updated?.username).toBe('Gueta_2');
+        expect(updated?.appearance.colorHex).toBe('#FFFFFF');
+    });
+
+    it('prevents a profile rename from claiming another account username', () => {
+        const first = store.createAccount('Gueta', '$argon2id$test-hash');
+        store.createAccount('America', '$argon2id$another-hash');
+        expect(() => store.updateProfile(first.id, { username: 'aMeRiCa' })).toThrow(/UNIQUE constraint failed/);
+        expect(store.getAccountById(first.id)?.username).toBe('Gueta');
+    });
+
     it('persists appearance changes without changing account identity', () => {
         const account = store.createAccount('Gueta', '$argon2id$test-hash');
         const updated = store.updateAppearance(account.id, { mode: 'color', colorHex: '#FFFFFF' });
