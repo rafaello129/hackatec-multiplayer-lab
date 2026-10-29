@@ -136,10 +136,27 @@ export class AccountStore {
         this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hashSessionToken(token));
     }
 
-    updateAppearance(userId: string, appearance: PlayerAppearance): Account | undefined {
-        this.db.prepare('UPDATE profiles SET appearance_json = ? WHERE user_id = ?')
-            .run(JSON.stringify(appearance), userId);
+    updateProfile(userId: string, change: { username?: string; appearance?: PlayerAppearance }): Account | undefined {
+        this.db.exec('BEGIN IMMEDIATE');
+        try {
+            if (change.username !== undefined) {
+                this.db.prepare('UPDATE accounts SET username = ?, username_key = ? WHERE id = ?')
+                    .run(change.username, normalizeUsername(change.username), userId);
+            }
+            if (change.appearance !== undefined) {
+                this.db.prepare('UPDATE profiles SET appearance_json = ? WHERE user_id = ?')
+                    .run(JSON.stringify(change.appearance), userId);
+            }
+            this.db.exec('COMMIT');
+        } catch (error) {
+            this.db.exec('ROLLBACK');
+            throw error;
+        }
         return this.getAccountById(userId);
+    }
+
+    updateAppearance(userId: string, appearance: PlayerAppearance): Account | undefined {
+        return this.updateProfile(userId, { appearance });
     }
 
     close(): void {
