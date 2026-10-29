@@ -200,9 +200,10 @@ export function registerSocketHandlers(
             const userId = identities.get(socket.id);
             if (!player || !roomId || !userId || !raw || typeof raw !== 'object') return;
             const value = raw as ProfileUpdatePayload;
+            const username = value.username;
             const appearance = value.appearance;
-            if (value.username !== undefined) {
-                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'El nombre de usuario se define al crear la cuenta.' });
+            if (username !== undefined && (typeof username !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{2,15}$/.test(username.trim()))) {
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'Username inválido (3-16 caracteres)' });
                 return;
             }
             if (appearance !== undefined && (
@@ -215,14 +216,20 @@ export function registerSocketHandlers(
                 return;
             }
             try {
-                const account = appearance ? accounts.updateAppearance(userId, appearance) : accounts.getAccountById(userId);
+                const account = accounts.updateProfile(userId, {
+                    ...(typeof username === 'string' ? { username: username.trim() } : {}),
+                    ...(appearance ? { appearance } : {})
+                });
                 if (!account || !socket.connected || roomManager.getPlayer(socket.id) !== player || identities.get(socket.id) !== userId) return;
                 player.name = account.username;
                 player.appearance = account.appearance;
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
                 socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: true, message: 'Perfil guardado' });
             } catch (error) {
-                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: error instanceof Error ? error.message : 'No se pudo guardar' });
+                const message = error instanceof Error && error.message.includes('UNIQUE constraint failed: accounts.username_key')
+                    ? 'Ese nombre de usuario ya está en uso.'
+                    : 'No se pudo guardar el perfil.';
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message });
             }
         });
 
