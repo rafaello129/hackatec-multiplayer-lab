@@ -12,7 +12,7 @@ import {
 import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
 import { CombatManager } from '../game/CombatManager.js';
-import { ProfileStore, type Profile } from '../profiles/ProfileStore.js';
+import { AccountStore, SESSION_COOKIE, type Account } from '../auth/AccountStore.js';
 import { RoomManager } from '../rooms/RoomManager.js';
 import { parseJoinPayload } from './validateJoinPayload.js';
 
@@ -23,13 +23,27 @@ function socketRoom(roomId: string): string
 
 export function registerSocketHandlers(
     io: Server,
-    roomManager = new RoomManager()
+    roomManager = new RoomManager(),
+    accounts = new AccountStore()
 )
 {
     const movement = new Map<string, MovementRuntime>();
     const combat = new CombatManager();
-    const profiles = new ProfileStore();
-    const identities = new Map<string,string>();
+    const identities = new Map<string, string>();
+
+    io.use((socket, next) => {
+        const cookieHeader = socket.handshake.headers.cookie;
+        const token = cookieHeader?.split(';').map(part => part.trim()).find(part => part.startsWith(`${SESSION_COOKIE}=`))?.slice(SESSION_COOKIE.length + 1);
+        let decodedToken: string | undefined;
+        try { decodedToken = token ? decodeURIComponent(token) : undefined; } catch { decodedToken = undefined; }
+        const account = accounts.getAccountBySessionToken(decodedToken);
+        if (!account) {
+            next(new Error('UNAUTHORIZED'));
+            return;
+        }
+        socket.data.account = account;
+        next();
+    });
     const rooms = new Set<string>();
     const tick = setInterval(() => {
         const now = Date.now();
@@ -81,15 +95,19 @@ export function registerSocketHandlers(
                 return;
             }
 
+            const account = socket.data.account as Account | undefined;
+            if (!account) {
+                socket.emit(SOCKET_EVENTS.ROOM_ERROR, { code: 'AUTH_REQUIRED', message: 'Inicia sesión para entrar a una sala.' });
+                return;
+            }
             const roomId = parsed.value.roomId.trim();
-            const playerName = parsed.value.playerName;
             const previousRoomId = roomManager.getRoomId(socket.id);
-            const suppliedId = (rawPayload as { profileId?: unknown }).profileId;
-            const profileId = typeof suppliedId === 'string' && /^[a-zA-Z0-9_-]{8,80}$/.test(suppliedId) ? suppliedId : socket.id;
-            let profile: Profile;
-            try { profile = await profiles.get(profileId); }
-            catch { profile = { appearance: { mode: 'color' as const, colorHex: '#60A5FA' } }; }
-            const result = roomManager.join(roomId, socket.id, playerName);
+            const profile = accounts.getAccountById(account.id);
+            if (!profile) {
+                socket.emit(SOCKET_EVENTS.ROOM_ERROR, { code: 'AUTH_REQUIRED', message: 'La sesión ya no es válida.' });
+                return;
+            }
+            const result = roomManager.join(roomId, socket.id, account.username);
 
             if (!result.ok)
             {
@@ -103,9 +121,8 @@ export function registerSocketHandlers(
             }
 
             if (!socket.connected) return;
-            identities.set(socket.id, profileId);
+            identities.set(socket.id, account.id);
             result.player.appearance = profile.appearance;
-            if (profile.username) result.player.name = profile.username;
             if (result.previous)
             {
                 socket.leave(socketRoom(result.previous.roomId));
@@ -157,29 +174,32 @@ export function registerSocketHandlers(
         socket.on(SOCKET_EVENTS.PROFILE_SET, async (raw: unknown) => {
             const player = roomManager.getPlayer(socket.id);
             const roomId = roomManager.getRoomId(socket.id);
-            const id = identities.get(socket.id);
-            if (!player || !roomId || !id || !raw || typeof raw !== 'object') return;
+            const userId = identities.get(socket.id);
+            if (!player || !roomId || !userId || !raw || typeof raw !== 'object') return;
             const value = raw as ProfileUpdatePayload;
-            const username = value.username;
             const appearance = value.appearance;
-            if (username !== undefined && (typeof username !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{2,15}$/.test(username))) {
-                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok:false, message:'Username inválido (3-16 caracteres)' }); return;
+            if (value.username !== undefined) {
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'El nombre de usuario se define al crear la cuenta.' });
+                return;
             }
             if (appearance !== undefined && (
                 !appearance || typeof appearance !== 'object' ||
                 (appearance.mode !== 'color' && appearance.mode !== 'skin') ||
                 typeof appearance.colorHex !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(appearance.colorHex) ||
                 (appearance.mode === 'skin' && (!appearance.skin || !/^\/skins\/[a-f0-9-]+\.(png|jpg|webp)$/.test(appearance.skin.url)))
-            )) { socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok:false, message:'Apariencia inválida' }); return; }
+            )) {
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'Apariencia inválida' });
+                return;
+            }
             try {
-                const saved = await profiles.update(id, { ...(username ? { username } : {}), ...(appearance ? { appearance } : {}) });
-                if (!socket.connected || roomManager.getPlayer(socket.id) !== player || identities.get(socket.id) !== id) return;
-                if (saved.username) player.name = saved.username;
-                player.appearance = saved.appearance;
+                const account = appearance ? accounts.updateAppearance(userId, appearance) : accounts.getAccountById(userId);
+                if (!account || !socket.connected || roomManager.getPlayer(socket.id) !== player || identities.get(socket.id) !== userId) return;
+                player.name = account.username;
+                player.appearance = account.appearance;
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
-                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, {ok:true,message:'Perfil guardado'});
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: true, message: 'Perfil guardado' });
             } catch (error) {
-                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, {ok:false,message:error instanceof Error ? error.message : 'No se pudo guardar'});
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: error instanceof Error ? error.message : 'No se pudo guardar' });
             }
         });
 
