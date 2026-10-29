@@ -196,7 +196,7 @@ const io = new Server(httpServer, {
     }
 });
 
-registerSocketHandlers(io, undefined, accounts);
+registerSocketHandlers(io, undefined, accounts, config.corsOrigin);
 
 httpServer.listen(config.port, config.host, () => {
     console.log(`[server] HackaTec Multiplayer Server listening on http://${config.host}:${config.port}`);
