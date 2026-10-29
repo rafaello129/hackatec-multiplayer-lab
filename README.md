@@ -57,12 +57,12 @@ Levanta:
 Prueba tres jugadores:
 
 ```text
-http://localhost:5173/?room=hackatec&name=Rafael
-http://localhost:5173/?room=hackatec&name=Ana
-http://localhost:5173/?room=hackatec&name=Luis
+http://localhost:5173/?room=hackatec
+http://localhost:5173/?room=hackatec
+http://localhost:5173/?room=hackatec
 ```
 
-Antes de entrar, cada jugador debe crear una cuenta o iniciar sesión. El nombre visible proviene de la cuenta, no del parámetro `name`. Todos deben ver los mismos jugadores. Al cerrar una pestaña, ese jugador desaparece de las demás sin refrescar.
+Abre la misma URL en varias pestañas. Cada jugador debe crear una cuenta distinta o iniciar sesión. El nombre visible proviene de la cuenta, no del parámetro `name`. Todos deben ver los mismos jugadores. Al cerrar una pestaña, ese jugador desaparece de las demás sin refrescar.
 
 ## PC del profesor — servidor central
 
