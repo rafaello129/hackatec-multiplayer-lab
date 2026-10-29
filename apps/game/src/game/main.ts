@@ -8,12 +8,10 @@ const config: Types.Core.GameConfig = {
     height: 768,
     parent: 'game-container',
     input: {
-      keyboard: true
+        keyboard: true,
+        gamepad: true
     },
     backgroundColor: '#07111f',
-<<<<<<< HEAD
-    input: { keyboard: true, gamepad: true },
-=======
     physics: {
         default: 'arcade',
         arcade: {
@@ -21,8 +19,6 @@ const config: Types.Core.GameConfig = {
             debug: false
         }
     },
-
->>>>>>> Emotes-Modos
     scale: {
         mode: Scale.FIT,
         autoCenter: Scale.CENTER_BOTH
