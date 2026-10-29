@@ -38,7 +38,6 @@ export function registerSocketHandlers(
         try { decodedToken = token ? decodeURIComponent(token) : undefined; } catch { decodedToken = undefined; }
         const account = accounts.getAccountBySessionToken(decodedToken);
         if (!account) {
-            console.warn(`[auth] Socket.IO rejected: cookie=${Boolean(cookieHeader)}, token=${Boolean(token)}, tokenFormat=${Boolean(decodedToken && /^[A-Za-z0-9_-]{40,60}$/.test(decodedToken))}`);
             next(new Error('UNAUTHORIZED'));
             return;
         }
