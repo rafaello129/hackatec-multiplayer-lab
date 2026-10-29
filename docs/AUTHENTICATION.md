@@ -1,0 +1,55 @@
+# Cuentas y sesiones
+
+## Requisitos
+
+- Node.js 22 o superior.
+- SQLite integrado en Node.js.
+- Argon2id para almacenar contraseñas; nunca se guardan contraseñas en texto plano.
+- Las cuentas nuevas comienzan sin importar los perfiles del antiguo archivo JSON.
+
+## Desarrollo local
+
+El servidor crea la base de datos automáticamente. Por defecto, se guarda en:
+
+`apps/server/storage/accounts.sqlite`
+
+Puedes cambiar la ruta con `DB_PATH`. La base de datos contiene:
+
+- `accounts`: identificador permanente, nombre de usuario único sin distinguir mayúsculas/minúsculas y hash Argon2id;
+- `profiles`: apariencia asociada a la cuenta;
+- `sessions`: hashes SHA-256 de tokens aleatorios, con vencimiento;
+- `progression`: XP y nivel iniciales para la fase de progresión;
+- `skins`: estructura para metadatos de skins vinculados a una cuenta.
+
+El archivo anterior `storage/profiles.json` no se importa ni se elimina automáticamente.
+
+## Crear cuenta
+
+- Nombre: 3–16 caracteres ASCII, empieza con una letra y continúa con letras, números o guion bajo.
+- Contraseña: 8–128 caracteres.
+- Los nombres se comparan sin distinguir mayúsculas/minúsculas.
+
+Rutas HTTP:
+
+- `POST /api/auth/register` — crea la cuenta e inicia sesión.
+- `POST /api/auth/login` — verifica la contraseña y crea una sesión.
+- `GET /api/auth/session` — recupera la sesión actual.
+- `POST /api/auth/logout` — revoca la sesión.
+
+El token de sesión se entrega mediante una cookie `HttpOnly`; el navegador no necesita leerlo desde JavaScript. La sesión dura siete días. El servidor vuelve a validar la sesión al establecer la conexión Socket.IO, y una conexión sin cuenta no puede entrar a una sala.
+
+Los errores de inicio de sesión no distinguen entre usuario inexistente y contraseña incorrecta. Los intentos fallidos se limitan temporalmente por dirección IP.
+
+## CORS y despliegue
+
+En desarrollo, `CORS_ORIGIN=*` es práctico para trabajar en LAN. **No uses ese valor en producción.** Define `CORS_ORIGIN` como una lista separada por comas con los orígenes exactos del cliente, por ejemplo:
+
+```env
+NODE_ENV=production
+CORS_ORIGIN=https://juego.ejemplo.com
+DB_PATH=storage/accounts.sqlite
+```
+
+En producción la cookie usa `Secure; SameSite=None` para permitir un cliente y servidor alojados en orígenes distintos. Las peticiones que cambian sesión o suben skins deben venir de un origen permitido.
+
+No publiques ni compartas `accounts.sqlite`: contiene datos de cuentas y hashes de contraseñas. Haz copias de seguridad con el servidor detenido o usando un procedimiento de respaldo consistente de SQLite.
