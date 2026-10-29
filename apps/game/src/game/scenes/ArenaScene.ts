@@ -95,7 +95,7 @@ export class ArenaScene extends Scene
         this.input.keyboard?.on('keydown-THREE', this.shotgun);
         this.healthBar = this.add.graphics().setDepth(8);
         this.scoreboard = this.add.text(765, 390, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
-        this.profilePanel = new ProfilePanel((username, appearance) => this.socket.emit(SOCKET_EVENTS.PROFILE_SET, { username:username || undefined, appearance }));
+        this.profilePanel = new ProfilePanel((_username, appearance) => this.socket.emit(SOCKET_EVENTS.PROFILE_SET, { appearance }));
         this.attachSocketListeners();
 
         // --- INICIALIZAR TECLADO GLOBALMENTE ---
