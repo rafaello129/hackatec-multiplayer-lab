@@ -13,6 +13,7 @@ import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
 import { CombatManager } from '../game/CombatManager.js';
 import { AccountStore, SESSION_COOKIE, type Account } from '../auth/AccountStore.js';
+import { getAllowedOrigins } from '../config/env.js';
 import { RoomManager } from '../rooms/RoomManager.js';
 import { parseJoinPayload } from './validateJoinPayload.js';
 
@@ -24,7 +25,8 @@ function socketRoom(roomId: string): string
 export function registerSocketHandlers(
     io: Server,
     roomManager = new RoomManager(),
-    accounts = new AccountStore()
+    accounts = new AccountStore(),
+    corsOrigin = '*'
 )
 {
     const movement = new Map<string, MovementRuntime>();
@@ -32,6 +34,16 @@ export function registerSocketHandlers(
     const identities = new Map<string, string>();
 
     io.use((socket, next) => {
+        const origin = socket.handshake.headers.origin;
+        const allowedOrigins = getAllowedOrigins(corsOrigin);
+        if (process.env.NODE_ENV === 'production' && (!origin || allowedOrigins === '*')) {
+            next(new Error('ORIGIN_NOT_ALLOWED'));
+            return;
+        }
+        if (origin && allowedOrigins !== '*' && !allowedOrigins.includes(origin)) {
+            next(new Error('ORIGIN_NOT_ALLOWED'));
+            return;
+        }
         const cookieHeader = socket.handshake.headers.cookie;
         const token = cookieHeader?.split(';').map(part => part.trim()).find(part => part.startsWith(`${SESSION_COOKIE}=`))?.slice(SESSION_COOKIE.length + 1);
         let decodedToken: string | undefined;
