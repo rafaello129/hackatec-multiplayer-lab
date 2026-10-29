@@ -8,7 +8,7 @@ export class ProfilePanel {
         this.element = div;
         div.style.cssText = 'position:absolute;right:12px;top:125px;z-index:20;background:#0f172aee;color:white;border:1px solid #334155;padding:12px;border-radius:10px;font:13px Arial;display:grid;gap:7px;width:210px';
         const heading = document.createElement('strong'); heading.textContent = 'Personalización';
-        const username = document.createElement('input'); username.placeholder = 'Cuenta'; username.maxLength = 16; username.readOnly = true; username.title = 'El nombre de usuario pertenece a tu cuenta.';
+        const username = document.createElement('input'); username.placeholder = 'Username (3-16)'; username.maxLength = 16; username.pattern = '[A-Za-z][A-Za-z0-9_]{2,15}';
         const color = document.createElement('input'); color.type = 'color'; color.value = '#60a5fa';
         const file = document.createElement('input'); file.type = 'file'; file.accept = 'image/png,image/jpeg,image/webp';
         file.style.width = '195px';
