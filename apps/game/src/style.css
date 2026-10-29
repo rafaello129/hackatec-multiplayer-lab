@@ -172,3 +172,8 @@ body {
     opacity: 0.6;
     cursor: wait;
 }
+
+
+.auth-card [hidden] {
+    display: none !important;
+}
