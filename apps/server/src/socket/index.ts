@@ -54,6 +54,8 @@ export function registerSocketHandlers(
     const lastWeaponStateSyncAt = new Map<string, number>();
     const lastStormStateSyncAt = new Map<string, number>();
     const lastZombieStateSyncAt = new Map<string, number>();
+    const lastMovementPacketAt = new Map<string, number>();
+    const MOVEMENT_PACKET_MIN_INTERVAL_MS = 20;
 
     const syncMatchRoom = (roomId: string, now: number): void => {
         const players = roomManager.getPlayers(roomId);
@@ -560,6 +562,10 @@ export function registerSocketHandlers(
         });
 
         socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) => {
+            const now = Date.now();
+            const previousPacketAt = lastMovementPacketAt.get(socket.id) ?? Number.NEGATIVE_INFINITY;
+            if (now - previousPacketAt < MOVEMENT_PACKET_MIN_INTERVAL_MS) return;
+            lastMovementPacketAt.set(socket.id, now);
             const activeRoom = roomManager.getRoomId(socket.id);
             const activePlayer = roomManager.getPlayer(socket.id);
             if (!activeRoom || !matches.isPlaying(activeRoom) || activePlayer?.spectator) return;
@@ -572,9 +578,9 @@ export function registerSocketHandlers(
                 !Number.isFinite(input.aimAngle) || Math.abs(input.aimAngle) > Math.PI)) return;
             const state = movement.get(socket.id);
             const previousDashReadyAt = activePlayer?.dashReadyAt;
-            if (state) acceptMovementInput(state, input, Date.now(), activePlayer);
+            if (state) acceptMovementInput(state, input, now, activePlayer);
             if (input.up || input.down || input.left || input.right || input.dash) {
-                activityTracker.mark(activeRoom, socket.id, Date.now());
+                activityTracker.mark(activeRoom, socket.id, now);
             }
             if (activePlayer && activePlayer.dashReadyAt !== previousDashReadyAt) {
                 io.to(socketRoom(activeRoom)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player: activePlayer });
@@ -617,6 +623,7 @@ export function registerSocketHandlers(
 
         socket.on('disconnect', (reason) => {
             movement.delete(socket.id);
+            lastMovementPacketAt.delete(socket.id);
             identities.delete(socket.id);
             laserPermissions.delete(socket.id);
             const left = roomManager.leave(socket.id);
