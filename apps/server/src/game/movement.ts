@@ -128,7 +128,10 @@ export function advanceMovement(
     if (state.dashStartedAt !== null) {
         const elapsed = Math.max(0, now - state.dashStartedAt);
         const progress = Math.min(1, elapsed / DASH_BALANCE.durationMs);
-        const distance = DASH_BALANCE.distancePx *
+        const onFence = map.obstacles.some(obstacle => obstacle.type === 'fence' &&
+            Math.max(Math.abs(player.x - obstacle.x) - obstacle.width / 2, 0) ** 2 +
+            Math.max(Math.abs(player.y - obstacle.y) - obstacle.height / 2, 0) ** 2 < PLAYER_RADIUS * PLAYER_RADIUS);
+        const distance = DASH_BALANCE.distancePx * (onFence ? 0.45 : 1) *
             (smoothStep(progress) - smoothStep(state.dashAppliedProgress));
         state.dashAppliedProgress = progress;
 
