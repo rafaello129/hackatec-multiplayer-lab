@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { PlayerState } from '@hackatec/shared';
 import { MatchManager } from './MatchManager.js';
 
@@ -24,17 +24,17 @@ describe('MatchManager', () => {
         const manager = new MatchManager();
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
 
-        expect(manager.vote('room-a', 'outsider', 'classic', 1).ok).toBe(false);
-        expect(manager.vote('room-a', 'a', 'team', 1).ok).toBe(false);
-        expect(manager.vote('room-a', 'a', 'classic', 1).ok).toBe(true);
-        expect(manager.vote('room-a', 'a', 'classic', 2).ok).toBe(true);
+        expect(manager.vote('room-a', 'outsider', 'account-x', 'classic', 1).ok).toBe(false);
+        expect(manager.vote('room-a', 'a', 'account-a', 'team', 1).ok).toBe(false);
+        expect(manager.vote('room-a', 'a', 'account-a', 'classic', 1).ok).toBe(true);
+        expect(manager.vote('room-a', 'a', 'account-a', 'classic', 300).ok).toBe(true);
         expect(manager.getState('room-a')?.votes).toEqual({ a: 'classic' });
     });
 
     it('resolves the vote, resets into countdown, and then starts the match', () => {
         const manager = new MatchManager(100, 50, 1_000, 100);
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
-        manager.vote('room-a', 'a', 'classic', 10);
+        manager.vote('room-a', 'a', 'account-a', 'classic', 10);
 
         const transitions = manager.advance(100, () => []);
         expect(transitions).toEqual([{ roomId: 'room-a', resetPlayers: true }]);
@@ -100,9 +100,49 @@ describe('MatchManager', () => {
         const manager = new MatchManager();
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
         manager.syncRoom('room-b', [player('c'), player('d')], 'c', 0);
-        manager.vote('room-a', 'a', 'classic', 1);
+        manager.vote('room-a', 'a', 'account-a', 'classic', 1);
         expect(manager.getState('room-a')?.votes).toEqual({ a: 'classic' });
         expect(manager.getState('room-b')?.votes).toEqual({});
+    });
+
+
+    it('enforces one vote per account and a small vote rate limit', () => {
+        const manager = new MatchManager();
+        const players = [player('socket-a'), player('socket-b')];
+        manager.syncRoom('room-a', players, 'socket-a', 0,
+            new Map([['socket-a', 'account-a'], ['socket-b', 'account-b']]));
+        expect(manager.vote('room-a', 'socket-a', 'account-a', 'classic', 1).ok).toBe(true);
+        expect(manager.vote('room-a', 'socket-b', 'account-a', 'classic', 2).ok).toBe(false);
+        expect(manager.vote('room-a', 'socket-a', 'account-a', 'classic', 100).ok).toBe(false);
+        expect(manager.getState('room-a')?.votes).toEqual({ 'socket-a': 'classic' });
+    });
+
+    it('makes players who join during a match spectators until the next round', () => {
+        const manager = new MatchManager(100, 10, 100, 15);
+        const players = [player('a'), player('b')];
+        manager.syncRoom('room-a', players, 'a', 0);
+        manager.advance(100, () => []);
+        manager.advance(110, () => []);
+        const late = player('late');
+        manager.syncRoom('room-a', [...players, late], 'a', 120);
+        expect(late.spectator).toBe(true);
+        manager.advance(210, () => []);
+        expect(manager.getState('room-a')?.phase).toBe('results');
+    });
+
+    it('chooses randomly among tied modes and when no one votes', () => {
+        const manager = new MatchManager(10, 5, 100, 15, ['classic', 'team']);
+        manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
+        manager.vote('room-a', 'a', 'a', 'classic', 1);
+        manager.vote('room-a', 'b', 'b', 'team', 1);
+        const random = vi.spyOn(Math, 'random').mockReturnValue(0.99);
+        manager.advance(10, () => []);
+        expect(manager.getState('room-a')?.mode).toBe('team');
+        random.mockReturnValue(0);
+        manager.syncRoom('room-b', [player('c'), player('d')], 'c', 0);
+        manager.advance(10, () => []);
+        expect(manager.getState('room-b')?.mode).toBe('classic');
+        random.mockRestore();
     });
 
     it('removes lifecycle state when the room becomes empty', () => {
