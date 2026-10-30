@@ -11,7 +11,8 @@ import {
     type WeaponType,
     type RoomErrorPayload,
     type RoomStatePayload,
-    type MatchStatePayload
+    type MatchStatePayload,
+    type GameMapState
 } from '@hackatec/shared';
 import { Scene, type GameObjects, Input } from 'phaser';
 import type { Socket } from 'socket.io-client';
@@ -223,6 +224,10 @@ export class ArenaScene extends Scene
         this.updateMatchClock();
     };
 
+    private readonly handleRoomMap = (map: GameMapState): void => {
+        this.mapView?.render(map);
+    };
+
     private readonly handleHostChanged = (payload: { hostId: string }): void => {
         this.roomHostId = payload.hostId;
         const isHost = this.roomHostId === this.selfId;
@@ -410,6 +415,7 @@ private createInterface()
         this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.on(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
         this.socket.on(SOCKET_EVENTS.MATCH_STATE, this.handleMatchState);
+        this.socket.on(SOCKET_EVENTS.ROOM_MAP, this.handleRoomMap);
         this.socket.on(SOCKET_EVENTS.MATCH_ACTION_RESULT, this.handleMatchActionResult);
         this.socket.on(SOCKET_EVENTS.ROOM_HOST_CHANGED, this.handleHostChanged);
     }
@@ -426,6 +432,7 @@ private createInterface()
         this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.off(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
         this.socket.off(SOCKET_EVENTS.MATCH_STATE, this.handleMatchState);
+        this.socket.off(SOCKET_EVENTS.ROOM_MAP, this.handleRoomMap);
         this.socket.off(SOCKET_EVENTS.MATCH_ACTION_RESULT, this.handleMatchActionResult);
         this.socket.off(SOCKET_EVENTS.ROOM_HOST_CHANGED, this.handleHostChanged);
     }
@@ -519,7 +526,7 @@ private createInterface()
             this.healthBar?.fillStyle(0x334155).fillRect(36, 127, 220, 12);
             this.healthBar?.fillStyle((self.hp??100)>30 ? 0x22c55e : 0xef4444).fillRect(36,127,220*Math.max(0,Math.min(100,self.hp??100))/100,12);
         }
-        if (self) this.combatText?.setText(`HP: ${self.hp ?? 100} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
+        if (self) this.combatText?.setText(self.spectator ? 'ESPECTADOR · Esperando la siguiente partida' : `HP: ${self.hp ?? 100} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
         this.bullets?.clear();
         this.bullets?.fillStyle(0xfacc15, 1);
         for (const projectile of state.projectiles) this.bullets?.fillCircle(projectile.x, projectile.y, 5);
@@ -527,7 +534,7 @@ private createInterface()
 
     update(time: number) {
         this.updateMatchClock();
-        if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors || this.matchState?.phase !== 'playing') return;
+        if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors || this.matchState?.phase !== 'playing' || this.playerRegistry.get(this.selfId)?.spectator) return;
         const pad = this.input.gamepad?.getPad(0);
         const x = pad?.leftStick.x ?? 0;
         const y = pad?.leftStick.y ?? 0;
