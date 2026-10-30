@@ -13,7 +13,8 @@ export const MATCH_BALANCE = {
     titanHealthPerHunter: 100,
     hunterLives: 2,
     battleRoyaleDurationMs: 450_000,
-    rocketsDurationMs: 300_000
+    rocketsDurationMs: 300_000,
+    zombiesDurationMs: 300_000
 } as const;
 
 export const WEAPON_SLOT_ORDER = [
@@ -133,7 +134,7 @@ export const ZOMBIE_BALANCE = {
     defaultPlayerDistancePx: 190,
     highDensityZombieSeparationPx: 90,
     defaultZombieSeparationPx: 180,
-    modes: ['classic', 'everyone-vs-one'] as const
+    modes: ['zombies'] as const
 } as const;
 
 export const XP_BALANCE = {
