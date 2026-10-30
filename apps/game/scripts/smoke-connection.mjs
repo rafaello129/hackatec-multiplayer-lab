@@ -321,6 +321,55 @@ async function main() {
     assert(movedPlayer.isDashing === true && movedPlayer.isInvulnerable === true,
         'the authoritative tick should apply dash state under a 32-player load');
 
+    const activeRoomSockets = [alpha, beta, delta, ...loadClients];
+    const dashUpdates = new Set();
+    const onDashUpdate = payload => {
+        if (payload?.player?.id) dashUpdates.add(payload.player.id);
+    };
+    alpha.on('player:moved', onDashUpdate);
+    for (const socket of activeRoomSockets) {
+        if (socket.id === movingPlayerId) continue;
+        socket.emit('player:input', {
+            input: { up: false, down: false, left: false, right: false, dash: true, aimAngle: 0 }
+        });
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
+    alpha.off('player:moved', onDashUpdate);
+    assert(dashUpdates.size >= 31,
+        'the server should process dash intents from the full active roster');
+
+    let movementPacketsSent = 0;
+    let movementCycles = 0;
+    const stressInterval = setInterval(() => {
+        const horizontal = movementCycles % 2 === 0;
+        for (const socket of activeRoomSockets) {
+            socket.emit('player:input', {
+                input: {
+                    up: false,
+                    down: !horizontal,
+                    left: false,
+                    right: horizontal,
+                    dash: false,
+                    aimAngle: horizontal ? 0 : Math.PI / 2
+                }
+            });
+            movementPacketsSent += 1;
+        }
+        movementCycles += 1;
+    }, 50);
+    const stressStartedAt = Date.now();
+    await new Promise(resolve => setTimeout(resolve, 1_500));
+    clearInterval(stressInterval);
+    const stressDurationMs = Date.now() - stressStartedAt;
+    const stressSnapshot = await waitForCombatRoster(alpha, 32, 5000);
+    assert(movementPacketsSent >= 32 * 20,
+        '32-player movement stress should send at least 20 input rounds');
+    assert(stressSnapshot.players.length === 32,
+        'the 32-player roster should remain synchronized after movement stress');
+    const inputRate = Math.round(movementPacketsSent * 1_000 / stressDurationMs);
+    console.log('[smoke] 32-player movement stress: ' + movementPacketsSent +
+        ' intents in ' + stressDurationMs + 'ms (~' + inputRate + ' intents/s)');
+
     const alphaLoadStopped = waitForMatchPhase(alpha, 'waiting', 10000);
     alpha.emit('match:host-stop');
     await alphaLoadStopped;
