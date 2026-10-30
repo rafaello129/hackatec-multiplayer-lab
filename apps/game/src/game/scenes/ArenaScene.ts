@@ -726,12 +726,14 @@ private createInterface()
     };
 
     private readonly handleChatMessage = (payload: ChatMessage | { error?: string }) => {
-        if ('error' in payload) {
-            if (payload.error) this.errorText.setText(payload.error).setVisible(true);
+        const error = (payload as { error?: unknown }).error;
+        if (typeof error === 'string') {
+            this.errorText.setText(error).setVisible(true);
             return;
         }
-        this.pushChatLine(this.formatChatMessage(payload));
-        this.playerViews.get(payload.senderId)?.showChat(payload.text);
+        const message = payload as ChatMessage;
+        this.pushChatLine(this.formatChatMessage(message));
+        this.playerViews.get(message.senderId)?.showChat(message.text);
     };
 
     private formatChatMessage(message: ChatMessage): string {
