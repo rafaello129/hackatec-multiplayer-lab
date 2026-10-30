@@ -25,16 +25,16 @@ describe('MatchManager', () => {
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
 
         expect(manager.vote('room-a', 'outsider', 'account-x', 'classic', 1).ok).toBe(false);
-        expect(manager.vote('room-a', 'a', 'account-a', 'team', 1).ok).toBe(false);
-        expect(manager.vote('room-a', 'a', 'account-a', 'classic', 1).ok).toBe(true);
-        expect(manager.vote('room-a', 'a', 'account-a', 'classic', 300).ok).toBe(true);
+        expect(manager.vote('room-a', 'a', 'a', 'team', 1).ok).toBe(false);
+        expect(manager.vote('room-a', 'a', 'a', 'classic', 1).ok).toBe(true);
+        expect(manager.vote('room-a', 'a', 'a', 'classic', 300).ok).toBe(true);
         expect(manager.getState('room-a')?.votes).toEqual({ a: 'classic' });
     });
 
     it('resolves the vote, resets into countdown, and then starts the match', () => {
         const manager = new MatchManager(100, 50, 1_000, 100);
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
-        manager.vote('room-a', 'a', 'account-a', 'classic', 10);
+        manager.vote('room-a', 'a', 'a', 'classic', 10);
 
         const transitions = manager.advance(100, () => []);
         expect(transitions).toEqual([{ roomId: 'room-a', resetPlayers: true }]);
@@ -100,7 +100,7 @@ describe('MatchManager', () => {
         const manager = new MatchManager();
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
         manager.syncRoom('room-b', [player('c'), player('d')], 'c', 0);
-        manager.vote('room-a', 'a', 'account-a', 'classic', 1);
+        manager.vote('room-a', 'a', 'a', 'classic', 1);
         expect(manager.getState('room-a')?.votes).toEqual({ a: 'classic' });
         expect(manager.getState('room-b')?.votes).toEqual({});
     });
@@ -111,10 +111,10 @@ describe('MatchManager', () => {
         const players = [player('socket-a'), player('socket-b')];
         manager.syncRoom('room-a', players, 'socket-a', 0,
             new Map([['socket-a', 'account-a'], ['socket-b', 'account-a']]));
-        expect(manager.vote('room-a', 'socket-a', 'account-a', 'classic', 1).ok).toBe(true);
-        expect(manager.vote('room-a', 'socket-b', 'account-a', 'classic', 2).ok).toBe(false);
-        expect(manager.vote('room-a', 'socket-a', 'account-a', 'classic', 100).ok).toBe(false);
-        expect(manager.vote('room-a', 'socket-b', 'account-a', 'classic', 300).ok).toBe(true);
+        expect(manager.vote('room-a', 'socket-a', 'a', 'classic', 1).ok).toBe(true);
+        expect(manager.vote('room-a', 'socket-b', 'a', 'classic', 2).ok).toBe(false);
+        expect(manager.vote('room-a', 'socket-a', 'a', 'classic', 100).ok).toBe(false);
+        expect(manager.vote('room-a', 'socket-b', 'a', 'classic', 300).ok).toBe(true);
         expect(manager.getState('room-a')?.votes).toEqual({ 'socket-b': 'classic' });
     });
 
