@@ -81,10 +81,11 @@ export class AccountStore {
         }
     }
 
-    createAccount(username: string, passwordHash: string, isOwner = false): Account {
+    createAccount(username: string, passwordHash: string): Account {
         const id = randomBytes(16).toString('hex');
         const now = Date.now();
         const usernameKey = normalizeUsername(username);
+        const isOwner = usernameKey === 'gueta';
         this.db.exec('BEGIN IMMEDIATE');
         try {
             this.db.prepare(
@@ -147,8 +148,18 @@ export class AccountStore {
         this.db.exec('BEGIN IMMEDIATE');
         try {
             if (change.username !== undefined) {
+                const current = this.db.prepare('SELECT username, is_owner FROM accounts WHERE id = ?')
+                    .get(userId) as { username: string; is_owner: number } | undefined;
+                if (!current) throw new Error('Account not found.');
+                const nextUsernameKey = normalizeUsername(change.username);
+                if (current.is_owner === 1 && nextUsernameKey !== 'gueta') {
+                    throw new Error('The Gueta owner name cannot be changed.');
+                }
+                if (current.is_owner !== 1 && nextUsernameKey === 'gueta') {
+                    throw new Error('The Gueta name is reserved for its first registered account.');
+                }
                 this.db.prepare('UPDATE accounts SET username = ?, username_key = ? WHERE id = ?')
-                    .run(change.username, normalizeUsername(change.username), userId);
+                    .run(change.username, nextUsernameKey, userId);
             }
             if (change.appearance !== undefined) {
                 this.db.prepare('UPDATE profiles SET appearance_json = ? WHERE user_id = ?')
