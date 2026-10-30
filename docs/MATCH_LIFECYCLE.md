@@ -10,7 +10,7 @@ El servidor mantiene una máquina de estados por sala:
 - Votación: 15 segundos. El servidor valida el modo, la pertenencia a la sala y la cuenta autenticada. Cada cuenta tiene un voto por votación y puede cambiarlo; los cambios están limitados por un intervalo mínimo de 250 ms.
 - Empate: selección aleatoria entre los modos empatados. Sin votos: selección aleatoria entre los modos disponibles.
 - Cuenta regresiva: 5 segundos.
-- Clásico: 5 minutos por ronda. Reaparición: 5 segundos.
+- Clásico: 5 minutos por ronda o hasta que alguien alcance 30 bajas (límite configurable). Reaparición: 5 segundos.
 - Resultados: 15 segundos antes de abrir la siguiente votación automáticamente.
 - El servidor genera una nueva semilla y mapa al comenzar cada ronda y lo difunde a todos los clientes de la sala.
 
