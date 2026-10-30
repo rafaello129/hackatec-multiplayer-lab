@@ -488,6 +488,9 @@ export function registerSocketHandlers(
             const value = raw as ProfileUpdatePayload;
             const username = value.username;
             const appearance = value.appearance;
+            const skinCandidate = appearance && typeof appearance === 'object' && !Array.isArray(appearance)
+                ? (appearance as { skin?: unknown }).skin
+                : undefined;
             const currentAccount = accounts.getAccountById(userId);
             if (currentAccount?.isOwner && username !== undefined &&
                 (typeof username !== 'string' || normalizeUsername(username.trim()) !== 'gueta')) {
@@ -503,8 +506,8 @@ export function registerSocketHandlers(
                 (appearance.mode !== 'color' && appearance.mode !== 'skin') ||
                 typeof appearance.colorHex !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(appearance.colorHex) ||
                 (appearance.mode === 'skin' && (
-                    !isSkinAssetRecord((appearance as { skin?: unknown }).skin) ||
-                    !accounts.ownsSkin(userId, (appearance as { skin: Parameters<AccountStore['ownsSkin']>[1] }).skin)
+                    !isSkinAssetRecord(skinCandidate) ||
+                    !accounts.ownsSkin(userId, skinCandidate)
                 ))
             )) {
                 socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'Apariencia inválida' });
