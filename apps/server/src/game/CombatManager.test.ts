@@ -98,6 +98,29 @@ describe('CombatManager weapon authority', () => {
         expect(target.hp).toBe(20);
     });
 
+    it('credits an assist to a player who damaged the victim before the final hit', () => {
+        const firstAttacker = player('first', 250);
+        const finalAttacker = player('final', 250);
+        const victim = player('victim', 300);
+        victim.hp = 40;
+        combat.initializePlayer('room', firstAttacker, false);
+        combat.initializePlayer('room', finalAttacker, false);
+
+        combat.setFireIntent('room', firstAttacker, { angle: 0, firing: true }, 1_000);
+        combat.step('room', [firstAttacker, finalAttacker, victim], map, 50, 1_000);
+        combat.step('room', [firstAttacker, finalAttacker, victim], map, 50, 1_050);
+        expect(victim.hp).toBe(20);
+
+        combat.setFireIntent('room', firstAttacker, { angle: 0, firing: false }, 1_100);
+        combat.setFireIntent('room', finalAttacker, { angle: 0, firing: true }, 2_000);
+        combat.step('room', [firstAttacker, finalAttacker, victim], map, 50, 2_000);
+        combat.step('room', [firstAttacker, finalAttacker, victim], map, 50, 2_050);
+
+        expect(victim.alive).toBe(false);
+        expect(finalAttacker.kills).toBe(1);
+        expect(firstAttacker.assists).toBe(1);
+    });
+
     it('applies rocket splash damage, reduced self-damage and knockback', () => {
         const shooter = player('shooter', 250);
         const target = player('target', 260);
