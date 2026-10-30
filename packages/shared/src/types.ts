@@ -160,7 +160,7 @@ export type PlayerLeftPayload = {
     playerId: string;
 };
 
-export type RoomErrorCode = 'INVALID_ROOM' | 'ROOM_FULL' | 'AUTH_REQUIRED';
+export type RoomErrorCode = 'INVALID_ROOM' | 'ROOM_FULL' | 'AUTH_REQUIRED' | 'ACCOUNT_IN_ROOM';
 
 export type RoomErrorPayload = {
     code: RoomErrorCode;
