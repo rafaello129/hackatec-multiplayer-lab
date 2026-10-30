@@ -195,9 +195,25 @@ export class PlayerView
         });
     }
 
+    playEmote(emote: 'spin' | 'jump' | 'crouch' | 'shake'): void
+    {
+        switch (emote) {
+            case 'spin': this.playSpin(); break;
+            case 'jump': this.playJump(); break;
+            case 'crouch': this.playCrouch(); break;
+            case 'shake': this.playShake(); break;
+        }
+    }
+
+    private get animatedParts(): GameObjects.GameObject[]
+    {
+        return [this.body, this.skin];
+    }
+
     playSpin()
     {
         this.container.scene.tweens.killTweensOf(this.body);
+        this.container.scene.tweens.killTweensOf(this.skin);
 
         this.body.x = 0;
         this.body.y = 0;
@@ -206,7 +222,7 @@ export class PlayerView
         this.body.angle = 0;
 
         this.container.scene.tweens.add({
-            targets: this.body,
+            targets: this.animatedParts,
             angle: 360,
             duration: 700,
             ease: 'Power2',
@@ -219,6 +235,7 @@ export class PlayerView
    playJump()
     {
         this.container.scene.tweens.killTweensOf(this.body);
+        this.container.scene.tweens.killTweensOf(this.skin);
 
         this.body.x = 0;
         this.body.y = 0;
@@ -227,7 +244,7 @@ export class PlayerView
         this.body.scaleY = 1;
 
         this.container.scene.tweens.add({
-            targets: this.body,
+            targets: this.animatedParts,
             y: -30,
             duration: 160,
             yoyo: true,
@@ -246,6 +263,7 @@ export class PlayerView
     playCrouch()
     {
         this.container.scene.tweens.killTweensOf(this.body);
+        this.container.scene.tweens.killTweensOf(this.skin);
 
         this.body.x = 0;
         this.body.y = 0;
@@ -254,7 +272,7 @@ export class PlayerView
         this.body.scaleY = 1;
 
         this.container.scene.tweens.add({
-            targets: this.body,
+            targets: this.animatedParts,
             scaleX: 1.3,
             scaleY: 0.45,
             y: 10,
@@ -274,6 +292,7 @@ export class PlayerView
     playShake()
     {
         this.container.scene.tweens.killTweensOf(this.body);
+        this.container.scene.tweens.killTweensOf(this.skin);
 
         this.body.x = 0;
         this.body.y = 0;
@@ -282,7 +301,7 @@ export class PlayerView
         this.body.scaleY = 1;
 
         this.container.scene.tweens.add({
-            targets: this.body,
+            targets: this.animatedParts,
             x: -22,
             angle: -12,
             duration: 50,
