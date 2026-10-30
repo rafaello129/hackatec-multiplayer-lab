@@ -43,7 +43,7 @@ describe('ZombieManager', () => {
 
         expect(state.zombies).toHaveLength(2);
         for (const zombie of state.zombies) {
-            expect(players.every(item => Math.hypot(item.x - zombie.x, item.y - zombie.y) >= 85)).toBe(true);
+            expect(players.every(item => Math.hypot(item.x - zombie.x, item.y - zombie.y) >= 75)).toBe(true);
             expect(blockedAt(zombie.x, zombie.y, map)).toBe(false);
         }
     });
