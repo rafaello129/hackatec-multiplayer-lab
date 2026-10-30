@@ -75,6 +75,8 @@ export const PICKUP_BALANCE = {
     healOnKill: 15,
     respawnMs: 60_000,
     battleRoyaleRespawnMs: 120_000,
+    medkitRespawnMs: 120_000,
+    battleRoyaleMedkitRespawnMs: 180_000,
     radiusPx: 15,
     obstaclePaddingPx: 8,
     spawnMarginX: 70,
