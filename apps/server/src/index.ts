@@ -159,7 +159,7 @@ app.post('/api/auth/login', requireTrustedOrigin, async (request: Request, respo
     }
 });
 
-app.get('/api/auth/session', (request: Request, response: Response) => {
+const currentAccountHandler: RequestHandler = (request, response) => {
     const token = readCookie(request.headers.cookie, SESSION_COOKIE);
     const account = accounts.getAccountBySessionToken(token);
     response.setHeader('Cache-Control', 'no-store');
@@ -168,7 +168,10 @@ app.get('/api/auth/session', (request: Request, response: Response) => {
         return;
     }
     response.json({ account: accountResponse(account) });
-});
+};
+
+app.get('/api/auth/session', currentAccountHandler);
+app.get('/api/auth/me', currentAccountHandler);
 
 app.post('/api/auth/logout', requireTrustedOrigin, (request: Request, response: Response) => {
     accounts.revokeSession(readCookie(request.headers.cookie, SESSION_COOKIE));
