@@ -1,4 +1,4 @@
-import type { ConnectionStatus } from '@hackatec/shared';
+import { ARENA_UI_TEXTS, type ConnectionStatus } from '@hackatec/shared';
 import { type GameObjects, Scene } from 'phaser';
 
 export class ArenaFrame {
@@ -36,21 +36,21 @@ export class ArenaFrame {
             .strokeRoundedRect(750, 375, 255, 270, 11)
             .strokeRoundedRect(32, 662, 960, 54, 11);
 
-        scene.add.text(38, 25, 'HACKATEC', {
+        scene.add.text(38, 25, ARENA_UI_TEXTS.brand, {
             fontFamily: 'Arial Black',
             fontSize: 19,
             color: '#f8fafc',
             letterSpacing: 1.2
         }).setDepth(10);
 
-        scene.add.text(39, 49, 'MULTIPLAYER ARENA', {
+        scene.add.text(39, 49, ARENA_UI_TEXTS.subtitle, {
             fontFamily: 'Arial Black',
             fontSize: 9,
             color: '#60a5fa',
             letterSpacing: 2.2
         }).setDepth(10);
 
-        this.roomText = scene.add.text(39, 76, 'SALA  ' + roomId, {
+        this.roomText = scene.add.text(39, 76, ARENA_UI_TEXTS.roomPrefix + '  ' + roomId, {
             fontFamily: 'Arial',
             fontSize: 13,
             color: '#b8c8dc'
@@ -58,14 +58,14 @@ export class ArenaFrame {
 
         scene.add.rectangle(512, 62, 1, 54, 0x3b526e, 0.6).setDepth(10);
 
-        this.playerCountText = scene.add.text(512, 42, '0 / 32 JUGADORES', {
+        this.playerCountText = scene.add.text(512, 42, '0 / 32 ' + ARENA_UI_TEXTS.playerCountSuffix, {
             fontFamily: 'Arial Black',
             fontSize: 15,
             color: '#f8fafc',
             align: 'center'
         }).setOrigin(0.5, 0).setDepth(10);
 
-        scene.add.text(512, 67, 'ARENA COMPARTIDA · ESTADO AUTORITATIVO', {
+        scene.add.text(512, 67, ARENA_UI_TEXTS.sharedArena, {
             fontFamily: 'Arial',
             fontSize: 9,
             color: '#7185a1',
@@ -80,7 +80,7 @@ export class ArenaFrame {
             align: 'right'
         }).setOrigin(1, 0).setDepth(10);
 
-        scene.add.text(985, 57, 'WASD / FLECHAS  ·  SHIFT DASH', {
+        scene.add.text(985, 57, ARENA_UI_TEXTS.movementHelp, {
             fontFamily: 'Arial Black',
             fontSize: 9,
             color: '#8194ad',
@@ -100,18 +100,18 @@ export class ArenaFrame {
     }
 
     setRoom(roomId: string): void {
-        this.roomText.setText('SALA  ' + roomId);
+        this.roomText.setText(ARENA_UI_TEXTS.roomPrefix + '  ' + roomId);
     }
 
     setPlayerCount(count: number, maximum = 32): void {
-        this.playerCountText.setText(count + ' / ' + maximum + ' JUGADORES');
+        this.playerCountText.setText(count + ' / ' + maximum + ' ' + ARENA_UI_TEXTS.playerCountSuffix);
     }
 
     setConnectionStatus(status: ConnectionStatus): void {
         const labels: Record<ConnectionStatus, string> = {
-            connecting: '● CONECTANDO',
-            connected: '● CONECTADO',
-            disconnected: '● DESCONECTADO'
+            connecting: ARENA_UI_TEXTS.connection.connecting,
+            connected: ARENA_UI_TEXTS.connection.connected,
+            disconnected: ARENA_UI_TEXTS.connection.disconnected
         };
         const colors: Record<ConnectionStatus, string> = {
             connecting: '#facc15',
