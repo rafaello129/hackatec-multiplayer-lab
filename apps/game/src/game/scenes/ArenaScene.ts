@@ -702,11 +702,12 @@ export class ArenaScene extends Scene
             this.bullets?.fillCircle(projectile.x, projectile.y, isRocket ? 9 : 5);
         }
         for (const beam of state.beams ?? []) {
-            this.bullets?.lineStyle(4, 0x67e8f9, 0.9);
+            this.bullets?.lineStyle(beam.weapon === 'sniper' ? 3 : 4, beam.weapon === 'sniper' ? 0xf8fafc : 0x67e8f9, beam.weapon === 'sniper' ? 1 : 0.9);
             this.bullets?.beginPath();
             this.bullets?.moveTo(beam.x1, beam.y1);
             this.bullets?.lineTo(beam.x2, beam.y2);
             this.bullets?.strokePath();
+            if (beam.weapon === 'sniper') this.bullets?.fillStyle(0xfbbf24, 1).fillCircle(beam.x2, beam.y2, 4);
         }
         for (const explosion of state.explosions ?? []) {
             this.bullets?.lineStyle(3, 0xfb923c, 0.9);
