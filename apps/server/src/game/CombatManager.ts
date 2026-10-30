@@ -137,6 +137,8 @@ export class CombatManager {
         if (canUseLaser) state.laserOwners.add(player.id);
         else state.laserOwners.delete(player.id);
         const weapon = this.weaponRuntime(state, player.id);
+        if (mode === 'rockets') weapon.selectedSlot = 6;
+        else if (!canUseLaser && weapon.selectedSlot === 7) weapon.selectedSlot = 4;
         player.selectedWeapon = weaponForSlot(weapon.selectedSlot) ?? 'pistol';
         return this.getWeaponState(roomId, player.id, Date.now(), mode);
     }
