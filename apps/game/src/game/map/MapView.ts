@@ -32,7 +32,7 @@ export class MapView
         this.createGroundTexture();
 
         this.ground = scene.add.tileSprite(
-            ARENA.x + ARENA.width / 2,
+            this.mapWidth / 2,
             ARENA.y + ARENA.height / 2,
             this.mapWidth - ARENA.x * 2,
             ARENA.height,
