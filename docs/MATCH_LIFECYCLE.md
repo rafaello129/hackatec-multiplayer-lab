@@ -1,35 +1,46 @@
-# Ciclo de partidas — Fase 2
+# Ciclo de partidas y modos
 
-## Autoridad y estados
+## Máquina de estados autoritativa
 
-El servidor mantiene una máquina de estados por sala:
+Cada sala tiene una única máquina de estados del servidor:
 
-`LOBBY (waiting) → VOTING → COUNTDOWN → PLAYING → RESULTS → VOTING`
+`WAITING → VOTING → COUNTDOWN → PLAYING → RESULTS → WAITING/VOTING`
 
 - Mínimo de jugadores: 2.
-- Votación: 15 segundos. El servidor valida el modo, la pertenencia a la sala y la cuenta autenticada. Cada cuenta tiene un voto por votación y puede cambiarlo; los cambios están limitados por un intervalo mínimo de 250 ms.
-- Empate: selección aleatoria entre los modos empatados. Sin votos: selección aleatoria entre los modos disponibles.
+- Votación: 15 segundos. El servidor valida sala, cuenta y modo. Cada cuenta tiene un voto y puede cambiarlo, con intervalo mínimo de 250 ms.
+- Empate: selección aleatoria entre los modos empatados. Sin votos: selección aleatoria entre todos los modos habilitados.
 - Cuenta regresiva: 5 segundos.
-- Clásico: 5 minutos por ronda o hasta que alguien alcance 30 bajas (límite configurable). Reaparición: 5 segundos.
-- Resultados: 15 segundos antes de abrir la siguiente votación automáticamente.
-- El servidor genera una nueva semilla y mapa al comenzar cada ronda y lo difunde a todos los clientes de la sala.
+- Resultados: 15 segundos; después la sala puede abrir una nueva votación automáticamente.
+- El servidor genera la semilla y el mapa de la ronda.
+- El primer jugador que entra es anfitrión; al desconectarse, el anfitrión pasa al siguiente jugador que permanece en la sala.
+- Solo el anfitrión puede detener la partida o forzar una nueva. Detener la partida desactiva el inicio automático hasta el siguiente inicio forzado.
+- Los jugadores que entran durante COUNTDOWN, PLAYING o RESULTS quedan como espectadores hasta la próxima ronda.
 
-## Anfitrión
+## Modos habilitados
 
-El primer jugador que entra es el anfitrión. Si se desconecta, el rol pasa al jugador que lleve más tiempo en la sala. Solo el anfitrión puede detener la partida o forzar el inicio de una nueva ronda. Detenerla desactiva el inicio automático hasta que el anfitrión fuerce otra ronda.
+| Modo | Duración máxima | Regla de victoria / eliminación |
+|---|---:|---|
+| Clásico | 5 min | Gana quien alcance 30 bajas o tenga más bajas al terminar. Respawn de 5 s. |
+| Todos contra uno | 4 min | Los cazadores ganan al eliminar al Titan. El Titan gana si resiste o elimina las vidas de todos los cazadores. |
+| Rocket para todos | 5 min | Solo ranura 6, lanzacohetes. |
+| Battle Royale | 7.5 min | Último jugador vivo. No hay respawn. Si el tiempo se agota, se desempata por supervivientes y salud. |
 
-Los controles del anfitrión son voluntarios: no interrumpen partidas por sí solos. Las acciones se autorizan en el servidor; ocultar el menú en el cliente no es una medida de seguridad.
+Los valores son configurables en `packages/shared/src/config/balance.ts`.
 
-## Modos disponibles en esta fase
+## Todos contra uno
 
-En esta fase solo está habilitado **Clásico**. Los modos Todos contra uno, Rocket para todos y Battle Royale pertenecen a fases posteriores y no se aceptan todavía como votos ni como órdenes de inicio. El menú del anfitrión ya utiliza un contrato de modo extensible.
+El servidor selecciona al azar un Titan. Su vida máxima es `500 + 100 × número de cazadores`. Cada cazador comienza con dos vidas. Al perder una vida reaparece tras 5 segundos; al perder la última se vuelve espectador. El Titan no reaparece. Si el Titan se desconecta, la ronda se cancela.
 
-## Jugadores que llegan tarde
+Los zombies están activos en Clásico y Todos contra uno.
 
-Quien entra durante COUNTDOWN, PLAYING o RESULTS queda marcado como espectador y no puede moverse, disparar ni recibir daño de proyectiles. Al reiniciar la siguiente ronda se integra como jugador activo.
+## Battle Royale
 
-## Pruebas
+La tormenta tiene cinco fases. Cada fase espera 30 segundos y se cierra durante 45 segundos. Los daños por segundo configurados son 2, 4, 8, 12 y 20. El círculo final tiene radio mínimo de 80 px. El servidor genera el centro y el radio, aplica daño fuera del círculo y registra las fases sobrevividas para progresión.
 
-- Unitarias de la máquina de estados, votos, rate limit, desempate, resultados, aislamiento entre salas, espectador tardío y sucesión de anfitrión.
-- Smoke test Socket.IO con cuentas autenticadas: entrada de dos jugadores, votación sincronizada, inicio forzado por anfitrión, detención y transferencia de anfitrión.
-- Validación CI con `npm run check` y smoke test de conexión.
+## Anfitrión y resultados
+
+El menú del anfitrión permite seleccionar cualquiera de los cuatro modos, iniciar y detener la ronda. Los resultados incluyen colocación, bajas, muertes, asistencias y zombies eliminados, además del ganador.
+
+## Pruebas automatizadas
+
+Se cubren las transiciones de estado, votos, autenticación, límite de voto, resultados, desempate, espectador tardío, reglas de victoria, eliminación permanente de Battle Royale y límites de vidas del Titan. Las pruebas de cámara y percepción visual de los espectadores requieren validación manual.
