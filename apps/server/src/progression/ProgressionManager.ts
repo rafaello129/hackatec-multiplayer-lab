@@ -19,6 +19,7 @@ export const ACTIVITY_BALANCE = {
 } as const;
 
 type ActivityRecord = {
+    startedAt: number;
     activeMs: number;
     lastActionAt: number | null;
     lastTickAt: number;
@@ -33,6 +34,7 @@ export class RoundActivityTracker {
         for (const player of players) {
             if (player.spectator) continue;
             records.set(player.id, {
+                startedAt: now,
                 activeMs: 0,
                 lastActionAt: null,
                 lastTickAt: now,
@@ -59,12 +61,15 @@ export class RoundActivityTracker {
         }
     }
 
-    isEligible(roomId: string, playerId: string): boolean {
+    isEligible(roomId: string, playerId: string, now?: number): boolean {
         const record = this.rooms.get(roomId)?.get(playerId);
         if (!record) return false;
+        const elapsedRoundMs = Math.max(0, (now ?? record.lastTickAt) - record.startedAt);
+        const expectedThreshold = record.roundDurationMs * ACTIVITY_BALANCE.minimumRoundRatio;
+        const observedThreshold = elapsedRoundMs * ACTIVITY_BALANCE.minimumRoundRatio;
         const minimum = Math.max(
             ACTIVITY_BALANCE.minimumActiveMs,
-            record.roundDurationMs * ACTIVITY_BALANCE.minimumRoundRatio
+            Math.min(expectedThreshold, observedThreshold)
         );
         return record.activeMs >= minimum;
     }
