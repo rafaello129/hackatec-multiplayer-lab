@@ -82,7 +82,7 @@ Las recompensas configuradas son:
 | Segundo o tercer lugar | 75 |
 | Fase de tormenta sobrevivida en Battle Royale | 25 |
 
-La XP se calcula en el servidor al terminar la ronda y se persiste en SQLite. El cliente solo recibe el resultado para mostrarlo. Se requiere participación durante una parte de la ronda; el umbral usa un mínimo de 30 segundos y el 20% de la duración efectiva o prevista, según cuál corresponda al cierre.
+La XP se calcula en el servidor al terminar la ronda y se persiste en SQLite. El cliente solo recibe el resultado para mostrarlo. Los mensajes de arena, chat, perfil, modos y armas se mantienen en `packages/shared/src/config/texts.ts` para evitar duplicar traducciones. Se requiere participación durante una parte de la ronda; el umbral usa un mínimo de 30 segundos y el 20% de la duración efectiva o prevista, según cuál corresponda al cierre.
 
 La XP necesaria para avanzar desde el nivel (L) es:
 
