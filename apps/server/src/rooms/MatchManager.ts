@@ -60,12 +60,9 @@ export class MatchManager {
         const membershipChanged = nextPlayers.size !== match.players.size ||
             [...nextPlayers].some(id => !match.players.has(id));
         const hostChanged = match.hostId !== (hostId ?? null);
-        const nextAlivePlayerIds = players.filter(player => player.alive !== false && !player.spectator).map(player => player.id);
-        const aliveChanged = nextAlivePlayerIds.length !== match.alivePlayerIds.length || nextAlivePlayerIds.some((id, index) => id !== match!.alivePlayerIds[index]);
         const newPlayerIds = [...nextPlayers].filter(id => !match.players.has(id));
 
         match.players = nextPlayers;
-        match.alivePlayerIds = nextAlivePlayerIds;
         match.hostId = hostId ?? null;
         match.accountIds = new Map(accountIds);
 
@@ -75,6 +72,14 @@ export class MatchManager {
             }
             if (newPlayerIds.length) match.message = MATCH_TEXTS.messages.lateJoin;
         }
+
+        // Rebuild this after late joiners are marked as spectators.
+        const nextAlivePlayerIds = players
+            .filter(player => player.alive !== false && !player.spectator)
+            .map(player => player.id);
+        const aliveChanged = nextAlivePlayerIds.length !== match.alivePlayerIds.length ||
+            nextAlivePlayerIds.some((id, index) => id !== match!.alivePlayerIds[index]);
+        match.alivePlayerIds = nextAlivePlayerIds;
 
         for (const [accountId, vote] of match.votes) {
             if (!nextPlayers.has(vote.playerId)) {
