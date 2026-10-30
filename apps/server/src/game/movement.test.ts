@@ -59,6 +59,31 @@ describe('authoritative dash', () => {
         expect(player.isDashing).toBe(false);
     });
 
+    it('blocks movement through rocks and lakes but slows players on fences', () => {
+        for (const type of ['rock', 'lake'] as const) {
+            const player = createPlayer();
+            const runtime = createMovementRuntime();
+            const map: GameMapState = {
+                ...openMap,
+                obstacles: [{ id: type, type, x: 310, y: 400, width: 60, height: 60 }]
+            };
+            acceptMovementInput(runtime, input({ right: true }), 1_000, player);
+            advanceMovement(player, runtime, map, 50, 1_050);
+            expect(player.x).toBe(300);
+        }
+
+        const player = createPlayer();
+        const runtime = createMovementRuntime();
+        const fenceMap: GameMapState = {
+            ...openMap,
+            obstacles: [{ id: 'fence', type: 'fence', x: 300, y: 400, width: 100, height: 30 }]
+        };
+        acceptMovementInput(runtime, input({ right: true }), 1_000, player);
+        advanceMovement(player, runtime, fenceMap, 50, 1_050);
+        expect(player.x - 300).toBeLessThan(185 * 0.05);
+        expect(player.x).toBeGreaterThan(300);
+    });
+
     it('does not start while trapped and uses movement direction when available', () => {
         const trapped = createPlayer();
         trapped.immobilizedUntil = 2_000;
