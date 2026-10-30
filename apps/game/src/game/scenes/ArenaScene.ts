@@ -75,6 +75,8 @@ export class ArenaScene extends Scene
     private hostStartButton?: GameObjects.Text;
     private hostStopButton?: GameObjects.Text;
     private matchCountdownText?: GameObjects.Text;
+    private spectatorStatusText?: GameObjects.Text;
+    private spectatorTargetId = '';
 
     private roomText!: GameObjects.Text;
     private playerCountText!: GameObjects.Text;
@@ -184,6 +186,7 @@ export class ArenaScene extends Scene
             this.hostStartButton?.destroy();
             this.hostStopButton?.destroy();
             this.matchCountdownText?.destroy();
+            this.spectatorStatusText?.destroy();
         });
     }
 
@@ -192,6 +195,11 @@ export class ArenaScene extends Scene
             fontFamily: 'Arial Black', fontSize: 17, color: '#f8fafc',
             backgroundColor: '#0f172acc', padding: { x: 12, y: 7 }, align: 'center'
         }).setOrigin(0.5).setDepth(320);
+
+        this.spectatorStatusText = this.add.text(512, 650, '', {
+            fontFamily: 'Arial Black', fontSize: 13, color: '#e0f2fe',
+            backgroundColor: '#0c4a6ecc', padding: { x: 10, y: 6 }, align: 'center'
+        }).setOrigin(0.5).setDepth(330).setVisible(false);
 
         this.matchCountdownText = this.add.text(512, 178, '', {
             fontFamily: 'Arial Black', fontSize: 20, color: '#facc15',
@@ -557,6 +565,9 @@ private createInterface()
         this.playerRegistry.replaceAll([]);
         this.selfId = '';
         this.matchState = undefined;
+        this.spectatorTargetId = '';
+        this.cameras.main.stopFollow();
+        this.spectatorStatusText?.setVisible(false);
         this.roomHostId = '';
         this.previousInput = '';
         this.mapView?.clear();
@@ -669,6 +680,7 @@ private createInterface()
         this.playerRegistry.replaceAll(state.players);
         this.syncPlayerViews();
         const self = state.players.find(player => player.id === this.selfId);
+        if (self?.spectator) this.syncSpectatorCamera(state.players);
         this.scoreboard?.setText('CLASIFICACIÓN\n' + [...state.players].sort((a,b)=>(b.kills??0)-(a.kills??0)).slice(0,8).map((p,i)=>`${i+1}. ${p.name}: ${p.kills??0} / ${p.deaths??0}`).join('\n'));
         this.healthBar?.clear();
         if (self) {
@@ -712,6 +724,17 @@ private createInterface()
     update(time: number) {
         this.stormView?.update();
         if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors) return;
+        const self = this.playerRegistry.get(this.selfId);
+        if (self?.spectator) {
+            if (Input.Keyboard.JustDown(this.keys.a)) this.cycleSpectatorTarget(-1);
+            if (Input.Keyboard.JustDown(this.keys.d)) this.cycleSpectatorTarget(1);
+            return;
+        }
+        if (this.spectatorTargetId) {
+            this.cameras.main.stopFollow();
+            this.spectatorTargetId = '';
+            this.spectatorStatusText?.setVisible(false);
+        }
         const pad = this.input.gamepad?.getPad(0);
         const x = pad?.leftStick.x ?? 0;
         const y = pad?.leftStick.y ?? 0;
@@ -744,6 +767,38 @@ private createInterface()
             this.previousInput = serialized;
             this.lastInputSent = time;
         }
+    }
+
+    private syncSpectatorCamera(players: PlayerState[]): void {
+        const available = players.filter(player =>
+            player.id !== this.selfId && player.alive !== false && !player.spectator
+        );
+        if (available.length === 0) {
+            this.cameras.main.stopFollow();
+            this.spectatorTargetId = '';
+            this.spectatorStatusText?.setText('ESPECTADOR · No quedan jugadores activos').setVisible(true);
+            return;
+        }
+        if (!available.some(player => player.id === this.spectatorTargetId)) {
+            this.spectatorTargetId = available[0]!.id;
+        }
+        const target = available.find(player => player.id === this.spectatorTargetId)!;
+        const view = this.playerViews.get(target.id);
+        if (view) this.cameras.main.startFollow(view.container, true, 0.08, 0.08);
+        this.spectatorStatusText?.setText(
+            'ESPECTADOR · Observando ' + target.name + ' · A / D para cambiar'
+        ).setVisible(true);
+    }
+
+    private cycleSpectatorTarget(direction: number): void {
+        const available = this.playerRegistry.getAll().filter(player =>
+            player.id !== this.selfId && player.alive !== false && !player.spectator
+        );
+        if (available.length === 0) return;
+        const currentIndex = available.findIndex(player => player.id === this.spectatorTargetId);
+        const nextIndex = (currentIndex + direction + available.length) % available.length;
+        this.spectatorTargetId = available[nextIndex]!.id;
+        this.syncSpectatorCamera(this.playerRegistry.getAll());
     }
 
     private readonly handlePlayerLeft = (payload: PlayerLeftPayload) =>
