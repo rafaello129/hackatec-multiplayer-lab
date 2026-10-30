@@ -274,6 +274,10 @@ export function registerSocketHandlers(
             if (zombieEnabled) {
                 const zombieStep = zombieManager.step(roomId, players, map, 50, now);
                 if (zombieStep) {
+                    for (const playerId of zombieStep.revivedPlayerIds) {
+                        const revived = players.find(candidate => candidate.id === playerId);
+                        if (revived) combat.revivePlayer(roomId, revived, now);
+                    }
                     for (const item of zombieStep.damage) {
                         const player = players.find(candidate => candidate.id === item.playerId);
                         if (player) combat.applyEnvironmentalDamage(roomId, player, item.amount, now);
