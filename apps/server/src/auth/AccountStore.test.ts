@@ -110,6 +110,36 @@ describe('AccountStore', () => {
         expect(store.getAccountById(first.id)?.username).toBe('PlayerOne');
     });
 
+    it('only lets the account that uploaded a skin assign it to the profile', () => {
+        const owner = store.createAccount('SkinOwner', '$argon2id$test-hash');
+        const other = store.createAccount('SkinOther', '$argon2id$test-hash');
+        const skin = {
+            id: '123e4567-e89b-12d3-a456-426614174000.png',
+            url: '/skins/123e4567-e89b-12d3-a456-426614174000.png',
+            width: 64,
+            height: 64
+        };
+
+        expect(() => store.updateAppearance(owner.id, {
+            mode: 'skin', colorHex: '#60A5FA', skin
+        })).toThrow(/does not belong/);
+
+        store.saveSkin(owner.id, skin);
+        expect(store.ownsSkin(owner.id, skin)).toBe(true);
+        expect(store.ownsSkin(other.id, skin)).toBe(false);
+
+        const updated = store.updateAppearance(owner.id, {
+            mode: 'skin', colorHex: '#60A5FA', skin
+        });
+        expect(updated?.appearance).toEqual({
+            mode: 'skin', colorHex: '#60A5FA', skin
+        });
+        expect(() => store.updateAppearance(other.id, {
+            mode: 'skin', colorHex: '#60A5FA', skin
+        })).toThrow(/does not belong/);
+        expect(store.getAccountById(other.id)?.appearance.mode).toBe('color');
+    });
+
     it('persists appearance changes without changing account identity', () => {
         const account = store.createAccount('Gueta', '$argon2id$test-hash');
         const updated = store.updateAppearance(account.id, { mode: 'color', colorHex: '#FFFFFF' });
