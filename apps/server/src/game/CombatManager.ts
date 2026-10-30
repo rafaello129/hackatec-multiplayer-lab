@@ -190,7 +190,7 @@ export class CombatManager {
 
         const state = this.runtime(roomId);
         const weapon = this.weaponRuntime(state, player.id);
-        if (now - weapon.lastSelectionAt < 120) {
+        if (now - weapon.lastSelectionAt < WEAPON_BALANCE.selectionCooldownMs) {
             return { ok: false, message: WEAPON_TEXTS.errors.rateLimit };
         }
         const allowedSlots = availableWeaponSlots(state.laserOwners.has(player.id), mode);
@@ -219,7 +219,7 @@ export class CombatManager {
 
         const state = this.runtime(roomId);
         const weapon = this.weaponRuntime(state, player.id);
-        if (request.firing && now - weapon.lastIntentAt < 35) return;
+        if (request.firing && now - weapon.lastIntentAt < WEAPON_BALANCE.minimumFireIntentIntervalMs) return;
 
         weapon.angle = request.angle;
         weapon.lastIntentAt = now;
@@ -340,7 +340,7 @@ export class CombatManager {
         zombieHits: ZombieHitPayload[]
     ): void {
         const weaponState = this.weaponRuntime(state, player.id);
-        if (weaponState.firing && now - weaponState.lastIntentAt > 220) weaponState.firing = false;
+        if (weaponState.firing && now - weaponState.lastIntentAt > WEAPON_BALANCE.fireIntentTimeoutMs) weaponState.firing = false;
 
         let weapon = weaponForSlot(weaponState.selectedSlot) ?? 'pistol';
         if (mode === 'rockets' && weapon !== 'rocketLauncher') {
@@ -475,7 +475,7 @@ export class CombatManager {
         map: GameMapState,
         zombies: ZombieState[] = []
     ): { x: number; y: number; target?: PlayerState; zombie?: ZombieState } {
-        const step = 6;
+        const step = COMBAT_BALANCE.rayStepPx;
         const dx = Math.cos(angle);
         const dy = Math.sin(angle);
         for (let distance = step; distance <= range; distance += step) {
@@ -659,7 +659,7 @@ export class CombatManager {
             const friction = Math.pow(0.08, dt / 0.4);
             force.vx *= friction;
             force.vy *= friction;
-            if (Math.hypot(force.vx, force.vy) < 12) state.knockback.delete(playerId);
+            if (Math.hypot(force.vx, force.vy) < COMBAT_BALANCE.knockbackStopSpeed) state.knockback.delete(playerId);
         }
     }
 
