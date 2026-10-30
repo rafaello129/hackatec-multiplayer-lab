@@ -20,6 +20,18 @@ describe('RoomManager', () =>
         expect(manager.getPlayers('hackatec')).toHaveLength(2);
     });
 
+    it('assigns the first player as host and transfers host to the longest-waiting player', () => {
+        const manager = new RoomManager();
+        const first = manager.join('host-room', 'socket-a', 'Ana');
+        manager.join('host-room', 'socket-b', 'Luis');
+        manager.join('host-room', 'socket-c', 'Mia');
+        expect(first.ok && first.hostId).toBe('socket-a');
+        expect(manager.getHostId('host-room')).toBe('socket-a');
+        const left = manager.leave('socket-a');
+        expect(left?.hostId).toBe('socket-b');
+        expect(manager.getHostId('host-room')).toBe('socket-b');
+    });
+
     it('removes a player and deletes an empty room', () =>
     {
         const manager = new RoomManager();
