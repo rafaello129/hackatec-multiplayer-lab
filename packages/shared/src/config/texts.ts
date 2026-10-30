@@ -1,0 +1,39 @@
+export const MATCH_TEXTS = {
+    phases: {
+        waiting: 'Esperando para iniciar',
+        voting: 'Votación de modo',
+        countdown: 'La partida está por comenzar',
+        playing: 'Partida en curso · Clásico',
+        results: 'Resultados de la partida'
+    },
+    messages: {
+        votePrompt: 'Vota por el modo de la siguiente partida.',
+        voteRecorded: 'Voto registrado. Puedes cambiarlo mientras la votación siga abierta.',
+        needPlayers: 'Se necesitan al menos 2 jugadores para votar.',
+        voteFinished: 'Votación finalizada. La partida está por comenzar.',
+        hostStarted: 'El anfitrión inició una nueva partida.',
+        gameStarted: '¡La partida comenzó!',
+        gameFinished: 'Partida finalizada.',
+        nextRound: 'Preparando la siguiente ronda.',
+        hostStopped: 'El anfitrión detuvo la partida. Esperando a que inicie otra.',
+        lateJoin: 'Los jugadores que entran durante una partida quedan como espectadores hasta la siguiente ronda.'
+    },
+    errors: {
+        notMember: 'No perteneces a esta sala.',
+        voteClosed: 'La votación no está abierta.',
+        voteExpired: 'El tiempo de votación terminó.',
+        modeUnavailable: 'Ese modo todavía no está disponible.',
+        identityInvalid: 'La identidad de la cuenta no es válida.',
+        voteRateLimit: 'Estás votando demasiado rápido. Espera un momento.',
+        hostOnlyStart: 'Solo el anfitrión puede iniciar o reiniciar la partida.',
+        hostOnlyStop: 'Solo el anfitrión puede detener la partida.'
+    },
+    controls: {
+        voteClassic: 'Votar: Clásico',
+        changeVoteClassic: 'Cambiar voto: Clásico',
+        hostMenu: '⚙ Anfitrión',
+        hostStart: 'Forzar nueva partida',
+        hostStop: 'Detener partida',
+        spectator: 'ESPECTADOR · Esperando la siguiente partida'
+    }
+} as const;
