@@ -56,7 +56,7 @@ describe('PickupManager', () => {
         expect(result.collected).toHaveLength(1);
         expect([a.hp, b.hp].filter(hp => hp === 90)).toHaveLength(1);
         expect(manager.getState('room').find(item => item.id === medkit.id)?.respawnAt)
-            .toBe(2_000 + PICKUP_BALANCE.respawnMs);
+            .toBe(2_000 + PICKUP_BALANCE.medkitRespawnMs);
     });
 
     it('adds shield up to the cap and uses the slower Battle Royale respawn', () => {
