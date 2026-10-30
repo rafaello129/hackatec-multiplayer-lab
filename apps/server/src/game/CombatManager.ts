@@ -7,6 +7,7 @@ import {
     type ExplosionState,
     type GameMapState,
     type LaserBeamState,
+    type KillFeedEntry,
     type PlayerState,
     type ProjectileState,
     type ProjectileWeaponType,
@@ -51,6 +52,7 @@ type Runtime = {
     mode: string | null;
     playersById: Map<string, PlayerState>;
     damageContributions: Map<string, Map<string, number>>;
+    killFeed: KillFeedEntry[];
 };
 
 export type CombatStepResult = {
@@ -103,7 +105,8 @@ export class CombatManager {
                 heals: [],
                 mode: null,
                 playersById: new Map(),
-                damageContributions: new Map()
+                damageContributions: new Map(),
+                killFeed: []
             };
             this.rooms.set(roomId, state);
         }
@@ -150,6 +153,7 @@ export class CombatManager {
         state.knockback.clear();
         state.playersById.clear();
         state.damageContributions.clear();
+        state.killFeed = [];
     }
 
     leave(roomId: string, playerId: string, roomEmpty: boolean): void {
@@ -253,6 +257,7 @@ export class CombatManager {
         const trapped: PlayerTrappedPayload[] = [];
         const zombieHits: ZombieHitPayload[] = [];
         state.heals = [];
+        state.killFeed = [];
         const byId = new Map(players.map(player => [player.id, player]));
         state.playersById = byId;
         const playerRadius = COMBAT_BALANCE.playerRadius;
@@ -315,7 +320,8 @@ export class CombatManager {
             explosions,
             trapped,
             heals: [...state.heals],
-            zombieHits
+            zombieHits,
+            killFeed: [...state.killFeed]
         };
     }
 
@@ -692,6 +698,14 @@ export class CombatManager {
             const contributions = state.damageContributions.get(player.id);
             if (attacker && attacker.id !== player.id) {
                 attacker.kills = (attacker.kills ?? 0) + 1;
+                state.killFeed.push({
+                    id: state.killFeed.length + ':' + now,
+                    killerId: attacker.id,
+                    killerName: attacker.name,
+                    victimId: player.id,
+                    victimName: player.name,
+                    createdAt: now
+                });
                 for (const [contributorId, totalDamage] of contributions ?? []) {
                     if (contributorId === attacker.id || totalDamage <= 0) continue;
                     const assister = state.playersById.get(contributorId);
