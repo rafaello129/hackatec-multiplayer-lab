@@ -163,10 +163,13 @@ export class MatchManager {
                 this.markDirty(roomId);
                 continue;
             }
-            if (match.phase === 'playing' && match.endsAt !== null && now >= match.endsAt) {
+            if (match.phase === 'playing' && match.endsAt !== null) {
+                const roundPlayers = getPlayers(roomId);
+                const killLimitReached = roundPlayers.some(player => (player.kills ?? 0) >= MATCH_BALANCE.classicKillLimit);
+                if (now < match.endsAt && !killLimitReached) continue;
                 match.phase = 'results';
                 match.startsAt = null;
-                match.results = getPlayers(roomId)
+                match.results = roundPlayers
                     .map(player => ({ playerId: player.id, name: player.name,
                         kills: player.kills ?? 0, deaths: player.deaths ?? 0 }))
                     .sort((a, b) => b.kills - a.kills || a.deaths - b.deaths || a.name.localeCompare(b.name));
