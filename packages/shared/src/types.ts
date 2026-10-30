@@ -6,6 +6,8 @@ export interface PlayerInput {
     /** Keyboard dash state; older client code may still use shift. */
     dash?: boolean;
     shift?: boolean;
+    /** Last pointer aim in radians; the server uses it for stationary dash direction. */
+    aimAngle?: number;
 }
 
 export interface PlayerState {
@@ -21,6 +23,9 @@ export interface PlayerState {
     shield?: number;
     isInvulnerable?: boolean;
     isDashing?: boolean;
+    dashReadyAt?: number;
+    spawnInvulnerableUntil?: number;
+    aimAngle?: number;
     alive?: boolean;
     spectator?: boolean;
     kills?: number;
