@@ -229,6 +229,29 @@ export class RoomManager
         return this.rooms.has(roomId);
     }
 
+    resetForMatch(roomId: string): { map: GameMapState; players: PlayerState[] } | undefined
+    {
+        const room = this.rooms.get(roomId);
+        if (!room) return undefined;
+        const map = generateMap(createMapSeed());
+        this.roomMaps.set(roomId, map);
+        let index = 0;
+        for (const player of room.values()) {
+            const spawn = getSpawnPosition(index++);
+            player.x = spawn.x;
+            player.y = spawn.y;
+            player.hp = 100;
+            player.maxHp = 100;
+            player.alive = true;
+            player.spectator = false;
+            player.kills = 0;
+            player.deaths = 0;
+            player.isDashing = false;
+            player.immobilizedUntil = 0;
+        }
+        return { map, players: [...room.values()] };
+    }
+
     getHostId(roomId: string): string | undefined
     {
         return this.roomHosts.get(roomId);
