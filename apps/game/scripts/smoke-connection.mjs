@@ -300,6 +300,8 @@ async function main() {
     const gammaAccount = await createAccount('Gamma');
     const deltaAccount = await createAccount('Delta');
     const limitedAccount = await createAccount('Limited');
+    const modeAAccount = await createAccount('ModeAlpha');
+    const modeBAccount = await createAccount('ModeBeta');
     await verifyAuthApi(alphaAccount);
     await verifyAccountLoginRateLimit(limitedAccount.username);
     const betaLoginCookie = await loginAccount(betaAccount.username);
