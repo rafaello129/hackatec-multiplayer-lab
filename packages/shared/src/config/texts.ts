@@ -3,8 +3,14 @@ export const MATCH_TEXTS = {
         waiting: 'Esperando para iniciar',
         voting: 'Votación de modo',
         countdown: 'La partida está por comenzar',
-        playing: 'Partida en curso · Clásico',
+        playing: 'Partida en curso',
         results: 'Resultados de la partida'
+    },
+    modes: {
+        classic: 'Clásico',
+        everyoneVsOne: 'Todos contra uno',
+        rockets: 'Rocket para todos',
+        battleRoyale: 'Battle Royale'
     },
     messages: {
         votePrompt: 'Vota por el modo de la siguiente partida.',
@@ -14,6 +20,9 @@ export const MATCH_TEXTS = {
         hostStarted: 'El anfitrión inició una nueva partida.',
         gameStarted: '¡La partida comenzó!',
         gameFinished: 'Partida finalizada.',
+        titanWins: 'El Titan ganó la ronda.',
+        huntersWin: 'Los cazadores ganaron la ronda.',
+        battleRoyaleWin: '¡Tenemos un ganador de Battle Royale!',
         nextRound: 'Preparando la siguiente ronda.',
         hostStopped: 'El anfitrión detuvo la partida. Esperando a que inicie otra.',
         lateJoin: 'Los jugadores que entran durante una partida quedan como espectadores hasta la siguiente ronda.'
