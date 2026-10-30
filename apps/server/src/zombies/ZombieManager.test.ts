@@ -2,11 +2,21 @@ import { describe, expect, it } from 'vitest';
 import type { GameMapState, PlayerState } from '@hackatec/shared';
 import { ZOMBIE_BALANCE } from '@hackatec/shared';
 import { ZombieManager } from './ZombieManager.js';
+import { getSpawnPosition } from '../game/spawn.js';
 
 const map: GameMapState = { seed: 99, width: 1_024, height: 768, obstacles: [] };
 const player = (id: string, x: number, y: number): PlayerState => ({
     id, name: id, x, y, hp: 100, maxHp: 100, alive: true
 });
+
+function blockedAt(x: number, y: number, sourceMap: GameMapState): boolean {
+    return sourceMap.obstacles.some(obstacle => {
+        if (obstacle.type !== 'wall') return false;
+        const dx = Math.max(Math.abs(x - obstacle.x) - obstacle.width / 2, 0);
+        const dy = Math.max(Math.abs(y - obstacle.y) - obstacle.height / 2, 0);
+        return dx * dx + dy * dy < 32 * 32;
+    });
+}
 
 describe('ZombieManager', () => {
     it('spawns a deterministic giant and spitter outside walls and away from players', () => {
@@ -20,6 +30,21 @@ describe('ZombieManager', () => {
         expect(stateA.zombies.map(zombie => zombie.type).sort()).toEqual(['giant', 'spitter']);
         for (const zombie of stateA.zombies) {
             expect(Math.hypot(zombie.x - 500, zombie.y - 420)).toBeGreaterThan(150);
+        }
+    });
+
+    it('still places giant and spitter in a room with 32 spread-out players', () => {
+        const players = Array.from({ length: 32 }, (_, index) => {
+            const spawn = getSpawnPosition(index);
+            return player('p' + index, spawn.x, spawn.y);
+        });
+        const manager = new ZombieManager();
+        const state = manager.reset('full-room', map, players, 0);
+
+        expect(state.zombies).toHaveLength(2);
+        for (const zombie of state.zombies) {
+            expect(players.every(item => Math.hypot(item.x - zombie.x, item.y - zombie.y) >= 85)).toBe(true);
+            expect(blockedAt(zombie.x, zombie.y, map)).toBe(false);
         }
     });
 
