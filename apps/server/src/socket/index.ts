@@ -531,7 +531,7 @@ export function registerSocketHandlers(
                 if (!account || !socket.connected || roomManager.getPlayer(socket.id) !== player || identities.get(socket.id) !== userId) return;
                 player.name = account.username;
                 player.appearance = account.appearance;
-                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player: publicPlayerState(player) });
                 socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: true, message: PROFILE_TEXTS.saved });
             } catch (error) {
                 const message = error instanceof Error && error.message.includes('UNIQUE constraint failed: accounts.username_key')
