@@ -16,7 +16,7 @@ Juego web multijugador 2D desarrollado con TypeScript, Phaser 4, Node.js, Expres
 - XP, niveles, asistencias, historial de progresión y chat con canal de espectadores.
 - HUD con hotbar, vida, escudo, roles, feed de eliminaciones, resultados, chat y burbujas de mensaje.
 
-Consulta [la auditoría y las decisiones técnicas](docs/FULL_GAME_AUDIT.md), [la referencia de juego](docs/GAMEPLAY_SYSTEMS.md), [el ciclo de partidas](docs/MATCH_LIFECYCLE.md) y [autenticación](docs/AUTHENTICATION.md).
+Consulta [el informe de cierre de Fase 11](docs/integration/PHASE_11_REPORT.md), [la auditoría histórica y las decisiones técnicas](docs/FULL_GAME_AUDIT.md), [la referencia de juego](docs/GAMEPLAY_SYSTEMS.md), [el ciclo de partidas](docs/MATCH_LIFECYCLE.md) y [autenticación](docs/AUTHENTICATION.md).
 
 ## Requisitos
 
@@ -132,6 +132,6 @@ Los valores de armas, habilidades, tormenta, zombies, pickups, XP y chat están 
 
 ## Estado de aceptación
 
-La CI remota ejecuta tests, TypeScript, build y smoke de Socket.IO. Eso no sustituye la verificación real de navegador: la sensación del dash, legibilidad del HUD, interacción visual de cada modo, comportamiento en LAN y carga sostenida deberán validarse en una sesión manual. No marcar la aceptación visual como completada antes de esas pruebas.
+La ejecución de GitHub Actions [#41053021839](https://github.com/rafaello129/hackatec-multiplayer-lab/actions/runs/41053021839) aprobó tests, build y smoke de Socket.IO para el commit `2a1463d`, incluido un escenario de 32 cuentas autenticadas y movimiento autoritativo. Esto no sustituye la aceptación manual: la sensación del dash, legibilidad del HUD, interacción visual de cada modo y comportamiento en LAN quedan pendientes de la persona responsable de esa validación. Consulta el [informe de Fase 11](docs/integration/PHASE_11_REPORT.md) y la [lista de aceptación manual](docs/integration/MANUAL_GAMEPLAY_ACCEPTANCE.md). No marcar la aceptación visual como completada antes de esas pruebas.
 
 No hacer merge a `main` sin autorización expresa.
