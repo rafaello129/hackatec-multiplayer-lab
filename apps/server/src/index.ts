@@ -5,7 +5,8 @@ import { createServer } from 'node:http';
 import express, { type Request, type RequestHandler, type Response } from 'express';
 import { Server } from 'socket.io';
 import { getAllowedOrigins, getServerConfig } from './config/env.js';
-import { AccountStore, SESSION_COOKIE, SESSION_TTL_MS } from './auth/AccountStore.js';
+import { AccountStore, normalizeUsername, SESSION_COOKIE, SESSION_TTL_MS } from './auth/AccountStore.js';
+import { AttemptLimiter } from './auth/AttemptLimiter.js';
 import { uploadSkin, skinsUploadHandler } from './http/skins.js';
 import { healthHandler } from './http/health.js';
 import { registerSocketHandlers } from './socket/index.js';
@@ -17,9 +18,14 @@ if (process.env.NODE_ENV === 'production' && config.corsOrigin === '*') {
 }
 
 const accounts = new AccountStore();
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_LOGIN_ATTEMPTS = 8;
+const loginIpAttempts = new AttemptLimiter();
+const loginAccountAttempts = new AttemptLimiter();
+const registrationAttempts = new AttemptLimiter();
+const MAX_LOGIN_ATTEMPTS_PER_IP = 8;
+const MAX_LOGIN_ATTEMPTS_PER_ACCOUNT = 5;
+const MAX_REGISTRATIONS_PER_IP = 8;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const REGISTRATION_WINDOW_MS = 60 * 60 * 1000;
 
 function readCookie(cookieHeader: string | undefined, name: string): string | undefined {
     if (!cookieHeader) return undefined;
@@ -104,6 +110,12 @@ app.use((request, response, next) => {
 app.get('/health', healthHandler);
 
 app.post('/api/auth/register', requireTrustedOrigin, async (request: Request, response: Response) => {
+    const registrationIp = request.ip || request.socket.remoteAddress || 'unknown';
+    const registrationLimit = registrationAttempts.consume(registrationIp, MAX_REGISTRATIONS_PER_IP, REGISTRATION_WINDOW_MS, Date.now());
+    if (!registrationLimit.allowed) {
+        response.status(429).json({ error: 'Se alcanzó el límite de registros desde esta conexión. Inténtalo más tarde.' });
+        return;
+    }
     const credentials = validateCredentials(request.body);
     if (!credentials) {
         response.status(400).json({ error: 'Usuario o contraseña inválidos. El usuario debe tener 3-16 caracteres y la contraseña al menos 8.' });
@@ -128,16 +140,21 @@ app.post('/api/auth/register', requireTrustedOrigin, async (request: Request, re
 app.post('/api/auth/login', requireTrustedOrigin, async (request: Request, response: Response) => {
     const ip = request.ip || request.socket.remoteAddress || 'unknown';
     const now = Date.now();
-    const current = loginAttempts.get(ip);
-    if (current && current.resetAt > now && current.count >= MAX_LOGIN_ATTEMPTS) {
-        response.status(429).json({ error: 'Demasiados intentos. Inténtalo más tarde.' });
+    if (!loginIpAttempts.isBlocked(ip, MAX_LOGIN_ATTEMPTS_PER_IP, now).allowed) {
+        response.status(429).json({ error: 'Demasiados intentos desde esta conexión. Inténtalo más tarde.' });
         return;
     }
+
     const credentials = validateCredentials(request.body);
+    const accountKey = credentials ? ip + ':' + normalizeUsername(credentials.username) : undefined;
+    if (accountKey && !loginAccountAttempts.isBlocked(accountKey, MAX_LOGIN_ATTEMPTS_PER_ACCOUNT, now).allowed) {
+        response.status(429).json({ error: 'Demasiados intentos para esta cuenta. Inténtalo más tarde.' });
+        return;
+    }
+
     const fail = () => {
-        const entry = loginAttempts.get(ip);
-        if (!entry || entry.resetAt <= now) loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
-        else entry.count += 1;
+        loginIpAttempts.consume(ip, MAX_LOGIN_ATTEMPTS_PER_IP, LOGIN_WINDOW_MS, now);
+        if (accountKey) loginAccountAttempts.consume(accountKey, MAX_LOGIN_ATTEMPTS_PER_ACCOUNT, LOGIN_WINDOW_MS, now);
         response.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
     };
     if (!credentials) { fail(); return; }
@@ -146,7 +163,8 @@ app.post('/api/auth/login', requireTrustedOrigin, async (request: Request, respo
     try {
         const valid = await argon2.verify(row.password_hash, credentials.password);
         if (!valid) { fail(); return; }
-        loginAttempts.delete(ip);
+        loginIpAttempts.reset(ip);
+        if (accountKey) loginAccountAttempts.reset(accountKey);
         const account = accounts.getAccountById(row.id);
         if (!account) { fail(); return; }
         const token = accounts.createSession(account.id);
