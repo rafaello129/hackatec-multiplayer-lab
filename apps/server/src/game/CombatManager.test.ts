@@ -172,6 +172,39 @@ describe('CombatManager weapon authority', () => {
         expect(hunterVictim.spectator).not.toBe(true);
     });
 
+    it('allows projectile, melee and laser weapons to damage zombie targets', () => {
+        const shooter = player('shooter', 250);
+        const zombie = {
+            id: 'zombie', type: 'giant' as const, x: 280, y: 400,
+            hp: 400, maxHp: 400, radius: 29, alive: true,
+            phase: 'approach' as const, phaseEndsAt: 0, targetId: null, angle: 0
+        };
+        combat.initializePlayer('room', shooter, false);
+        combat.setFireIntent('room', shooter, { angle: 0, firing: true }, 1_000);
+        const projectile = combat.step('room', [shooter], map, 50, 1_000, 'classic', [zombie]);
+        expect(projectile.zombieHits[0]).toMatchObject({
+            zombieId: 'zombie',
+            attackerId: 'shooter',
+            damage: 20
+        });
+
+        const knifeUser = player('knife-user', 250);
+        const nearbyZombie = { ...zombie, id: 'knife-target', hp: 400, x: 300 };
+        combat.initializePlayer('knife-room', knifeUser, false);
+        combat.selectWeapon('knife-room', knifeUser, 1, 'classic', 1_000);
+        combat.setFireIntent('knife-room', knifeUser, { angle: 0, firing: true }, 1_000);
+        const knife = combat.step('knife-room', [knifeUser], map, 50, 1_000, 'classic', [nearbyZombie]);
+        expect(knife.zombieHits[0]?.damage).toBe(28);
+
+        const laserUser = player('gueta', 250);
+        const laserTarget = { ...zombie, id: 'laser-target', hp: 400 };
+        combat.initializePlayer('laser-room', laserUser, true);
+        combat.selectWeapon('laser-room', laserUser, 7, 'classic', 1_000);
+        combat.setFireIntent('laser-room', laserUser, { angle: 0, firing: true }, 1_000);
+        const laser = combat.step('laser-room', [laserUser], map, 50, 1_000, 'classic', [laserTarget]);
+        expect(laser.zombieHits[0]?.damage).toBe(4);
+    });
+
     it('restricts Rocket para todos to slot six on the server tick', () => {
         const shooter = player('shooter', 250);
         combat.initializePlayer('room', shooter, false);
