@@ -204,13 +204,16 @@ app.post('/api/auth/logout', requireTrustedOrigin, (request: Request, response: 
 app.use('/skins', express.static('storage/skins'));
 const requireAuthenticatedUpload: RequestHandler = (request, response, next) => {
     const token = readCookie(request.headers.cookie, SESSION_COOKIE);
-    if (!accounts.getAccountBySessionToken(token)) {
+    const account = accounts.getAccountBySessionToken(token);
+    if (!account) {
         response.status(401).json({ error: 'Inicia sesión para subir una skin.' });
         return;
     }
+    response.locals.accountId = account.id;
     next();
 };
-app.post('/api/skins', requireTrustedOrigin, requireAuthenticatedUpload, uploadSkin, skinsUploadHandler);
+app.post('/api/skins', requireTrustedOrigin, requireAuthenticatedUpload, uploadSkin,
+    (request, response) => skinsUploadHandler(request, response, accounts));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
