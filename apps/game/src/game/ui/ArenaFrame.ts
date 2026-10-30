@@ -45,7 +45,7 @@ export class ArenaFrame {
         }).setDepth(10).setScrollFactor(0);
         this.chrome.push(this.roomText);
 
-        this.chrome.push(scene.add.rectangle(512, 62, 1, 54, 0x3b526e, 0.6).setDepth(10));
+        this.chrome.push(scene.add.rectangle(512, 62, 1, 54, 0x3b526e, 0.6).setDepth(10).setScrollFactor(0));
 
         this.playerCountText = scene.add.text(512, 42, '0 / 32 ' + ARENA_UI_TEXTS.playerCountSuffix, {
             fontFamily: 'Arial Black',
