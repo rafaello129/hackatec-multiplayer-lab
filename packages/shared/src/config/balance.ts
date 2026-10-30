@@ -6,15 +6,15 @@ export const MATCH_BALANCE = {
     classicKillLimit: 30,
     initialHealth: 100,
     resultsDurationMs: 15_000,
-    classicRespawnMs: 5_000,
+    classicRespawnMs: 4_000,
     voteRateLimitMs: 250,
-    everyoneVsOneDurationMs: 240_000,
+    everyoneVsOneDurationMs: 270_000,
     titanBaseHealth: 500,
-    titanHealthPerHunter: 100,
+    titanHealthPerHunter: 80,
     hunterLives: 2,
     battleRoyaleDurationMs: 450_000,
     rocketsDurationMs: 300_000,
-    zombiesDurationMs: 300_000
+    zombiesDurationMs: 900_000
 } as const;
 
 export const WEAPON_SLOT_ORDER = [
@@ -34,17 +34,17 @@ export const WEAPON_BALANCE = {
     pistol: { cooldownMs: 500, projectileSpeed: 640, damage: 20, spreadRadians: [0] },
     sniper: { cooldownMs: 3_000, damage: 95, range: 1_600 },
     rocketLauncher: {
-        cooldownMs: 1_400,
+        cooldownMs: 1_600,
         projectileSpeed: 360,
-        centerDamage: 55,
+        centerDamage: 50,
         edgeDamage: 15,
         blastRadius: 110,
-        selfDamageMultiplier: 0.5,
+        selfDamageMultiplier: 0.35,
         knockbackSpeed: 330,
         lifetimeMs: 5_000
     },
     laser: {
-        damagePerSecond: 80,
+        damagePerSecond: 100,
         tickMs: 100,
         energyMs: 4_000,
         rechargeMs: 0,
@@ -122,8 +122,13 @@ export const ZOMBIE_BALANCE = {
         puddleRadius: 48
     },
     spawnIntervalMs: 20_000,
-    maximumAlive: 12,
-    initialSpawnCount: 2,
+    maximumAlive: 24,
+    initialSpawnCount: 3,
+    totalRounds: 10,
+    intermissionMs: 10_000,
+    initialLives: 3,
+    bossHealth: 2_500,
+    bossHealthPerPlayer: 650,
     spawnGridMarginPx: 45,
     spawnGridMinX: 55,
     spawnGridStepX: 60,
