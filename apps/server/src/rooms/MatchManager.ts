@@ -1,4 +1,4 @@
-import { MATCH_BALANCE, type GameMode, type MatchStatePayload, type PlayerState } from '@hackatec/shared';
+import { MATCH_BALANCE, MATCH_TEXTS, type GameMode, type MatchStatePayload, type PlayerState } from '@hackatec/shared';
 
 export const AVAILABLE_GAME_MODES: readonly GameMode[] = ['classic'];
 
@@ -71,7 +71,7 @@ export class MatchManager {
             for (const player of players) {
                 if (newPlayerIds.includes(player.id)) player.spectator = true;
             }
-            if (newPlayerIds.length) match.message = 'Los jugadores que entran durante una partida quedan como espectadores hasta la siguiente ronda.';
+            if (newPlayerIds.length) match.message = MATCH_TEXTS.messages.lateJoin;
         }
 
         for (const [accountId, vote] of match.votes) {
@@ -94,7 +94,7 @@ export class MatchManager {
             match.voteEndsAt = null;
             match.startsAt = null;
             match.endsAt = null;
-            match.message = 'Se necesitan al menos 2 jugadores para votar.';
+            match.message = MATCH_TEXTS.messages.needPlayers;
             this.markDirty(roomId);
         }
 
@@ -105,37 +105,37 @@ export class MatchManager {
 
     vote(roomId: string, playerId: string, accountId: string, mode: GameMode, now: number): MatchActionResult {
         const match = this.matches.get(roomId);
-        if (!match || !match.players.has(playerId)) return { ok: false, message: 'No perteneces a esta sala.' };
-        if (match.phase !== 'voting') return { ok: false, message: 'La votación no está abierta.' };
-        if (match.voteEndsAt === null || now >= match.voteEndsAt) return { ok: false, message: 'El tiempo de votación terminó.' };
-        if (match.accountIds.get(playerId) !== accountId) return { ok: false, message: 'La identidad de la cuenta no es válida.' };
-        if (!this.isAvailableMode(mode)) return { ok: false, message: 'Ese modo todavía no está disponible.' };
+        if (!match || !match.players.has(playerId)) return { ok: false, message: MATCH_TEXTS.errors.notMember };
+        if (match.phase !== 'voting') return { ok: false, message: MATCH_TEXTS.errors.voteClosed };
+        if (match.voteEndsAt === null || now >= match.voteEndsAt) return { ok: false, message: MATCH_TEXTS.errors.voteExpired };
+        if (match.accountIds.get(playerId) !== accountId) return { ok: false, message: MATCH_TEXTS.errors.identityInvalid };
+        if (!this.isAvailableMode(mode)) return { ok: false, message: MATCH_TEXTS.errors.modeUnavailable };
         if (now - (match.lastVoteAt.get(accountId) ?? -Infinity) < MATCH_BALANCE.voteRateLimitMs) {
-            return { ok: false, message: 'Estás votando demasiado rápido. Espera un momento.' };
+            return { ok: false, message: MATCH_TEXTS.errors.voteRateLimit };
         }
 
         match.lastVoteAt.set(accountId, now);
         match.votes.set(accountId, { playerId, mode });
-        match.message = 'Voto registrado. Puedes cambiarlo mientras la votación siga abierta.';
+        match.message = MATCH_TEXTS.messages.voteRecorded;
         this.markDirty(roomId);
         return { ok: true, message: 'Voto registrado.' };
     }
 
     forceStart(roomId: string, requesterId: string, mode: GameMode, now: number): MatchActionResult {
         const match = this.matches.get(roomId);
-        if (!match || !match.players.has(requesterId)) return { ok: false, message: 'No perteneces a esta sala.' };
-        if (match.hostId !== requesterId) return { ok: false, message: 'Solo el anfitrión puede iniciar o reiniciar la partida.' };
-        if (!this.isAvailableMode(mode)) return { ok: false, message: 'Ese modo todavía no está disponible.' };
+        if (!match || !match.players.has(requesterId)) return { ok: false, message: MATCH_TEXTS.errors.notMember };
+        if (match.hostId !== requesterId) return { ok: false, message: MATCH_TEXTS.errors.hostOnlyStart };
+        if (!this.isAvailableMode(mode)) return { ok: false, message: MATCH_TEXTS.errors.modeUnavailable };
 
         match.blockedByHost = false;
-        this.startCountdown(roomId, match, mode, now, 'El anfitrión inició una nueva partida.');
+        this.startCountdown(roomId, match, mode, now, MATCH_TEXTS.messages.hostStarted);
         return { ok: true, message: 'Nueva partida programada.' };
     }
 
     stop(roomId: string, requesterId: string): MatchActionResult {
         const match = this.matches.get(roomId);
-        if (!match || !match.players.has(requesterId)) return { ok: false, message: 'No perteneces a esta sala.' };
-        if (match.hostId !== requesterId) return { ok: false, message: 'Solo el anfitrión puede detener la partida.' };
+        if (!match || !match.players.has(requesterId)) return { ok: false, message: MATCH_TEXTS.errors.notMember };
+        if (match.hostId !== requesterId) return { ok: false, message: MATCH_TEXTS.errors.hostOnlyStop };
 
         match.phase = 'waiting';
         match.mode = null;
@@ -145,7 +145,7 @@ export class MatchManager {
         match.endsAt = null;
         match.results = [];
         match.blockedByHost = true;
-        match.message = 'El anfitrión detuvo la partida. Esperando a que inicie otra.';
+        match.message = MATCH_TEXTS.messages.hostStopped;
         this.markDirty(roomId);
         return { ok: true, message: 'Partida detenida.' };
     }
@@ -155,7 +155,7 @@ export class MatchManager {
         for (const [roomId, match] of this.matches) {
             if (match.phase === 'voting' && match.voteEndsAt !== null && now >= match.voteEndsAt) {
                 const mode = this.resolveVote(match.votes);
-                this.startCountdown(roomId, match, mode, now, 'Votación finalizada. La partida está por comenzar.');
+                this.startCountdown(roomId, match, mode, now, MATCH_TEXTS.messages.voteFinished);
                 transitions.push({ roomId, resetPlayers: true });
                 continue;
             }
@@ -163,7 +163,7 @@ export class MatchManager {
                 match.phase = 'playing';
                 match.startsAt = null;
                 match.endsAt = now + this.matchDurationMs;
-                match.message = '¡La partida comenzó!';
+                match.message = MATCH_TEXTS.messages.gameStarted;
                 this.markDirty(roomId);
                 continue;
             }
@@ -178,7 +178,7 @@ export class MatchManager {
                         kills: player.kills ?? 0, deaths: player.deaths ?? 0 }))
                     .sort((a, b) => b.kills - a.kills || a.deaths - b.deaths || a.name.localeCompare(b.name));
                 match.endsAt = now + this.resultsDurationMs;
-                match.message = 'Partida finalizada.';
+                match.message = MATCH_TEXTS.messages.gameFinished;
                 this.markDirty(roomId);
                 continue;
             }
@@ -190,7 +190,7 @@ export class MatchManager {
                 match.startsAt = null;
                 match.endsAt = null;
                 match.results = [];
-                match.message = 'Preparando la siguiente ronda.';
+                match.message = MATCH_TEXTS.messages.nextRound;
                 this.markDirty(roomId);
                 if (!match.blockedByHost && match.players.size >= MATCH_BALANCE.minimumPlayers) this.startVoting(roomId, match, now);
             }
@@ -234,7 +234,7 @@ export class MatchManager {
         match.phase = 'voting'; match.mode = null; match.votes.clear();
         match.voteEndsAt = now + this.voteDurationMs;
         match.startsAt = null; match.endsAt = null; match.results = [];
-        match.message = 'Vota por el modo de la siguiente partida.';
+        match.message = MATCH_TEXTS.messages.votePrompt;
         this.markDirty(roomId);
     }
 
