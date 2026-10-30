@@ -13,8 +13,8 @@ La selección de ranuras es fija:
 | 3 | Escopeta | 3 perdigones, 15 de daño por perdigón, cooldown 800 ms, velocidad 590 px/s |
 | 4 | Pistola | 20 de daño, cooldown 500 ms, velocidad 640 px/s |
 | 5 | Sniper | 95 de daño, alcance 1600 px, cooldown 3000 ms; impacto hitscan con trazador visual |
-| 6 | Lanzacohetes | 55 de daño central, 15 en el borde, radio 110 px, cooldown 1400 ms, empuje |
-| 7 | Láser | 80 de daño por segundo, alcance 1800 px, energía para 4 s, sin tiempo de recarga |
+| 6 | Lanzacohetes | 50 de daño central, 15 en el borde, radio 110 px, cooldown 1600 ms, empuje |
+| 7 | Láser | 100 de daño por segundo, alcance 1800 px, energía para 4 s, sin tiempo de recarga |
 
 Rocket para todos fuerza la ranura 6 y bloquea las demás. El cliente no puede elegir el arma enviando un campo arbitrario en el disparo.
 
@@ -23,7 +23,8 @@ Rocket para todos fuerza la ranura 6 y bloquea las demás. El cliente no puede e
 - Velocidad normal: 185 px/s.
 - Dash: desplazamiento configurado de 170 px en 160 ms, invulnerabilidad durante 300 ms y cooldown de 2500 ms.
 - La dirección del dash usa el movimiento; si el jugador está quieto, usa el ángulo de apuntado validado por el servidor.
-- Las paredes bloquean movimiento y proyectiles.
+- Las rocas y los lagos bloquean el movimiento; las rocas también bloquean proyectiles, mientras que los disparos atraviesan los lagos.
+- Las cercas se pueden atravesar, pero ralentizan brevemente al jugador.
 - Las trampas inmovilizan durante 5 segundos.
 - Los cactus aplican daño con un cooldown de 1 segundo.
 
@@ -118,3 +119,13 @@ El historial es temporal y se pierde cuando la sala queda vacía o el servidor s
 | Zombies | 5 min |
 
 Los valores se pueden ajustar en un solo sitio. Cualquier cambio de balance debe actualizar los tests y esta documentación.
+
+
+## Modos y mapas
+
+- Clásico: 5 minutos, reaparición de 4 segundos y límite de 30 bajas.
+- Battle Royale: 7 minutos y 30 segundos, sin reapariciones; el mapa crece con el número de jugadores y es mayor que el de los otros modos. La tormenta espera 25 segundos y cierra cada fase durante 40 segundos.
+- Cohetes: 5 minutos; el cohete inflige 50 de daño central y 35% de daño propio.
+- Todos contra uno: 4 minutos y 30 segundos; el Titán tiene 500 de vida base más 80 por Cazador, y sus embestidas activan una onda de choque de 35 de daño con 12 segundos de enfriamiento.
+- Zombies: diez rondas sin límite de tiempo y un jefe final. Cada jugador comienza con tres vidas. Al quedar sin vidas pasa a espectador; si el equipo completa la ronda y queda alguien vivo, los eliminados regresan con una vida. Durante el jefe final no hay reanimaciones. El equipo gana al derrotar al jefe y pierde cuando todos quedan eliminados.
+- El jefe zombi escala su vida con el tamaño del equipo y convoca escupidores durante el combate.
