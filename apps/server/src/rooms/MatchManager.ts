@@ -8,6 +8,7 @@ type RoomMatch = {
     mode: GameMode | null;
     hostId: string | null;
     players: Set<string>;
+    alivePlayerIds: string[];
     accountIds: Map<string, string>;
     votes: Map<string, Vote>;
     lastVoteAt: Map<string, number>;
@@ -46,7 +47,7 @@ export class MatchManager {
         if (!match) {
             match = {
                 phase: 'waiting', mode: null, hostId: hostId ?? null,
-                players: new Set(), accountIds: new Map(), votes: new Map(),
+                players: new Set(), alivePlayerIds: [], accountIds: new Map(), votes: new Map(),
                 lastVoteAt: new Map(), voteEndsAt: null, startsAt: null,
                 endsAt: null, results: [], blockedByHost: false
             };
@@ -57,9 +58,12 @@ export class MatchManager {
         const membershipChanged = nextPlayers.size !== match.players.size ||
             [...nextPlayers].some(id => !match.players.has(id));
         const hostChanged = match.hostId !== (hostId ?? null);
+        const nextAlivePlayerIds = players.filter(player => player.alive !== false && !player.spectator).map(player => player.id);
+        const aliveChanged = nextAlivePlayerIds.length !== match.alivePlayerIds.length || nextAlivePlayerIds.some((id, index) => id !== match!.alivePlayerIds[index]);
         const newPlayerIds = [...nextPlayers].filter(id => !match.players.has(id));
 
         match.players = nextPlayers;
+        match.alivePlayerIds = nextAlivePlayerIds;
         match.hostId = hostId ?? null;
         match.accountIds = new Map(accountIds);
 
@@ -81,7 +85,7 @@ export class MatchManager {
             if (![...match.accountIds.values()].includes(accountId)) match.lastVoteAt.delete(accountId);
         }
 
-        if (membershipChanged || hostChanged || newPlayerIds.length) this.markDirty(roomId);
+        if (membershipChanged || hostChanged || newPlayerIds.length || aliveChanged) this.markDirty(roomId);
 
         if (match.phase === 'voting' && match.players.size < MATCH_BALANCE.minimumPlayers) {
             match.phase = 'waiting';
@@ -246,7 +250,7 @@ export class MatchManager {
         for (const { playerId, mode } of match.votes.values()) votes[playerId] = mode;
         return {
             roomId, phase: match.phase, mode: match.mode, hostId: match.hostId,
-            votes, voteEndsAt: match.voteEndsAt, startsAt: match.startsAt,
+            votes, alivePlayerIds: [...match.alivePlayerIds], voteEndsAt: match.voteEndsAt, startsAt: match.startsAt,
             endsAt: match.endsAt, results: match.results.map(result => ({ ...result })),
             message: match.message
         };
