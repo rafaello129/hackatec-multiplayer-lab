@@ -278,6 +278,12 @@ export class ArenaScene extends Scene
 
     private readonly handleMatchState = (state: MatchStatePayload): void => {
         this.matchState = state;
+        if (state.phase === 'countdown' || state.phase === 'waiting') {
+            this.killFeedIds.clear();
+            this.killFeedLines.length = 0;
+            this.killFeedHud?.setText('');
+            this.scoreboard?.setText('');
+        }
         this.stormView?.setActive(state.mode === 'battleRoyale' && state.phase === 'playing');
         this.roomHostId = state.hostId ?? '';
         const labels: Record<MatchStatePayload['phase'], string> = {
