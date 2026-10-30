@@ -64,6 +64,7 @@ export class ArenaScene extends Scene
     private lastFireSentAt = 0;
     private bullets?: GameObjects.Graphics;
     private combatText?: GameObjects.Text;
+    private weaponHud?: GameObjects.Text;
     private matchState?: MatchStatePayload;
     private matchStatusText?: GameObjects.Text;
     private readonly voteButtons = new Map<GameMode, GameObjects.Text>();
@@ -118,7 +119,11 @@ export class ArenaScene extends Scene
         this.pickupView = new PickupView(this);
         this.stormView = new StormView(this);
         this.bullets = this.add.graphics().setDepth(3);
-        this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(5);
+        this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(8);
+        this.weaponHud = this.add.text(512, 690, '', {
+            fontFamily: 'Arial Black', fontSize: 11, color: '#e2e8f0',
+            backgroundColor: '#0f172acc', padding: { x: 10, y: 6 }, align: 'center'
+        }).setOrigin(0.5).setDepth(8);
         this.input.keyboard?.on('keydown-ONE', this.selectSlot1);
         this.input.keyboard?.on('keydown-TWO', this.selectSlot2);
         this.input.keyboard?.on('keydown-THREE', this.selectSlot3);
@@ -280,7 +285,8 @@ export class ArenaScene extends Scene
         } else if (state.phase === 'results' && state.results.length > 0) {
             const lines = state.results.slice(0, 5).map((result, index) => `${index + 1}. ${result.name}: ${result.kills} bajas / ${result.deaths} muertes`);
             this.scoreboard?.setText('RESULTADOS\\n' + lines.join('\\n'));
-            this.matchStatusText?.setText(labels[state.phase]);
+            const winner = state.winnerName ? 'Ganador: ' + state.winnerName + '\\n' : '';
+            this.matchStatusText?.setText(labels[state.phase] + '\\n' + winner + (state.message ?? ''));
         }
         this.updateMatchClock();
     };
@@ -617,6 +623,17 @@ private createInterface()
         this.weaponState = state;
         this.weapon = state.selectedWeapon;
         this.selectedSlot = state.selectedSlot;
+        const labels: Record<WeaponType, string> = {
+            knife: 'Cuchillo', machineGun: 'Metralleta', shotgun: 'Escopeta',
+            pistol: 'Pistola', sniper: 'Sniper', rocketLauncher: 'Cohete', laser: 'Láser'
+        };
+        const weapons: WeaponType[] = ['knife', 'machineGun', 'shotgun', 'pistol', 'sniper', 'rocketLauncher', 'laser'];
+        this.weaponHud?.setText(weapons.map((weapon, index) => {
+            const slot = index + 1;
+            const selected = slot === state.selectedSlot;
+            const available = state.availableSlots.includes(slot as WeaponStatePayload['selectedSlot']);
+            return (selected ? '【' : '') + slot + ' ' + labels[weapon] + (available ? '' : ' 🔒') + (selected ? '】' : '');
+        }).join('   ') + '   Láser: ' + (state.laserEnergyMs / 1_000).toFixed(1) + 's');
     };
 
     private readonly handleWeaponResult = (result: { ok: boolean; message: string }) => {
@@ -655,10 +672,22 @@ private createInterface()
         this.scoreboard?.setText('CLASIFICACIÓN\n' + [...state.players].sort((a,b)=>(b.kills??0)-(a.kills??0)).slice(0,8).map((p,i)=>`${i+1}. ${p.name}: ${p.kills??0} / ${p.deaths??0}`).join('\n'));
         this.healthBar?.clear();
         if (self) {
+            const hp = Math.max(0, Math.min(self.maxHp ?? 100, self.hp ?? 100));
+            const maxHp = Math.max(1, self.maxHp ?? 100);
+            const shield = Math.max(0, Math.min(50, self.shield ?? 0));
             this.healthBar?.fillStyle(0x334155).fillRect(36, 127, 220, 12);
-            this.healthBar?.fillStyle((self.hp??100)>30 ? 0x22c55e : 0xef4444).fillRect(36,127,220*Math.max(0,Math.min(100,self.hp??100))/100,12);
+            this.healthBar?.fillStyle((hp / maxHp) > 0.3 ? 0x22c55e : 0xef4444)
+                .fillRect(36, 127, 220 * hp / maxHp, 12);
+            this.healthBar?.fillStyle(0x0f172a).fillRect(36, 145, 220, 8);
+            this.healthBar?.fillStyle(0x38bdf8).fillRect(36, 145, 220 * shield / 50, 8);
         }
-        if (self) this.combatText?.setText(self.spectator ? MATCH_TEXTS.controls.spectator : `HP: ${self.hp ?? 100} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
+        if (self) {
+            const role = self.role === 'titan' ? 'TITAN' : self.role === 'hunter' ? 'CAZADOR' : '';
+            const lives = self.role === 'hunter' ? ' · Vidas: ' + (self.lives ?? 0) : '';
+            const shield = self.shield ? ' · Escudo: ' + Math.round(self.shield) : '';
+            this.combatText?.setText(self.spectator ? MATCH_TEXTS.controls.spectator :
+                (role ? role + ' · ' : '') + `HP: ${self.hp ?? 100}${shield}${lives} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
+        }
         this.bullets?.clear();
         for (const projectile of state.projectiles) {
             const isRocket = projectile.weapon === 'rocketLauncher';
