@@ -430,7 +430,11 @@ export function registerSocketHandlers(
             const accountId = identities.get(socket.id);
             if (!roomId || !player || !accountId || !raw || typeof raw !== 'object' || Array.isArray(raw)) return;
             const payload = raw as Partial<ChatSendPayload>;
-            const channel: ChatChannel = payload.channel === 'spectators' ? 'spectators' : 'all';
+            if (payload.channel !== 'all' && payload.channel !== 'spectators') {
+                socket.emit(SOCKET_EVENTS.CHAT_MESSAGE, { error: 'Canal de chat inválido.' });
+                return;
+            }
+            const channel: ChatChannel = payload.channel;
             const result = chatManager.send(roomId, player, accountId, channel, payload.text, Date.now());
             if (!result.ok || !result.message) {
                 socket.emit(SOCKET_EVENTS.CHAT_MESSAGE, { error: result.error });
