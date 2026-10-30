@@ -283,7 +283,7 @@ export function registerSocketHandlers(
             const roomId = roomManager.getRoomId(socket.id);
             if (!roomId || !raw || typeof raw !== 'object') return;
             const mode = (raw as Partial<MatchVotePayload>).mode;
-            if (typeof mode !== 'string') return;
+            if (typeof mode !== 'string' || mode.length > 32) return;
             const accountId = identities.get(socket.id);
             if (!accountId) return;
             const result = matches.vote(roomId, socket.id, accountId, mode as GameMode, Date.now());
@@ -306,6 +306,13 @@ export function registerSocketHandlers(
             const roomId = roomManager.getRoomId(socket.id);
             if (!roomId) return;
             const result = matches.stop(roomId, socket.id);
+            if (result.ok) {
+                combat.resetRoom(roomId);
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, {
+                    players: roomManager.getPlayers(roomId),
+                    projectiles: []
+                });
+            }
             socket.emit(SOCKET_EVENTS.MATCH_ACTION_RESULT, result);
             for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
         });
