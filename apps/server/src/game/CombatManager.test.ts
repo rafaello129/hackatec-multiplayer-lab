@@ -107,14 +107,15 @@ describe('CombatManager weapon authority', () => {
         expect(combat.step('room', [shooter], map, 50, 1_100).projectiles).toHaveLength(2);
     });
 
-    it('uses the server hit scan for the sniper and respects its cooldown', () => {
+    it('deals 95 damage with the sniper and respects its cooldown', () => {
         const shooter = player('shooter', 250);
         const target = player('target', 500);
         combat.initializePlayer('room', shooter, false);
         combat.selectWeapon('room', shooter, 5, 'classic', 1_000);
         combat.setFireIntent('room', shooter, { angle: 0, firing: true }, 1_000);
-        combat.step('room', [shooter, target], map, 50, 1_000);
-        expect(target.hp).toBe(20);
+        const shot = combat.step('room', [shooter, target], map, 50, 1_000);
+        expect(target.hp).toBe(5);
+        expect(shot.beams).toMatchObject([{ ownerId: 'shooter', x1: 250, y1: 400, x2: 500, y2: 400, weapon: 'sniper' }]);
 
         combat.setFireIntent('room', shooter, { angle: 0, firing: false }, 1_050);
         combat.setFireIntent('room', shooter, { angle: 0, firing: true }, 1_100);
