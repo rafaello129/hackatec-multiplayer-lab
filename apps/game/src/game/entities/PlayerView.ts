@@ -6,7 +6,7 @@ export class PlayerView
 {
     readonly container: GameObjects.Container;
 
-    private readonly body: GameObjects.Rectangle;
+    private readonly body: GameObjects.Polygon;
     private readonly scene: Scene;
     private readonly skin: GameObjects.Image;
     private currentSkin = '';
@@ -24,13 +24,12 @@ export class PlayerView
     )
     {
         this.scene = scene;
-        this.body = scene.add.rectangle(
+        // Default player avatar: a compact spacecraft pointing in the aim direction.
+        this.body = scene.add.polygon(
             0,
             0,
-            42,
-            42,
-            0x3b82f6,
-            1
+            [24, 0, 7, -7, -13, -17, -8, -4, -8, 4, -13, 17, 7, 7],
+            0x3b82f6
         );
 
         this.body.setStrokeStyle(
