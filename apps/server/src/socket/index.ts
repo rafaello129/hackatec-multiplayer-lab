@@ -504,7 +504,7 @@ export function registerSocketHandlers(
                 typeof appearance.colorHex !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(appearance.colorHex) ||
                 (appearance.mode === 'skin' && (
                     !isSkinAssetRecord((appearance as { skin?: unknown }).skin) ||
-                    !accounts.ownsSkin(userId, (appearance as { skin: NonNullable<ProfileUpdatePayload['appearance']>['skin'] }).skin)
+                    !accounts.ownsSkin(userId, (appearance as { skin: Parameters<AccountStore['ownsSkin']>[1] }).skin)
                 ))
             )) {
                 socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'Apariencia inválida' });
