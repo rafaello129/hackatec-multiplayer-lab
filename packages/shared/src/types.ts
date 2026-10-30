@@ -80,7 +80,7 @@ export type PickupCollectedPayload = {
     playerId: string;
     restored: number;
 };
-export type ZombieType = 'giant' | 'spitter';
+export type ZombieType = 'giant' | 'spitter' | 'boss';
 export type ZombiePhase = 'approach' | 'telegraph' | 'charge' | 'stunned' | 'spit';
 export type ZombieState = {
     id: string;
@@ -111,11 +111,16 @@ export type AcidPuddleState = {
     radius: number;
     expiresAt: number;
 };
+export type ZombieRunPhase = 'wave' | 'intermission' | 'boss' | 'won' | 'lost';
 export type ZombieStatePayload = {
     roomId: string;
     zombies: ZombieState[];
     projectiles: AcidProjectileState[];
     puddles: AcidPuddleState[];
+    round?: number;
+    totalRounds?: number;
+    runPhase?: ZombieRunPhase;
+    intermissionEndsAt?: number | null;
 };
 export type ZombieHitPayload = { zombieId: string; attackerId: string; damage: number };
 export type ProgressionStatePayload = {
@@ -170,7 +175,7 @@ export type RoomErrorPayload = {
     message: string;
 };
 
-export type MapObstacleType = 'wall' | 'trap' | 'cactus';
+export type MapObstacleType = 'wall' | 'fence' | 'rock' | 'lake' | 'trap' | 'cactus';
 export type CactusSize = 'small' | 'medium' | 'large';
 export type BaseMapObstacle = {
     id: string;
@@ -181,9 +186,12 @@ export type BaseMapObstacle = {
     height: number;
 };
 export type WallObstacle = BaseMapObstacle & { type: 'wall' };
+export type FenceObstacle = BaseMapObstacle & { type: 'fence' };
+export type RockObstacle = BaseMapObstacle & { type: 'rock' };
+export type LakeObstacle = BaseMapObstacle & { type: 'lake' };
 export type TrapObstacle = BaseMapObstacle & { type: 'trap' };
 export type CactusObstacle = BaseMapObstacle & { type: 'cactus'; size: CactusSize; damage: number };
-export type MapObstacle = WallObstacle | TrapObstacle | CactusObstacle;
+export type MapObstacle = WallObstacle | FenceObstacle | RockObstacle | LakeObstacle | TrapObstacle | CactusObstacle;
 export type GameMapState = { seed: number; width: number; height: number; obstacles: MapObstacle[] };
 export type PlayerInputPayload = { input: PlayerInput };
 export type PlayerMovedPayload = { player: PlayerState };
