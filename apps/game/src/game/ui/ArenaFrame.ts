@@ -3,7 +3,6 @@ import { type GameObjects, Scene } from 'phaser';
 
 export class ArenaFrame {
     private readonly background: GameObjects.Graphics;
-    private readonly overlayPanels: GameObjects.Graphics;
     private readonly roomText: GameObjects.Text;
     private readonly playerCountText: GameObjects.Text;
     private readonly connectionText: GameObjects.Text;
@@ -22,19 +21,6 @@ export class ArenaFrame {
             .fillRoundedRect(32, 128, 960, 600, 12)
             .lineStyle(1, 0x263c59, 0.85)
             .strokeRoundedRect(32, 128, 960, 600, 12);
-
-        this.overlayPanels = scene.add.graphics().setDepth(7);
-        this.overlayPanels
-            .fillStyle(0x091528, 0.94)
-            .fillRoundedRect(27, 164, 286, 174, 11)
-            .fillRoundedRect(750, 164, 255, 188, 11)
-            .fillRoundedRect(750, 375, 255, 270, 11)
-            .fillRoundedRect(32, 662, 960, 54, 11)
-            .lineStyle(1, 0x263e5e, 0.88)
-            .strokeRoundedRect(27, 164, 286, 174, 11)
-            .strokeRoundedRect(750, 164, 255, 188, 11)
-            .strokeRoundedRect(750, 375, 255, 270, 11)
-            .strokeRoundedRect(32, 662, 960, 54, 11);
 
         scene.add.text(38, 25, ARENA_UI_TEXTS.brand, {
             fontFamily: 'Arial Black',
@@ -132,7 +118,6 @@ export class ArenaFrame {
 
     destroy(): void {
         this.background.destroy();
-        this.overlayPanels.destroy();
         this.roomText.destroy();
         this.playerCountText.destroy();
         this.connectionText.destroy();
