@@ -47,6 +47,7 @@ type Runtime = {
     weapons: Map<string, WeaponRuntime>;
     laserOwners: Set<string>;
     knockback: Map<string, KnockbackRuntime>;
+    titanStompReadyAt: Map<string, number>;
     projectileCounter: number;
     explosionCounter: number;
     heals: PlayerHealedPayload[];
@@ -102,6 +103,7 @@ export class CombatManager {
                 weapons: new Map(),
                 laserOwners: new Set(),
                 knockback: new Map(),
+                titanStompReadyAt: new Map(),
                 projectileCounter: 0,
                 explosionCounter: 0,
                 heals: [],
@@ -155,6 +157,7 @@ export class CombatManager {
         state.respawn.clear();
         state.weapons.clear();
         state.knockback.clear();
+        state.titanStompReadyAt.clear();
         state.playersById.clear();
         state.damageContributions.clear();
         state.killFeed = [];
@@ -188,6 +191,7 @@ export class CombatManager {
         state.weapons.delete(playerId);
         state.laserOwners.delete(playerId);
         state.knockback.delete(playerId);
+        state.titanStompReadyAt.delete(playerId);
         state.playersById.delete(playerId);
         state.damageContributions.delete(playerId);
         for (const contributions of state.damageContributions.values()) contributions.delete(playerId);
@@ -288,6 +292,31 @@ export class CombatManager {
         this.applyKnockback(state, byId, map, dt, now);
 
         for (const player of players) {
+            if (mode === 'everyone-vs-one' && player.role === 'titan' && player.isDashing &&
+                now >= (state.titanStompReadyAt.get(player.id) ?? 0)) {
+                state.titanStompReadyAt.set(player.id, now + 12_000);
+                explosions.push({
+                    id: roomId + ':titan-stomp:' + (++state.explosionCounter),
+                    x: player.x,
+                    y: player.y,
+                    radius: 150,
+                    createdAt: now
+                });
+                for (const hunter of players) {
+                    if (hunter.role !== 'hunter' || hunter.alive === false || hunter.spectator) continue;
+                    const dx = hunter.x - player.x;
+                    const dy = hunter.y - player.y;
+                    const distance = Math.hypot(dx, dy);
+                    if (distance > 150) continue;
+                    this.damage(state, hunter, 35, now, player);
+                    const safeDistance = Math.max(1, distance);
+                    state.knockback.set(hunter.id, {
+                        vx: dx / safeDistance * 300,
+                        vy: dy / safeDistance * 300,
+                        endsAt: now + 300
+                    });
+                }
+            }
             if (player.spectator) continue;
             if (player.alive === false) {
                 const respawnAt = state.respawn.get(player.id) ?? Number.POSITIVE_INFINITY;
