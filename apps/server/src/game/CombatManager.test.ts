@@ -20,7 +20,7 @@ describe('CombatManager weapon authority', () => {
         combat = new CombatManager();
     });
 
-    it('does not let a regular account select the Gueta-only laser', () => {
+    it('enforces the restricted seventh weapon slot', () => {
         const regular = player('regular', 250);
         combat.initializePlayer('room', regular, false);
         expect(combat.selectWeapon('room', regular, 7, 'classic', 1_000).ok).toBe(false);
@@ -28,6 +28,22 @@ describe('CombatManager weapon authority', () => {
         const gueta = player('gueta', 350);
         combat.initializePlayer('room', gueta, true);
         expect(combat.selectWeapon('room', gueta, 7, 'classic', 1_000).ok).toBe(true);
+    });
+
+    it('omits restricted weapon metadata from regular account state', () => {
+        const regular = player('regular', 250);
+        combat.initializePlayer('room', regular, false);
+        const regularState = combat.getWeaponState('room', regular.id, 1_000, 'classic');
+        expect(regularState.availableSlots).not.toContain(7);
+        expect(regularState).not.toHaveProperty('laserEnergyMs');
+        expect(regularState).not.toHaveProperty('laserEnergyMaxMs');
+
+        const owner = player('gueta', 350);
+        combat.initializePlayer('room', owner, true);
+        const ownerState = combat.getWeaponState('room', owner.id, 1_000, 'classic');
+        expect(ownerState.availableSlots).toContain(7);
+        expect(ownerState.laserEnergyMs).toBeDefined();
+        expect(ownerState.laserEnergyMaxMs).toBeDefined();
     });
 
     it('ignores invalid and rate-limited weapon selection', () => {
