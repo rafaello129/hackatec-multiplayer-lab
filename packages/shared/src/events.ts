@@ -5,6 +5,7 @@ export const SOCKET_EVENTS = {
     ROOM_STATE: 'room:state',
     ROOM_ERROR: 'room:error',
     ROOM_HOST_CHANGED: 'room:host-changed',
+    ROOM_MAP: 'room:map',
     MATCH_STATE: 'match:state',
     MATCH_VOTE: 'match:vote',
     MATCH_HOST_START: 'match:host-start',
