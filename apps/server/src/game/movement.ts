@@ -1,14 +1,15 @@
 import {
     COMBAT_BALANCE,
     DASH_BALANCE,
+    MOVEMENT_BALANCE,
     type GameMapState,
     type PlayerInput,
     type PlayerState
 } from '@hackatec/shared';
 
 const PLAYER_RADIUS = COMBAT_BALANCE.playerRadius;
-const SPEED = 185;
-const INPUT_TIMEOUT_MS = 250;
+const SPEED = MOVEMENT_BALANCE.speedPxPerSecond;
+const INPUT_TIMEOUT_MS = MOVEMENT_BALANCE.inputTimeoutMs;
 const MAX_STEP_SECONDS = COMBAT_BALANCE.serverTickMs / 1_000;
 
 export type MovementRuntime = {
