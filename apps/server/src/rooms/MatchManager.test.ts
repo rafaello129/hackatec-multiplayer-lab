@@ -46,7 +46,7 @@ describe('MatchManager', () => {
         manager.vote('room-a', 'a', 'a', 'classic', 10);
 
         const transitions = manager.advance(100, () => []);
-        expect(transitions).toEqual([{ roomId: 'room-a', resetPlayers: true }]);
+        expect(transitions).toMatchObject([{ roomId: 'room-a', resetPlayers: true, previousPhase: 'voting', phase: 'countdown' }]);
         expect(manager.getState('room-a')?.phase).toBe('countdown');
         expect(manager.isPlaying('room-a')).toBe(false);
 
