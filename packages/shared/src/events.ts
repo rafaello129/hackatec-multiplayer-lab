@@ -24,6 +24,10 @@ export const SOCKET_EVENTS = {
     PICKUP_COLLECTED: 'pickup:collected',
     STORM_STATE: 'storm:state',
     ZOMBIE_STATE: 'zombie:state',
+    PROGRESSION_STATE: 'progression:state',
+    CHAT_SEND: 'chat:send',
+    CHAT_MESSAGE: 'chat:message',
+    CHAT_HISTORY: 'chat:history',
     PROFILE_SET: 'profile:set',
     PROFILE_RESULT: 'profile:result',
 
