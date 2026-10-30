@@ -18,6 +18,31 @@ describe('AccountStore', () => {
         rmSync(directory, { recursive: true, force: true });
     });
 
+    it('persists XP and applies the level-up formula 100 × level^1.5', () => {
+        const account = store.createAccount('ProgressPlayer', '$argon2id$test-hash');
+        expect(store.getProgression(account.id)).toMatchObject({
+            level: 1, xp: 0, totalXP: 0, xpToNextLevel: 100
+        });
+
+        const first = store.addXP(account.id, 99);
+        expect(first).toMatchObject({ level: 1, xp: 99, totalXP: 99, xpToNextLevel: 100 });
+
+        const second = store.addXP(account.id, 1);
+        expect(second).toMatchObject({ level: 2, xp: 0, totalXP: 100, xpToNextLevel: 283 });
+
+        const third = store.addXP(account.id, 283);
+        expect(third).toMatchObject({ level: 3, xp: 0, totalXP: 383, xpToNextLevel: 520 });
+        expect(store.getProgression(account.id)).toEqual(third);
+    });
+
+    it('rejects invalid XP amounts and returns undefined for unknown accounts', () => {
+        const account = store.createAccount('ProgressPlayer', '$argon2id$test-hash');
+        expect(() => store.addXP(account.id, -1)).toThrow(RangeError);
+        expect(() => store.addXP(account.id, 1.5)).toThrow(RangeError);
+        expect(() => store.addXP(account.id, 100_001)).toThrow(RangeError);
+        expect(store.addXP('missing-account', 50)).toBeUndefined();
+    });
+
     it('persists an account and its appearance in SQLite', () => {
         const created = store.createAccount('Gueta', '$argon2id$test-hash');
         const loaded = store.getAccountById(created.id);
