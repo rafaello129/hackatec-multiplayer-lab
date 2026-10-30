@@ -27,6 +27,7 @@ describe('ChatManager', () => {
         expect(manager.send('room', player('active'), 'a', 'all', ' '.repeat(8), 1).ok).toBe(false);
         expect(manager.send('room', player('active'), 'a', 'all', 'x'.repeat(CHAT_BALANCE.maxLength + 1), 2).ok).toBe(false);
         expect(manager.send('room', player('active'), 'a', 'spectators', 'secret', 3).ok).toBe(false);
+        expect(manager.send('room', player('spectator', true), 'b', 'all', 'public leak', 4).ok).toBe(false);
     });
 
     it('limits messages per account across multiple sockets', () => {
