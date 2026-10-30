@@ -295,7 +295,7 @@ export function registerSocketHandlers(
             const roomId = roomManager.getRoomId(socket.id);
             if (!roomId || !raw || typeof raw !== 'object') return;
             const mode = (raw as Partial<HostStartMatchPayload>).mode;
-            if (typeof mode !== 'string') return;
+            if (typeof mode !== 'string' || mode.length > 32) return;
             const result = matches.forceStart(roomId, socket.id, mode as GameMode, Date.now());
             if (result.ok) resetRoomForMatch(roomId);
             socket.emit(SOCKET_EVENTS.MATCH_ACTION_RESULT, result);
