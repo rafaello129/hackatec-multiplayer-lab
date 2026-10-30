@@ -543,11 +543,7 @@ private createInterface()
         if (payload.hostId) this.roomHostId = payload.hostId;
 
         const myPlayerState = this.playerRegistry.get(this.selfId);
-        if (myPlayerState) {
-            if (myPlayerState.x) this.localX = myPlayerState.x;
-            if (myPlayerState.y) this.localY = myPlayerState.y;
-            this.upsertPlayerView(myPlayerState);
-        }
+        if (myPlayerState) this.upsertPlayerView(myPlayerState);
     };
 
     private readonly handleRoomError = (payload: RoomErrorPayload) =>
