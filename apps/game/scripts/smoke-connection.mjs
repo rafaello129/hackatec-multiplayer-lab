@@ -40,6 +40,39 @@ function waitForCombatPlayer(socket, playerId, spectator, timeoutMs = 5000) {
     });
 }
 
+function waitForCombatRoster(socket, count, timeoutMs = 10000) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            socket.off('combat:state', handler);
+            reject(new Error('Timed out waiting for the full combat roster'));
+        }, timeoutMs);
+        const handler = (payload) => {
+            if ((payload?.players?.length ?? 0) < count) return;
+            clearTimeout(timeout);
+            socket.off('combat:state', handler);
+            resolve(payload);
+        };
+        socket.on('combat:state', handler);
+    });
+}
+
+function waitForPlayerMoved(socket, playerId, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            socket.off('player:moved', handler);
+            reject(new Error('Timed out waiting for authoritative movement update'));
+        }, timeoutMs);
+        const handler = (payload) => {
+            if (payload?.player?.id !== playerId) return;
+            clearTimeout(timeout);
+            socket.off('player:moved', handler);
+            resolve(payload.player);
+        };
+        socket.on('player:moved', handler);
+    });
+}
+
+
 function waitForMatchVote(socket, playerId, timeoutMs = 5000) {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
@@ -265,6 +298,33 @@ async function main() {
     assert(finalLoadSnapshot?.players.length === 32,
         'room should accept exactly 32 authenticated players');
     console.log('[smoke] 32 authenticated players joined a single room');
+
+    // Exercise the live server tick with the full roster, not just idle connections.
+    const loadCountdown = waitForMatchPhase(alpha, 'countdown', 10000);
+    alpha.emit('match:host-start', { mode: 'classic' });
+    await loadCountdown;
+    const loadPlaying = waitForMatchPhase(alpha, 'playing', 10000);
+    await loadPlaying;
+    const fullRosterPromise = waitForCombatRoster(alpha, 32, 10000);
+    const fullRoster = await fullRosterPromise;
+    assert(fullRoster.players.length === 32, 'combat state must contain all 32 players');
+    assert(fullRoster.players.every(player => player.spectator !== true),
+        'all 32 players should be active at the start of the load round');
+
+    const movingClient = loadClients[0];
+    const movingPlayerId = movingClient.id;
+    const movementPromise = waitForPlayerMoved(alpha, movingPlayerId);
+    movingClient.emit('player:input', {
+        input: { up: false, down: false, left: false, right: false, dash: true, aimAngle: 0 }
+    });
+    const movedPlayer = await movementPromise;
+    assert(movedPlayer.isDashing === true && movedPlayer.isInvulnerable === true,
+        'the authoritative tick should apply dash state under a 32-player load');
+
+    const alphaLoadStopped = waitForMatchPhase(alpha, 'waiting', 10000);
+    alpha.emit('match:host-stop');
+    await alphaLoadStopped;
+    console.log('[smoke] 32-player active combat tick and authoritative dash verified');
 
     const gamma = await connectClient('gamma', gammaAccount.cookie);
     const gammaState = await joinRoom(gamma, 'other-room');
