@@ -230,15 +230,15 @@ export class RoomManager
         return this.rooms.has(roomId);
     }
 
-    resetForMatch(roomId: string): { map: GameMapState; players: PlayerState[] } | undefined
+    resetForMatch(roomId: string, mode: string | null = 'classic'): { map: GameMapState; players: PlayerState[] } | undefined
     {
         const room = this.rooms.get(roomId);
         if (!room) return undefined;
-        const map = generateMap(createMapSeed());
+        const map = generateMap(createMapSeed(), room.size, mode);
         this.roomMaps.set(roomId, map);
         let index = 0;
         for (const player of room.values()) {
-            const spawn = getSpawnPosition(index++);
+            const spawn = getSpawnPosition(index++, map.width, map.height);
             player.x = spawn.x;
             player.y = spawn.y;
             player.hp = MATCH_BALANCE.initialHealth;
