@@ -15,6 +15,7 @@ import {
     type PlayerTrappedPayload,
     type PlayerHealedPayload,
     type StormStatePayload,
+    type ZombieStatePayload,
     type RoomErrorPayload,
     type RoomStatePayload,
     type MatchStatePayload,
@@ -28,6 +29,7 @@ import { ProfilePanel } from '../ui/ProfilePanel';
 import { MapView } from '../map/MapView';
 import { PickupView } from '../map/PickupView';
 import { StormView } from '../map/StormView';
+import { ZombieView } from '../entities/ZombieView';
 import { PlayerView } from '../entities/PlayerView';
 import { getClientIdentity, type ClientIdentity } from '../../network/identity';
 import { getSocket } from '../../network/socket';
@@ -51,6 +53,7 @@ export class ArenaScene extends Scene
     private mapView?: MapView;
     private pickupView?: PickupView;
     private stormView?: StormView;
+    private zombieView?: ZombieView;
     private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
     private previousInput = '';
     private lastInputSent = 0;
@@ -120,6 +123,7 @@ export class ArenaScene extends Scene
         this.mapView = new MapView(this);
         this.pickupView = new PickupView(this);
         this.stormView = new StormView(this);
+        this.zombieView = new ZombieView(this);
         this.bullets = this.add.graphics().setDepth(3);
         this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(8);
         this.weaponHud = this.add.text(512, 690, '', {
@@ -157,6 +161,7 @@ export class ArenaScene extends Scene
             this.mapView?.destroy();
             this.pickupView?.destroy();
             this.stormView?.destroy();
+            this.zombieView?.destroy();
             this.profilePanel?.destroy();
             this.input.keyboard?.off('keydown-ONE', this.selectSlot1);
             this.input.keyboard?.off('keydown-TWO', this.selectSlot2);
@@ -308,6 +313,10 @@ export class ArenaScene extends Scene
             default: return MATCH_TEXTS.modes.classic;
         }
     }
+
+    private readonly handleZombieState = (state: ZombieStatePayload): void => {
+        this.zombieView?.sync(state);
+    };
 
     private readonly handleStormState = (state: StormStatePayload): void => {
         this.stormView?.render(state);
@@ -504,6 +513,7 @@ private createInterface()
         this.socket.on(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.on(SOCKET_EVENTS.STORM_STATE, this.handleStormState);
+        this.socket.on(SOCKET_EVENTS.ZOMBIE_STATE, this.handleZombieState);
         this.socket.on(SOCKET_EVENTS.PICKUP_STATE, this.handlePickupState);
         this.socket.on(SOCKET_EVENTS.PICKUP_COLLECTED, this.handlePickupCollected);
         this.socket.on(SOCKET_EVENTS.PLAYER_TRAPPED, this.handlePlayerTrapped);
@@ -528,6 +538,7 @@ private createInterface()
         this.socket.off(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.off(SOCKET_EVENTS.STORM_STATE, this.handleStormState);
+        this.socket.off(SOCKET_EVENTS.ZOMBIE_STATE, this.handleZombieState);
         this.socket.off(SOCKET_EVENTS.PICKUP_STATE, this.handlePickupState);
         this.socket.off(SOCKET_EVENTS.PICKUP_COLLECTED, this.handlePickupCollected);
         this.socket.off(SOCKET_EVENTS.PLAYER_TRAPPED, this.handlePlayerTrapped);
@@ -573,6 +584,7 @@ private createInterface()
         this.mapView?.clear();
         this.pickupView?.clear();
         this.stormView?.clear();
+        this.zombieView?.clear();
         this.bullets?.clear();
         this.syncPlayerViews();
     };
