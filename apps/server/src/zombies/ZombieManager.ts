@@ -79,7 +79,7 @@ export class ZombieManager {
         };
         this.rooms.set(roomId, runtime);
 
-        const positions = this.spawnPositions(map, players, 2, runtime);
+        const positions = this.spawnPositions(map, players, ZOMBIE_BALANCE.initialSpawnCount, runtime);
         if (positions[0]) this.addZombie(runtime, roomId, 'giant', positions[0], now);
         if (positions[1]) this.addZombie(runtime, roomId, 'spitter', positions[1], now);
         return this.getState(roomId);
@@ -208,11 +208,21 @@ export class ZombieManager {
         const candidates: Array<{ x: number; y: number }> = [];
         // Full rooms occupy almost every spawn grid cell; keep a smaller, safe buffer
         // at high occupancy rather than silently disabling zombie spawns.
-        const minimumPlayerDistance = players.length >= 16 ? 75 : players.length >= 8 ? 130 : 190;
-        const minimumZombieSeparation = players.length >= 16 ? 90 : 180;
-        for (let y = COMBAT_BALANCE.playableTop + 45; y <= COMBAT_BALANCE.playableBottom - 45; y += 55) {
-            for (let x = 55; x <= map.width - 55; x += 60) {
-                if (blockedSpawn(x, y, 32, map)) continue;
+        const minimumPlayerDistance = players.length >= ZOMBIE_BALANCE.highDensityThreshold
+            ? ZOMBIE_BALANCE.highDensityPlayerDistancePx
+            : players.length >= ZOMBIE_BALANCE.mediumDensityThreshold
+                ? ZOMBIE_BALANCE.mediumDensityPlayerDistancePx
+                : ZOMBIE_BALANCE.defaultPlayerDistancePx;
+        const minimumZombieSeparation = players.length >= ZOMBIE_BALANCE.highDensityThreshold
+            ? ZOMBIE_BALANCE.highDensityZombieSeparationPx
+            : ZOMBIE_BALANCE.defaultZombieSeparationPx;
+        for (let y = COMBAT_BALANCE.playableTop + ZOMBIE_BALANCE.spawnGridMarginPx;
+            y <= COMBAT_BALANCE.playableBottom - ZOMBIE_BALANCE.spawnGridMarginPx;
+            y += ZOMBIE_BALANCE.spawnGridStepY) {
+            for (let x = ZOMBIE_BALANCE.spawnGridMinX;
+                x <= map.width - ZOMBIE_BALANCE.spawnGridMinX;
+                x += ZOMBIE_BALANCE.spawnGridStepX) {
+                if (blockedSpawn(x, y, ZOMBIE_BALANCE.spawnRadiusPx, map)) continue;
                 if (players.some(player => Math.hypot(player.x - x, player.y - y) < minimumPlayerDistance)) continue;
                 candidates.push({ x, y });
             }
@@ -278,7 +288,7 @@ export class ZombieManager {
         const dx = target.x - zombie.x;
         const dy = target.y - zombie.y;
         const distance = Math.hypot(dx, dy) || 1;
-        if (distance <= 220 && now >= zombie.phaseEndsAt) {
+        if (distance <= ZOMBIE_BALANCE.giant.chargeRangePx && now >= zombie.phaseEndsAt) {
             zombie.phase = 'telegraph';
             zombie.phaseEndsAt = now + balance.telegraphMs;
             zombie.angle = Math.atan2(dy, dx);
