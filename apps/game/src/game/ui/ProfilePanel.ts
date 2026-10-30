@@ -1,4 +1,4 @@
-import type { PlayerAppearance } from '@hackatec/shared';
+import { PROFILE_TEXTS, type PlayerAppearance } from '@hackatec/shared';
 import { serverUrl } from '../../network/socket';
 
 export class ProfilePanel {
@@ -16,7 +16,7 @@ export class ProfilePanel {
         const toggle = document.createElement('button');
         toggle.className = 'profile-panel__toggle';
         toggle.type = 'button';
-        toggle.textContent = 'Personalizar';
+        toggle.textContent = PROFILE_TEXTS.toggle;
         toggle.setAttribute('aria-expanded', 'false');
 
         const content = document.createElement('div');
@@ -26,23 +26,23 @@ export class ProfilePanel {
 
         const heading = document.createElement('div');
         heading.className = 'profile-panel__heading';
-        heading.textContent = 'Tu perfil';
+        heading.textContent = PROFILE_TEXTS.heading;
 
         const usernameLabel = document.createElement('label');
         usernameLabel.htmlFor = 'profile-username';
-        usernameLabel.textContent = 'Nombre de usuario';
+        usernameLabel.textContent = PROFILE_TEXTS.username;
         const username = document.createElement('input');
         username.id = 'profile-username';
         username.name = 'username';
         username.type = 'text';
         username.setAttribute('autocomplete', 'nickname');
-        username.placeholder = '3–16 caracteres';
+        username.placeholder = PROFILE_TEXTS.usernameHint;
         username.maxLength = 16;
         username.pattern = '[A-Za-z][A-Za-z0-9_]{2,15}';
 
         const colorLabel = document.createElement('label');
         colorLabel.htmlFor = 'profile-color';
-        colorLabel.textContent = 'Color del jugador';
+        colorLabel.textContent = PROFILE_TEXTS.color;
         const color = document.createElement('input');
         color.id = 'profile-color';
         color.name = 'color';
@@ -51,20 +51,20 @@ export class ProfilePanel {
 
         const modeLabel = document.createElement('label');
         modeLabel.htmlFor = 'profile-mode';
-        modeLabel.textContent = 'Apariencia';
+        modeLabel.textContent = PROFILE_TEXTS.appearance;
         const mode = document.createElement('select');
         mode.id = 'profile-mode';
         mode.name = 'mode';
         for (const value of ['color', 'skin'] as const) {
             const option = document.createElement('option');
             option.value = value;
-            option.textContent = value === 'color' ? 'Color sólido' : 'Skin';
+            option.textContent = value === 'color' ? PROFILE_TEXTS.colorOption : PROFILE_TEXTS.skinOption;
             mode.append(option);
         }
 
         const fileLabel = document.createElement('label');
         fileLabel.htmlFor = 'profile-skin';
-        fileLabel.textContent = 'Subir skin';
+        fileLabel.textContent = PROFILE_TEXTS.uploadSkin;
         const file = document.createElement('input');
         file.id = 'profile-skin';
         file.name = 'skin';
@@ -74,7 +74,7 @@ export class ProfilePanel {
         const save = document.createElement('button');
         save.className = 'profile-panel__save';
         save.type = 'button';
-        save.textContent = 'Guardar cambios';
+        save.textContent = PROFILE_TEXTS.save;
         this.status = document.createElement('span');
         this.status.className = 'profile-panel__status';
         this.status.setAttribute('role', 'status');
@@ -84,13 +84,13 @@ export class ProfilePanel {
             const willOpen = content.hidden;
             content.hidden = !willOpen;
             toggle.setAttribute('aria-expanded', String(willOpen));
-            toggle.textContent = willOpen ? 'Cerrar perfil' : 'Personalizar';
+            toggle.textContent = willOpen ? PROFILE_TEXTS.close : PROFILE_TEXTS.toggle;
             if (willOpen) username.focus();
         });
 
         file.addEventListener('change', async () => {
             if (!file.files?.[0]) return;
-            this.setStatus('Subiendo skin…');
+            this.setStatus(PROFILE_TEXTS.uploading);
             const form = new FormData();
             form.append('skin', file.files[0]);
             try {
@@ -103,11 +103,11 @@ export class ProfilePanel {
                     id?: string; url?: string; width?: number; height?: number; error?: string
                 };
                 if (!response.ok || !result.url || !result.id || !result.width || !result.height) {
-                    throw new Error(result.error || 'No se pudo subir la skin.');
+                    throw new Error(result.error || PROFILE_TEXTS.skinUploadError);
                 }
                 this.savedSkin = { id: result.id, url: result.url, width: result.width, height: result.height };
                 mode.value = 'skin';
-                this.setStatus('Skin cargada correctamente.');
+                this.setStatus(PROFILE_TEXTS.skinUploaded);
             } catch (error) {
                 this.setStatus(error instanceof Error ? error.message : 'Error al subir la skin.', true);
             }
@@ -120,11 +120,11 @@ export class ProfilePanel {
                 ...((this.savedSkin) ? { skin: this.savedSkin } : {})
             };
             if (appearance.mode === 'skin' && !appearance.skin) {
-                this.setStatus('Primero selecciona y sube una skin.', true);
+                this.setStatus(PROFILE_TEXTS.skinRequired, true);
                 return;
             }
             onSave(username.value.trim(), appearance);
-            this.setStatus('Guardando cambios…');
+            this.setStatus(PROFILE_TEXTS.saving);
         });
 
         content.append(
