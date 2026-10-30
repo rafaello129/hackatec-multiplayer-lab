@@ -24,7 +24,8 @@ import {
     type MatchStatePayload,
     type GameMode,
     type GameMapState,
-    MATCH_TEXTS
+    MATCH_TEXTS,
+    CHAT_TEXTS
 } from '@hackatec/shared';
 import { Scene, type GameObjects, Input } from 'phaser';
 import type { Socket } from 'socket.io-client';
@@ -132,13 +133,13 @@ export class ArenaScene extends Scene
             backgroundColor: '#0f172acc', padding: { x: 8, y: 6 },
             fixedWidth: 270, lineSpacing: 3
         }).setDepth(8);
-        this.chatPanel = this.add.text(765, 175, 'CHAT · ENTER para escribir', {
+        this.chatPanel = this.add.text(765, 175, CHAT_TEXTS.panelTitle, {
             fontFamily: 'Arial', fontSize: 11, color: '#e2e8f0',
             backgroundColor: '#0f172acc', padding: { x: 9, y: 7 },
             fixedWidth: 235, fixedHeight: 170, wordWrap: { width: 218 },
             lineSpacing: 3
         }).setDepth(9);
-        this.chatInputHud = this.add.text(765, 352, 'ENTER · Escribir mensaje', {
+        this.chatInputHud = this.add.text(765, 352, CHAT_TEXTS.inputIdle, {
             fontFamily: 'Arial', fontSize: 11, color: '#94a3b8',
             backgroundColor: '#0f172acc', padding: { x: 9, y: 6 }, fixedWidth: 235
         }).setDepth(9);
@@ -459,8 +460,8 @@ export class ArenaScene extends Scene
         this.killFeedIds.clear();
         this.killFeedLines.length = 0;
         this.killFeedHud?.setText('');
-        this.chatPanel?.setText('CHAT · ENTER para escribir');
-        this.chatInputHud?.setText('ENTER · Escribir mensaje');
+        this.chatPanel?.setText(CHAT_TEXTS.panelTitle);
+        this.chatInputHud?.setText(CHAT_TEXTS.inputIdle);
         this.progression = undefined;
         this.progressionHud?.setText('Nivel 1 · XP 0/100');
         this.cameras.main.stopFollow();
@@ -557,7 +558,7 @@ export class ArenaScene extends Scene
             ' · Total ' + state.totalXP
         );
         if (state.awardedXP && state.awardedXP > 0) {
-            this.pushChatLine('Sistema: +' + state.awardedXP + ' XP por la partida');
+            this.pushChatLine(CHAT_TEXTS.systemPrefix + state.awardedXP + CHAT_TEXTS.systemSuffix);
         }
     };
 
@@ -581,7 +582,7 @@ export class ArenaScene extends Scene
     private formatChatMessage(message: ChatMessage): string {
         const date = new Date(message.createdAt);
         const time = date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-        const channel = message.channel === 'spectators' ? '[ESPECTADORES] ' : '';
+        const channel = message.channel === 'spectators' ? CHAT_TEXTS.spectatorPrefix : '';
         return time + ' ' + channel + message.senderName + ': ' + message.text;
     }
 
@@ -592,7 +593,7 @@ export class ArenaScene extends Scene
     }
 
     private renderChatPanel(): void {
-        const heading = 'CHAT · ENTER para escribir';
+        const heading = CHAT_TEXTS.panelTitle;
         this.chatPanel?.setText([heading, ...this.chatLines].join('\\n'));
     }
 
@@ -602,7 +603,7 @@ export class ArenaScene extends Scene
             if (!this.chatInputActive) {
                 this.chatInputActive = true;
                 this.chatDraft = '';
-                this.chatInputHud?.setText('> Escribe y pulsa ENTER');
+                this.chatInputHud?.setText(CHAT_TEXTS.inputPrompt);
             } else {
                 const text = this.chatDraft.trim();
                 if (text && this.socket?.connected) {
@@ -614,7 +615,7 @@ export class ArenaScene extends Scene
                 }
                 this.chatInputActive = false;
                 this.chatDraft = '';
-                this.chatInputHud?.setText('ENTER · Escribir mensaje');
+                this.chatInputHud?.setText(CHAT_TEXTS.inputIdle);
             }
             return;
         }
@@ -623,13 +624,13 @@ export class ArenaScene extends Scene
         if (event.key === 'Escape') {
             this.chatInputActive = false;
             this.chatDraft = '';
-            this.chatInputHud?.setText('ENTER · Escribir mensaje');
+            this.chatInputHud?.setText(CHAT_TEXTS.inputIdle);
         } else if (event.key === 'Backspace') {
             this.chatDraft = [...this.chatDraft].slice(0, -1).join('');
-            this.chatInputHud?.setText('> ' + this.chatDraft + '▌');
+            this.chatInputHud?.setText(CHAT_TEXTS.inputPrefix + this.chatDraft + '▌');
         } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && [...this.chatDraft].length < 120) {
             this.chatDraft += event.key;
-            this.chatInputHud?.setText('> ' + this.chatDraft + '▌');
+            this.chatInputHud?.setText(CHAT_TEXTS.inputPrefix + this.chatDraft + '▌');
         }
     };
 
