@@ -22,7 +22,7 @@ import { createMovementRuntime, acceptMovementInput, advanceMovement, type Movem
 import { CombatManager } from '../game/CombatManager.js';
 import { PickupManager } from '../pickups/PickupManager.js';
 import { StormManager } from '../storm/StormManager.js';
-import { ZombieManager } from '../zombies/ZombieManager.js';
+import { isZombieMode, ZombieManager } from '../zombies/ZombieManager.js';
 import { ChatManager } from '../chat/ChatManager.js';
 import { calculateMatchAwards, RoundActivityTracker } from '../progression/ProgressionManager.js';
 import { AccountStore, normalizeUsername, SESSION_COOKIE, type Account } from '../auth/AccountStore.js';
@@ -129,7 +129,7 @@ export function registerSocketHandlers(
         } else {
             stormManager.removeRoom(roomId);
         }
-        if (mode === 'classic' || mode === 'everyone-vs-one') {
+        if (isZombieMode(mode)) {
             const zombieState = zombieManager.reset(roomId, reset.map, reset.players, Date.now());
             io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ZOMBIE_STATE, zombieState);
         } else {
@@ -251,7 +251,7 @@ export function registerSocketHandlers(
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PICKUP_STATE, { roomId, pickups: pickupStep.pickups });
                 for (const collected of pickupStep.collected) io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PICKUP_COLLECTED, collected);
             }
-            const zombieEnabled = mode === 'classic' || mode === 'everyone-vs-one';
+            const zombieEnabled = isZombieMode(mode);
             const activeZombies = zombieEnabled ? zombieManager.getTargets(roomId) : [];
             const snapshot = combat.step(roomId, players, map, 50, now, mode ?? 'classic', activeZombies);
             const zombieHitsApplied = zombieEnabled && zombieManager.applyHits(roomId, snapshot.zombieHits, players);
