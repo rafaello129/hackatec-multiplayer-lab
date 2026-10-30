@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import multer from 'multer';
 import type { Request, Response } from 'express';
+import type { AccountStore } from '../auth/AccountStore.js';
 
 const SKINS_DIRECTORY = path.resolve('storage/skins');
 
@@ -37,7 +38,8 @@ export const uploadSkin = upload.single('skin');
 
 export async function skinsUploadHandler(
     request: Request,
-    response: Response
+    response: Response,
+    accounts: AccountStore
 )
 {
     if (!request.file)
@@ -90,17 +92,30 @@ export async function skinsUploadHandler(
         fileName
     );
 
-    await fs.writeFile(
-        filePath,
-        request.file.buffer
-    );
+    const accountId = response.locals.accountId;
+    if (typeof accountId !== 'string' || !accountId) {
+        response.status(401).json({ error: 'La sesión ya no es válida.' });
+        return;
+    }
 
-    response.status(201).json({
+    const skin = {
         id: fileName,
         url: `/skins/${fileName}`,
         width: dimensions.width,
         height: dimensions.height
-    });
+    };
+
+    try {
+        await fs.writeFile(filePath, request.file.buffer);
+        accounts.saveSkin(accountId, skin);
+    } catch (error) {
+        await fs.unlink(filePath).catch(() => undefined);
+        console.error('[skins] could not persist skin ownership:', error instanceof Error ? error.message : 'unknown error');
+        response.status(500).json({ error: 'No se pudo guardar la skin.' });
+        return;
+    }
+
+    response.status(201).json(skin);
 }
 
 function getExtension(
