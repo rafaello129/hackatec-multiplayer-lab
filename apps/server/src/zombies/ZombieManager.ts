@@ -44,7 +44,7 @@ function blocked(x: number, y: number, radius: number, map: GameMapState): boole
         y < COMBAT_BALANCE.playableTop + radius ||
         y > COMBAT_BALANCE.playableBottom - radius) return true;
     return map.obstacles.some(obstacle => {
-        if (obstacle.type !== 'wall') return false;
+        if (!['wall', 'rock', 'lake'].includes(obstacle.type)) return false;
         const dx = Math.max(Math.abs(x - obstacle.x) - obstacle.width / 2, 0);
         const dy = Math.max(Math.abs(y - obstacle.y) - obstacle.height / 2, 0);
         return dx * dx + dy * dy < radius * radius;
