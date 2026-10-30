@@ -34,6 +34,21 @@ function socketRoom(roomId: string): string
     return `room:${roomId}`;
 }
 
+function isSkinAssetRecord(value: unknown): value is {
+    id: string;
+    url: string;
+    width: number;
+    height: number;
+} {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const asset = value as Record<string, unknown>;
+    return typeof asset.id === 'string' &&
+        /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.(png|jpg|webp)$/i.test(asset.id) &&
+        asset.url === '/skins/' + asset.id &&
+        Number.isInteger(asset.width) && (asset.width as number) >= 1 && (asset.width as number) <= 512 &&
+        Number.isInteger(asset.height) && (asset.height as number) >= 1 && (asset.height as number) <= 512;
+}
+
 export function registerSocketHandlers(
     io: Server,
     roomManager = new RoomManager(),
@@ -488,9 +503,8 @@ export function registerSocketHandlers(
                 (appearance.mode !== 'color' && appearance.mode !== 'skin') ||
                 typeof appearance.colorHex !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(appearance.colorHex) ||
                 (appearance.mode === 'skin' && (
-                    !appearance.skin ||
-                    !/^\/skins\/[a-f0-9-]+\.(png|jpg|webp)$/.test(appearance.skin.url) ||
-                    !accounts.ownsSkin(userId, appearance.skin)
+                    !isSkinAssetRecord((appearance as { skin?: unknown }).skin) ||
+                    !accounts.ownsSkin(userId, (appearance as { skin: NonNullable<ProfileUpdatePayload['appearance']>['skin'] }).skin)
                 ))
             )) {
                 socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'Apariencia inválida' });
