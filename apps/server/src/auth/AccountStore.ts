@@ -2,13 +2,20 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import type { PlayerAppearance } from '@hackatec/shared';
+import { XP_BALANCE, type PlayerAppearance } from '@hackatec/shared';
 
 export type Account = {
     id: string;
     username: string;
     appearance: PlayerAppearance;
     isOwner: boolean;
+};
+
+export type ProgressionState = {
+    level: number;
+    xp: number;
+    totalXP: number;
+    xpToNextLevel: number;
 };
 
 type AccountRow = {
@@ -75,6 +82,10 @@ export class AccountStore {
                 created_at INTEGER NOT NULL
             );
         `);
+        const progressionColumns = this.db.prepare('PRAGMA table_info(progression)').all() as Array<{ name: string }>;
+        if (!progressionColumns.some(column => column.name === 'total_xp')) {
+            this.db.exec('ALTER TABLE progression ADD COLUMN total_xp INTEGER NOT NULL DEFAULT 0');
+        }
         const accountColumns = this.db.prepare('PRAGMA table_info(accounts)').all() as Array<{ name: string }>;
         if (!accountColumns.some(column => column.name === 'is_owner')) {
             this.db.exec('ALTER TABLE accounts ADD COLUMN is_owner INTEGER NOT NULL DEFAULT 0');
@@ -142,6 +153,57 @@ export class AccountStore {
     revokeSession(token: string | undefined): void {
         if (!token || !/^[A-Za-z0-9_-]{40,60}$/.test(token)) return;
         this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hashSessionToken(token));
+    }
+
+    getProgression(userId: string): ProgressionState | undefined {
+        const row = this.db.prepare(
+            'SELECT xp, level, total_xp FROM progression WHERE user_id = ?'
+        ).get(userId) as { xp: number; level: number; total_xp: number } | undefined;
+        if (!row) return undefined;
+        return {
+            level: row.level,
+            xp: row.xp,
+            totalXP: row.total_xp,
+            xpToNextLevel: this.xpRequiredForLevel(row.level)
+        };
+    }
+
+    addXP(userId: string, amount: number): ProgressionState | undefined {
+        if (!Number.isSafeInteger(amount) || amount < 0 || amount > 100_000) {
+            throw new RangeError('XP award must be an integer between 0 and 100000.');
+        }
+
+        this.db.exec('BEGIN IMMEDIATE');
+        try {
+            const row = this.db.prepare(
+                'SELECT xp, level, total_xp FROM progression WHERE user_id = ?'
+            ).get(userId) as { xp: number; level: number; total_xp: number } | undefined;
+            if (!row) {
+                this.db.exec('ROLLBACK');
+                return undefined;
+            }
+
+            let xp = row.xp + amount;
+            let level = Math.max(1, row.level);
+            while (xp >= this.xpRequiredForLevel(level)) {
+                xp -= this.xpRequiredForLevel(level);
+                level += 1;
+            }
+
+            this.db.prepare(
+                'UPDATE progression SET xp = ?, level = ?, total_xp = ? WHERE user_id = ?'
+            ).run(xp, level, row.total_xp + amount, userId);
+            this.db.exec('COMMIT');
+        } catch (error) {
+            this.db.exec('ROLLBACK');
+            throw error;
+        }
+        return this.getProgression(userId);
+    }
+
+    xpRequiredForLevel(level: number): number {
+        const safeLevel = Math.max(1, Math.floor(level));
+        return Math.round(XP_BALANCE.baseForNextLevel * safeLevel ** XP_BALANCE.levelExponent);
     }
 
     updateProfile(userId: string, change: { username?: string; appearance?: PlayerAppearance }): Account | undefined {
