@@ -22,15 +22,16 @@ Estado de referencia: rama `work/full-game-completion`. Esta lista separa implem
 - [x] Registro, login y rechazo de sockets sin sesión.
 - [x] Alias `/api/auth/me` y rate limit de login por IP y cuenta.
 - [x] Perfil actualizado: un socket nuevo ve el nombre persistido, no el nombre antiguo del handshake.
+- [x] Skins: subida autenticada, archivo ligado al dueño en SQLite, rechazo de skins de otras cuentas, formatos inválidos y archivos demasiado grandes.
 - [x] Votación, transición y espectadores tardíos.
 - [x] Chat general, canal de espectadores, sanitización y rechazo de espectadores intentando publicar en el canal general.
 - [x] Aislamiento entre salas y sucesión de anfitrión.
-- [x] Roster de 32 conexiones autenticadas, inicio de ronda, estado de combate con 32 jugadores y dash autoritativo.
-- [x] Prueba corta de movimiento bajo esa carga: 928 intenciones en 1,500 ms (aproximadamente 619 intenciones/s) en la ejecución registrada.
+- [x] Roster de 32 cuentas distintas autenticadas, bloqueo de una misma cuenta duplicada en la sala, inicio de ronda, estado de combate con 32 jugadores y dash autoritativo.
+- [x] Prueba corta de movimiento bajo esa carga: 928 intenciones en 1,501 ms (aproximadamente 618 intenciones/s) en la ejecución registrada.
 - [x] Zombies: spawn disponible con 32 jugadores.
 - [x] La CI más reciente ejecuta tests, build y smoke completo; revisa la ejecución enlazada desde el Pull Request o la pestaña Actions de esta rama.
 
-**Alcance real del smoke de carga:** usa 32 conexiones Socket.IO simultáneas; las conexiones de carga reutilizan una misma sesión autenticada en varias pestañas simuladas. Por ello comprueba la capacidad de conexiones/jugadores de sala, pero no 32 cuentas independientes. El intervalo de estrés es corto y no mide memoria, latencia percentil ni estabilidad de una partida larga con 32 personas disparando a la vez.
+**Alcance real del smoke de carga:** usa 32 conexiones Socket.IO simultáneas, cada una con una cuenta autenticada distinta. CI aumenta temporalmente el límite de registros para sembrar cuentas sintéticas; el valor por defecto de producción sigue siendo 8 registros por IP y hora. El intervalo de estrés es corto y no mide memoria, latencia percentil ni estabilidad de una partida larga con 32 personas disparando a la vez.
 
 ## Aceptación manual pendiente
 
