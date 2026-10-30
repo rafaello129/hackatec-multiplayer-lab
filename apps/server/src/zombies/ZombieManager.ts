@@ -10,6 +10,10 @@ import {
     type ZombieStatePayload
 } from '@hackatec/shared';
 
+export function isZombieMode(mode: string | null): boolean {
+    return mode !== null && (ZOMBIE_BALANCE.modes as readonly string[]).includes(mode);
+}
+
 type Runtime = {
     seed: number;
     zombies: Map<string, ZombieState>;
