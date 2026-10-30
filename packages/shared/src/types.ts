@@ -10,6 +10,9 @@ export interface PlayerInput {
     aimAngle?: number;
 }
 
+export type PlayerEmote = 'spin' | 'jump' | 'crouch' | 'shake';
+export type PlayerEmotePayload = { playerId: string; emote: PlayerEmote };
+
 export interface PlayerState {
     id: string;
     name: string;
