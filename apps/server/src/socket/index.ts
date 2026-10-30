@@ -38,7 +38,7 @@ function socketRoom(roomId: string): string
     return `room:${roomId}`;
 }
 
-function publicPlayerState(player: PlayerState): PlayerState {
+export function publicPlayerState(player: PlayerState): PlayerState {
     if (player.selectedWeapon !== 'laser') return player;
     return { ...player, selectedWeapon: 'pistol' };
 }
