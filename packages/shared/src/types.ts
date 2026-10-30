@@ -118,10 +118,12 @@ export type ProjectileState = {
     weapon: ProjectileWeaponType;
 };
 export type LaserBeamState = { ownerId: string; x1: number; y1: number; x2: number; y2: number };
+export type ExplosionState = { id: string; x: number; y: number; radius: number; createdAt: number };
 export type CombatSnapshot = {
     players: PlayerState[];
     projectiles: ProjectileState[];
     beams?: LaserBeamState[];
+    explosions?: ExplosionState[];
 };
 
 export type SkinAsset = { id: string; url: string; width: number; height: number };
