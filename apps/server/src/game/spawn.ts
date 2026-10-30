@@ -10,14 +10,14 @@ const HORIZONTAL_MARGIN = 100;
 const TOP_MARGIN = 190;
 const BOTTOM_MARGIN = 90;
 
-export function getSpawnPosition(index: number): SpawnPosition
+export function getSpawnPosition(index: number, arenaWidth = ARENA_WIDTH, arenaHeight = ARENA_HEIGHT): SpawnPosition
 {
     const safeIndex = Math.max(0, Math.floor(index));
     const column = safeIndex % COLUMNS;
     const row = Math.floor(safeIndex / COLUMNS);
 
-    const usableWidth = ARENA_WIDTH - (HORIZONTAL_MARGIN * 2);
-    const usableHeight = ARENA_HEIGHT - TOP_MARGIN - BOTTOM_MARGIN;
+    const usableWidth = arenaWidth - (HORIZONTAL_MARGIN * 2);
+    const usableHeight = arenaHeight - TOP_MARGIN - BOTTOM_MARGIN;
 
     const columnGap = usableWidth / Math.max(1, COLUMNS - 1);
     const rowCount = 4;
