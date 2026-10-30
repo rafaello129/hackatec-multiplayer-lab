@@ -1,6 +1,6 @@
 import { MATCH_BALANCE, MATCH_TEXTS, type GameMode, type MatchStatePayload, type PlayerState } from '@hackatec/shared';
 
-export const AVAILABLE_GAME_MODES: readonly GameMode[] = ['classic', 'everyone-vs-one', 'rockets', 'battleRoyale'];
+export const AVAILABLE_GAME_MODES: readonly GameMode[] = ['classic', 'everyone-vs-one', 'rockets', 'battleRoyale', 'zombies'];
 
 type Vote = { playerId: string; mode: GameMode };
 type RoomMatch = {
@@ -238,6 +238,7 @@ export class MatchManager {
             case 'everyone-vs-one': return MATCH_BALANCE.everyoneVsOneDurationMs;
             case 'rockets': return MATCH_BALANCE.rocketsDurationMs;
             case 'battleRoyale': return MATCH_BALANCE.battleRoyaleDurationMs;
+            case 'zombies': return MATCH_BALANCE.zombiesDurationMs;
             case 'classic':
             default: return this.matchDurationMs;
         }
