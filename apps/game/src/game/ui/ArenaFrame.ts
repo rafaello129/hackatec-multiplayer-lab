@@ -36,7 +36,7 @@ export class ArenaFrame {
             fontSize: 9,
             color: '#60a5fa',
             letterSpacing: 2.2
-        }).setDepth(10));
+        }).setDepth(10).setScrollFactor(0));
 
         this.roomText = scene.add.text(39, 76, ARENA_UI_TEXTS.roomPrefix + '  ' + roomId, {
             fontFamily: 'Arial',
@@ -61,7 +61,7 @@ export class ArenaFrame {
             color: '#7185a1',
             align: 'center',
             letterSpacing: 1.1
-        }).setOrigin(0.5, 0).setDepth(10));
+        }).setOrigin(0.5, 0).setDepth(10).setScrollFactor(0));
 
         this.connectionText = scene.add.text(985, 31, '', {
             fontFamily: 'Arial Black',
@@ -77,7 +77,7 @@ export class ArenaFrame {
             color: '#8194ad',
             align: 'right',
             letterSpacing: 0.5
-        }).setOrigin(1, 0).setDepth(10));
+        }).setOrigin(1, 0).setDepth(10).setScrollFactor(0));
 
         this.errorText = scene.add.text(512, 134, '', {
             fontFamily: 'Arial',
@@ -87,7 +87,7 @@ export class ArenaFrame {
             padding: { x: 12, y: 7 },
             align: 'center',
             wordWrap: { width: 720 }
-        }).setOrigin(0.5, 0).setDepth(40).setVisible(false);
+        }).setOrigin(0.5, 0).setDepth(40).setScrollFactor(0).setVisible(false);
     }
 
     setMinimalHud(hidden: boolean): void {
