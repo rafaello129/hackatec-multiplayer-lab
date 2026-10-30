@@ -123,6 +123,7 @@ export const PROFILE_TEXTS = {
         imageTooLarge: 'La imagen no puede superar 512x512 píxeles.',
         uploadFailed: 'No se pudo guardar la skin.',
         sessionExpired: 'La sesión ya no es válida.',
-        unsupportedFormat: 'Formato de imagen no permitido.'
+        unsupportedFormat: 'Formato de imagen no permitido.',
+        fileTooLarge: 'La imagen no puede superar 2 MiB.'
     }
 } as const;
