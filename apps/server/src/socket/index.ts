@@ -18,6 +18,7 @@ import { createMovementRuntime, acceptMovementInput, advanceMovement, type Movem
 import { CombatManager } from '../game/CombatManager.js';
 import { PickupManager } from '../pickups/PickupManager.js';
 import { StormManager } from '../storm/StormManager.js';
+import { ZombieManager } from '../zombies/ZombieManager.js';
 import { AccountStore, normalizeUsername, SESSION_COOKIE, type Account } from '../auth/AccountStore.js';
 import { getAllowedOrigins } from '../config/env.js';
 import { RoomManager } from '../rooms/RoomManager.js';
@@ -40,11 +41,13 @@ export function registerSocketHandlers(
     const combat = new CombatManager();
     const pickupManager = new PickupManager();
     const stormManager = new StormManager();
+    const zombieManager = new ZombieManager();
     const matches = new MatchManager();
     const identities = new Map<string, string>();
     const laserPermissions = new Map<string, boolean>();
     let lastWeaponStateSyncAt = 0;
     let lastStormStateSyncAt = 0;
+    let lastZombieStateSyncAt = 0;
 
     const syncMatchRoom = (roomId: string, now: number): void => {
         const players = roomManager.getPlayers(roomId);
@@ -101,7 +104,16 @@ export function registerSocketHandlers(
         } else {
             stormManager.removeRoom(roomId);
         }
-        io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players: reset.players, projectiles: [], beams: [], explosions: [], trapped: [], heals: [] });
+        if (mode === 'classic' || mode === 'everyone-vs-one') {
+            const zombieState = zombieManager.reset(roomId, reset.map, reset.players, Date.now());
+            io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ZOMBIE_STATE, zombieState);
+        } else {
+            zombieManager.removeRoom(roomId);
+            io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ZOMBIE_STATE, {
+                roomId, zombies: [], projectiles: [], puddles: []
+            });
+        }
+        io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players: reset.players, projectiles: [], beams: [], explosions: [], trapped: [], heals: [], zombieHits: [] });
         for (const player of reset.players) {
             const weaponState = combat.initializePlayer(
                 roomId,
@@ -183,7 +195,24 @@ export function registerSocketHandlers(
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PICKUP_STATE, { roomId, pickups: pickupStep.pickups });
                 for (const collected of pickupStep.collected) io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PICKUP_COLLECTED, collected);
             }
-            const snapshot = combat.step(roomId, players, map, 50, now, mode ?? 'classic');
+            const zombieEnabled = mode === 'classic' || mode === 'everyone-vs-one';
+            const activeZombies = zombieEnabled ? zombieManager.getTargets(roomId) : [];
+            const snapshot = combat.step(roomId, players, map, 50, now, mode ?? 'classic', activeZombies);
+            const zombieHitsApplied = zombieEnabled && zombieManager.applyHits(roomId, snapshot.zombieHits, players);
+            let zombieSnapshotChanged = Boolean(zombieHitsApplied);
+            if (zombieEnabled) {
+                const zombieStep = zombieManager.step(roomId, players, map, 50, now);
+                if (zombieStep) {
+                    for (const item of zombieStep.damage) {
+                        const player = players.find(candidate => candidate.id === item.playerId);
+                        if (player) combat.applyEnvironmentalDamage(roomId, player, item.amount, now);
+                    }
+                    if (now - lastZombieStateSyncAt >= 100 || zombieSnapshotChanged) {
+                        lastZombieStateSyncAt = now;
+                        io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ZOMBIE_STATE, zombieStep.state);
+                    }
+                }
+            }
             if (mode === 'battleRoyale') {
                 const stormStep = stormManager.step(roomId, players, map, 50, now);
                 if (stormStep) {
@@ -312,6 +341,7 @@ export function registerSocketHandlers(
                     rooms.delete(previousRoomId);
                     pickupManager.removeRoom(previousRoomId);
                     stormManager.removeRoom(previousRoomId);
+                    zombieManager.removeRoom(previousRoomId);
                 }
             }
             if (!movement.has(socket.id) || previousRoomId !== result.roomId) movement.set(socket.id, createMovementRuntime());
@@ -334,6 +364,7 @@ export function registerSocketHandlers(
             socket.emit(SOCKET_EVENTS.PICKUP_STATE, { roomId: result.roomId, pickups: pickupManager.getState(result.roomId) });
             const stormState = stormManager.getState(result.roomId, Date.now());
             if (stormState) socket.emit(SOCKET_EVENTS.STORM_STATE, stormState);
+            socket.emit(SOCKET_EVENTS.ZOMBIE_STATE, zombieManager.getState(result.roomId));
             for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
 
             if (previousRoomId !== result.roomId)
@@ -503,6 +534,7 @@ export function registerSocketHandlers(
                     rooms.delete(left.roomId);
                     pickupManager.removeRoom(left.roomId);
                     stormManager.removeRoom(left.roomId);
+                    zombieManager.removeRoom(left.roomId);
                 }
                 syncMatchRoom(left.roomId, Date.now());
                 for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
