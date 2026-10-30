@@ -49,7 +49,7 @@ function blocked(x: number, y: number, map: GameMapState): boolean {
         y > Math.min(map.height, COMBAT_BALANCE.playableBottom) - PLAYER_RADIUS) return true;
 
     return map.obstacles.some(obstacle => {
-        if (obstacle.type !== 'wall') return false;
+        if (!['wall', 'rock', 'lake'].includes(obstacle.type)) return false;
         const dx = Math.max(Math.abs(x - obstacle.x) - obstacle.width / 2, 0);
         const dy = Math.max(Math.abs(y - obstacle.y) - obstacle.height / 2, 0);
         return dx * dx + dy * dy < PLAYER_RADIUS * PLAYER_RADIUS;
@@ -160,7 +160,10 @@ export function advanceMovement(
     if (direction.x === 0 && direction.y === 0) return false;
 
     const delta = Math.max(0, Math.min(deltaMs / 1_000, MAX_STEP_SECONDS));
-    const distance = SPEED * delta;
+    const onFence = map.obstacles.some(obstacle => obstacle.type === 'fence' &&
+        Math.max(Math.abs(player.x - obstacle.x) - obstacle.width / 2, 0) ** 2 +
+        Math.max(Math.abs(player.y - obstacle.y) - obstacle.height / 2, 0) ** 2 < PLAYER_RADIUS * PLAYER_RADIUS);
+    const distance = SPEED * delta * (onFence ? 0.45 : 1);
     const nextX = player.x + direction.x * distance;
     const nextY = player.y + direction.y * distance;
     if (!blocked(nextX, player.y, map)) player.x = nextX;
