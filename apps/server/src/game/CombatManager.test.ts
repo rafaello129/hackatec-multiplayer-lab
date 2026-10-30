@@ -129,6 +129,48 @@ describe('CombatManager weapon authority', () => {
         expect(target.hp).toBe(92);
     });
 
+    it('permanently eliminates Battle Royale players instead of scheduling respawn', () => {
+        const shooter = player('shooter', 250);
+        const victim = player('victim', 280);
+        victim.hp = 10;
+        victim.role = 'survivor';
+        victim.lives = 1;
+        combat.initializePlayer('room', shooter, false);
+        combat.setFireIntent('room', shooter, { angle: 0, firing: true }, 1_000);
+        combat.step('room', [shooter, victim], map, 50, 1_000, 'battleRoyale');
+
+        expect(victim.alive).toBe(false);
+        expect(victim.spectator).toBe(true);
+        combat.step('room', [shooter, victim], map, 50, 20_000, 'battleRoyale');
+        expect(victim.alive).toBe(false);
+        expect(victim.spectator).toBe(true);
+    });
+
+    it('removes a Titan without respawn and decrements hunter lives on death', () => {
+        const hunter = player('hunter', 250);
+        const titan = player('titan', 280);
+        titan.hp = 10;
+        titan.role = 'titan';
+        hunter.role = 'hunter';
+        hunter.lives = 2;
+        combat.initializePlayer('room', hunter, false);
+        combat.setFireIntent('room', hunter, { angle: 0, firing: true }, 1_000);
+        combat.step('room', [hunter, titan], map, 50, 1_000, 'everyone-vs-one');
+
+        expect(titan.alive).toBe(false);
+        expect(titan.spectator).toBe(true);
+
+        const hunterVictim = player('hunter-victim', 400);
+        hunterVictim.role = 'hunter';
+        hunterVictim.lives = 2;
+        const titanShooter = player('titan-shooter', 250);
+        combat.initializePlayer('room-hunter', titanShooter, false);
+        combat.setFireIntent('room-hunter', titanShooter, { angle: 0, firing: true }, 2_000);
+        combat.step('room-hunter', [titanShooter, hunterVictim], map, 50, 2_000, 'everyone-vs-one');
+        expect(hunterVictim.lives).toBe(1);
+        expect(hunterVictim.spectator).not.toBe(true);
+    });
+
     it('restricts Rocket para todos to slot six on the server tick', () => {
         const shooter = player('shooter', 250);
         combat.initializePlayer('room', shooter, false);
