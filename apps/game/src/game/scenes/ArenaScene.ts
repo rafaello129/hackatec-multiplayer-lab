@@ -29,6 +29,7 @@ import {
 import { Scene, type GameObjects, Input } from 'phaser';
 import type { Socket } from 'socket.io-client';
 import { ProfilePanel } from '../ui/ProfilePanel';
+import { ArenaFrame } from '../ui/ArenaFrame';
 import { MapView } from '../map/MapView';
 import { PickupView } from '../map/PickupView';
 import { StormView } from '../map/StormView';
@@ -54,6 +55,7 @@ export class ArenaScene extends Scene
     private previousInput = '';
     private lastInputSent = 0;
     private profilePanel?: ProfilePanel;
+    private frame?: ArenaFrame;
     private scoreboard?: GameObjects.Text;
     private killFeedHud?: GameObjects.Text;
     private readonly killFeedIds = new Set<string>();
@@ -87,11 +89,6 @@ export class ArenaScene extends Scene
     private spectatorStatusText?: GameObjects.Text;
     private spectatorTargetId = '';
 
-    private roomText!: GameObjects.Text;
-    private playerCountText!: GameObjects.Text;
-    private connectionText!: GameObjects.Text;
-    private errorText!: GameObjects.Text;
-
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
 
     constructor()
@@ -106,7 +103,7 @@ export class ArenaScene extends Scene
         this.identity = getClientIdentity(window.location.search);
         this.socket = getSocket();
 
-        this.createInterface();
+        this.frame = new ArenaFrame(this, this.identity.roomId);
         this.mapView = new MapView(this);
         this.pickupView = new PickupView(this);
         this.stormView = new StormView(this);
@@ -170,6 +167,7 @@ export class ArenaScene extends Scene
             this.stormView?.destroy();
             this.zombieView?.destroy();
             this.profilePanel?.destroy();
+            this.frame?.destroy();
             this.input.keyboard?.off('keydown-ONE', this.selectSlot1);
             this.input.keyboard?.off('keydown-TWO', this.selectSlot2);
             this.input.keyboard?.off('keydown-THREE', this.selectSlot3);
@@ -351,8 +349,8 @@ export class ArenaScene extends Scene
     };
 
     private readonly handleMatchActionResult = (result: { ok: boolean; message: string }): void => {
-        if (!result.ok) this.errorText.setText(result.message).setVisible(true);
-        else this.errorText.setVisible(false);
+        if (!result.ok) this.frame?.showError(result.message);
+        else this.frame?.clearError();
     };
 
     private updateMatchClock(): void {
@@ -373,65 +371,6 @@ export class ArenaScene extends Scene
             state.phase === 'results' ? 'Resultados: ' : 'Tiempo: ';
         this.matchCountdownText.setText(prefix + minutes + ':' + remainder);
     }
-
-private createInterface()
-
-    {
-        this.add.rectangle(512, 64, 984, 96, 0x0f172a, 0.96)
-            .setStrokeStyle(1, 0x334155, 0.8);
-
-        this.add.text(36, 28, 'HACKATEC MULTIPLAYER LAB', {
-            fontFamily: 'Arial Black',
-            fontSize: 20,
-            color: '#f8fafc'
-        });
-
-        this.roomText = this.add.text(36, 68, `Sala: ${this.identity.roomId}`, {
-            fontFamily: 'Arial',
-            fontSize: 16,
-            color: '#cbd5e1'
-        });
-
-        this.playerCountText = this.add.text(512, 45, 'Players: 0', {
-            fontFamily: 'Arial Black',
-            fontSize: 18,
-            color: '#f8fafc'
-        }).setOrigin(0.5);
-
-        this.connectionText = this.add.text(988, 30, '', {
-            fontFamily: 'Arial Black',
-            fontSize: 14,
-            color: '#facc15',
-            align: 'right'
-        }).setOrigin(1, 0);
-
-        this.add.text(988, 68, 'Mapa compartido · movimiento sincronizado', {
-            fontFamily: 'Arial',
-            fontSize: 12,
-            color: '#64748b',
-            align: 'right'
-        }).setOrigin(1, 0);
-
-        this.add.rectangle(512, 438, 960, 600, 0x020617, 0.38)
-            .setStrokeStyle(1, 0x1e293b, 0.9);
-
-        this.errorText = this.add.text(512, 134, '', {
-            fontFamily: 'Arial',
-            fontSize: 16,
-            color: '#fda4af',
-            backgroundColor: '#4c0519cc',
-            padding: { x: 10, y: 5 },
-            align: 'center'
-        }).setOrigin(0.5).setVisible(false);
-
-        this.add.text(512, 730, 'WASD / flechas para moverse · SHIFT para dash', {
-            fontFamily: 'Arial',
-            fontSize: 14,
-            color: '#64748b'
-        }).setOrigin(0.5);
-    }
-
-    
 
     private attachSocketListeners()
     {
@@ -497,7 +436,7 @@ private createInterface()
             profileId: this.identity.profileId
         };
 
-        this.errorText.setVisible(false);
+        this.frame?.clearError();
         this.socket.emit(SOCKET_EVENTS.ROOM_JOIN, payload);
     }
 
@@ -539,7 +478,7 @@ private createInterface()
    // === 2. REEMPLAZA TU handleRoomState COMPLETO POR ESTE ===
     private readonly handleRoomState = (payload: RoomStatePayload) =>
     {
-        this.roomText.setText(`Sala: ${payload.roomId}`);
+        this.frame?.setRoom(payload.roomId);
         this.selfId = payload.selfId;
         const own = payload.players.find(player => player.id === payload.selfId);
         if (own?.appearance) this.profilePanel?.setProfile(own.name, own.appearance);
@@ -554,9 +493,7 @@ private createInterface()
 
     private readonly handleRoomError = (payload: RoomErrorPayload) =>
     {
-        this.errorText
-            .setText(`${payload.code}: ${payload.message}`)
-            .setVisible(true);
+        this.frame?.showError(`${payload.code}: ${payload.message}`);
     };
 
     private readonly handlePlayerJoined = (payload: PlayerJoinedPayload) =>
@@ -604,13 +541,13 @@ private createInterface()
     };
 
     private readonly handleWeaponResult = (result: { ok: boolean; message: string }) => {
-        if (!result.ok) this.errorText.setText(result.message).setVisible(true);
+        if (!result.ok) this.frame?.showError(result.message);
     };
 
     private readonly handleProfileResult = (result: {ok:boolean;message:string}) => {
         this.profilePanel?.setStatus(result.message, !result.ok);
-        if (!result.ok) this.errorText.setText(result.message).setVisible(true);
-        else this.errorText.setVisible(false);
+        if (!result.ok) this.frame?.showError(result.message);
+        else this.frame?.clearError();
     };
 
     private readonly handleProgressionState = (state: ProgressionStatePayload) => {
@@ -633,7 +570,7 @@ private createInterface()
     private readonly handleChatMessage = (payload: ChatMessage | { error?: string }) => {
         const error = (payload as { error?: unknown }).error;
         if (typeof error === 'string') {
-            this.errorText.setText(error).setVisible(true);
+            this.frame?.showError(error);
             return;
         }
         const message = payload as ChatMessage;
@@ -919,24 +856,11 @@ private createInterface()
 
     private updatePlayerCount()
     {
-        this.playerCountText.setText(`Players: ${this.playerRegistry.size}`);
+        this.frame?.setPlayerCount(this.playerRegistry.size);
     }
 
-    private setConnectionStatus(status: ConnectionStatus)
+    private setConnectionStatus(status: ConnectionStatus): void
     {
-        const labels: Record<ConnectionStatus, string> = {
-            connecting: '● CONNECTING',
-            connected: '● CONNECTED',
-            disconnected: '● DISCONNECTED'
-        };
-
-        const colors: Record<ConnectionStatus, string> = {
-            connecting: '#facc15',
-            connected: '#4ade80',
-            disconnected: '#fb7185'
-        };
-
-        this.connectionText.setText(labels[status]);
-        this.connectionText.setColor(colors[status]);
+        this.frame?.setConnectionStatus(status);
     }
 } // <-- Esta es la llave final que cierra la clase ArenaScene
