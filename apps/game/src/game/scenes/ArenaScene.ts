@@ -119,13 +119,13 @@ export class ArenaScene extends Scene
         // --- INICIALIZAR TECLADO GLOBALMENTE ---
         if (this.input.keyboard) {
             this.cursors = this.input.keyboard.createCursorKeys();
-            this.wasd = {
-                up: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.W),
-                down: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.S),
-                left: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.A),
-                right: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.D),
+            this.keys = {
+                w: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.W),
+                a: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.A),
+                s: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.S),
+                d: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.D),
+                shift: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.SHIFT)
             };
-            this.shiftKey = this.input.keyboard.addKey(Input.Keyboard.KeyCodes.SHIFT);
             this.input.keyboard.enabled = true;
         }
 
