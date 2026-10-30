@@ -1,6 +1,6 @@
 import { MATCH_BALANCE, MATCH_TEXTS, type GameMode, type MatchStatePayload, type PlayerState } from '@hackatec/shared';
 
-export const AVAILABLE_GAME_MODES: readonly GameMode[] = ['classic'];
+export const AVAILABLE_GAME_MODES: readonly GameMode[] = ['classic', 'everyone-vs-one', 'rockets', 'battleRoyale'];
 
 type Vote = { playerId: string; mode: GameMode };
 type RoomMatch = {
@@ -16,6 +16,8 @@ type RoomMatch = {
     startsAt: number | null;
     endsAt: number | null;
     results: MatchStatePayload['results'];
+    winnerId: string | null;
+    winnerName: string | null;
     message?: string;
     blockedByHost: boolean;
 };
@@ -49,7 +51,7 @@ export class MatchManager {
                 phase: 'waiting', mode: null, hostId: hostId ?? null,
                 players: new Set(), alivePlayerIds: [], accountIds: new Map(), votes: new Map(),
                 lastVoteAt: new Map(), voteEndsAt: null, startsAt: null,
-                endsAt: null, results: [], blockedByHost: false
+                endsAt: null, results: [], winnerId: null, winnerName: null, blockedByHost: false
             };
             this.matches.set(roomId, match);
         }
@@ -144,6 +146,8 @@ export class MatchManager {
         match.startsAt = null;
         match.endsAt = null;
         match.results = [];
+        match.winnerId = null;
+        match.winnerName = null;
         match.blockedByHost = true;
         match.message = MATCH_TEXTS.messages.hostStopped;
         this.markDirty(roomId);
@@ -162,23 +166,29 @@ export class MatchManager {
             if (match.phase === 'countdown' && match.startsAt !== null && now >= match.startsAt) {
                 match.phase = 'playing';
                 match.startsAt = null;
-                match.endsAt = now + this.matchDurationMs;
+                match.endsAt = now + this.durationForMode(match.mode);
                 match.message = MATCH_TEXTS.messages.gameStarted;
                 this.markDirty(roomId);
                 continue;
             }
             if (match.phase === 'playing' && match.endsAt !== null) {
                 const roundPlayers = getPlayers(roomId);
-                const killLimitReached = roundPlayers.some(player => (player.kills ?? 0) >= MATCH_BALANCE.classicKillLimit);
-                if (now < match.endsAt && !killLimitReached) continue;
+                const outcome = this.resolveModeOutcome(match.mode, roundPlayers, now >= match.endsAt);
+                if (!outcome.finished) continue;
                 match.phase = 'results';
                 match.startsAt = null;
-                match.results = roundPlayers
-                    .map(player => ({ playerId: player.id, name: player.name,
-                        kills: player.kills ?? 0, deaths: player.deaths ?? 0 }))
-                    .sort((a, b) => b.kills - a.kills || a.deaths - b.deaths || a.name.localeCompare(b.name));
+                const ordered = this.orderModeResults(match.mode, roundPlayers, outcome.winnerId);
+                match.results = ordered.map((player, index) => ({
+                    playerId: player.id,
+                    name: player.name,
+                    kills: player.kills ?? 0,
+                    deaths: player.deaths ?? 0,
+                    placement: index + 1
+                }));
+                match.winnerId = outcome.winnerId;
+                match.winnerName = roundPlayers.find(player => player.id === outcome.winnerId)?.name ?? null;
                 match.endsAt = now + this.resultsDurationMs;
-                match.message = MATCH_TEXTS.messages.gameFinished;
+                match.message = outcome.message;
                 this.markDirty(roomId);
                 continue;
             }
@@ -190,6 +200,8 @@ export class MatchManager {
                 match.startsAt = null;
                 match.endsAt = null;
                 match.results = [];
+                match.winnerId = null;
+                match.winnerName = null;
                 match.message = MATCH_TEXTS.messages.nextRound;
                 this.markDirty(roomId);
                 if (!match.blockedByHost && match.players.size >= MATCH_BALANCE.minimumPlayers) this.startVoting(roomId, match, now);
@@ -214,6 +226,105 @@ export class MatchManager {
     }
 
     isPlaying(roomId: string): boolean { return this.matches.get(roomId)?.phase === 'playing'; }
+
+    private durationForMode(mode: GameMode | null): number {
+        switch (mode) {
+            case 'everyone-vs-one': return MATCH_BALANCE.everyoneVsOneDurationMs;
+            case 'rockets': return MATCH_BALANCE.rocketsDurationMs;
+            case 'battleRoyale': return MATCH_BALANCE.battleRoyaleDurationMs;
+            case 'classic':
+            default: return this.matchDurationMs;
+        }
+    }
+
+    private resolveModeOutcome(
+        mode: GameMode | null,
+        players: PlayerState[],
+        timeExpired: boolean
+    ): { finished: boolean; winnerId: string | null; message: string } {
+        if (mode === 'battleRoyale') {
+            const survivors = players.filter(player => player.alive !== false && !player.spectator);
+            if (survivors.length <= 1) {
+                return {
+                    finished: true,
+                    winnerId: survivors[0]?.id ?? null,
+                    message: survivors.length ? '¡Tenemos un ganador de Battle Royale!' : 'Todos los participantes fueron eliminados.'
+                };
+            }
+            if (timeExpired) {
+                const ranked = [...survivors].sort((a, b) =>
+                    (b.hp ?? 0) - (a.hp ?? 0) ||
+                    (b.kills ?? 0) - (a.kills ?? 0) ||
+                    a.deaths! - b.deaths!
+                );
+                return { finished: true, winnerId: ranked[0]?.id ?? null, message: 'Tiempo agotado. Resultado por supervivencia y salud restante.' };
+            }
+            return { finished: false, winnerId: null, message: '' };
+        }
+
+        if (mode === 'everyone-vs-one') {
+            const titan = players.find(player => player.role === 'titan');
+            // The Titan is not replaced if they disconnect; this round is cancelled.
+            if (!titan) return { finished: true, winnerId: null, message: 'El Titan se desconectó. Ronda cancelada.' };
+            const hunters = players.filter(player => player.role === 'hunter');
+            const activeHunters = hunters.filter(player =>
+                player.alive !== false && !player.spectator && (player.lives ?? 0) > 0
+            );
+            if (titan.alive === false || (titan.hp ?? 0) <= 0) {
+                const winner = [...activeHunters].sort((a, b) =>
+                    (b.kills ?? 0) - (a.kills ?? 0) || a.name.localeCompare(b.name)
+                )[0];
+                return { finished: true, winnerId: winner?.id ?? null, message: '¡Los cazadores derrotaron al Titan!' };
+            }
+            if (activeHunters.length === 0 || timeExpired) {
+                return {
+                    finished: true,
+                    winnerId: titan.id,
+                    message: timeExpired ? '¡El Titan resistió hasta el final!' : '¡El Titan eliminó a todos los cazadores!'
+                };
+            }
+            return { finished: false, winnerId: null, message: '' };
+        }
+
+        const killLimitReached = mode === 'classic' &&
+            players.some(player => (player.kills ?? 0) >= MATCH_BALANCE.classicKillLimit);
+        if (!timeExpired && !killLimitReached) return { finished: false, winnerId: null, message: '' };
+        const winner = [...players].sort((a, b) =>
+            (b.kills ?? 0) - (a.kills ?? 0) ||
+            (a.deaths ?? 0) - (b.deaths ?? 0) ||
+            a.name.localeCompare(b.name)
+        )[0];
+        return { finished: true, winnerId: winner?.id ?? null, message: MATCH_TEXTS.messages.gameFinished };
+    }
+
+    private orderModeResults(mode: GameMode | null, players: PlayerState[], winnerId: string | null): PlayerState[] {
+        const sorted = [...players];
+        if (mode === 'battleRoyale') {
+            return sorted.sort((a, b) => {
+                if (a.id === winnerId) return -1;
+                if (b.id === winnerId) return 1;
+                const aAlive = a.alive !== false && !a.spectator;
+                const bAlive = b.alive !== false && !b.spectator;
+                return Number(bAlive) - Number(aAlive) ||
+                    (b.hp ?? 0) - (a.hp ?? 0) ||
+                    (b.kills ?? 0) - (a.kills ?? 0);
+            });
+        }
+        if (mode === 'everyone-vs-one') {
+            return sorted.sort((a, b) => {
+                if (a.id === winnerId) return -1;
+                if (b.id === winnerId) return 1;
+                if (a.role === 'titan' && b.role !== 'titan') return -1;
+                if (b.role === 'titan' && a.role !== 'titan') return 1;
+                return (b.kills ?? 0) - (a.kills ?? 0) || a.name.localeCompare(b.name);
+            });
+        }
+        return sorted.sort((a, b) =>
+            (b.kills ?? 0) - (a.kills ?? 0) ||
+            (a.deaths ?? 0) - (b.deaths ?? 0) ||
+            a.name.localeCompare(b.name)
+        );
+    }
 
     private isAvailableMode(mode: GameMode): boolean { return this.availableModes.includes(mode); }
 
@@ -241,7 +352,7 @@ export class MatchManager {
     private startCountdown(roomId: string, match: RoomMatch, mode: GameMode, now: number, message: string): void {
         match.phase = 'countdown'; match.mode = mode; match.votes.clear();
         match.voteEndsAt = null; match.startsAt = now + this.countdownDurationMs;
-        match.endsAt = null; match.results = []; match.message = message;
+        match.endsAt = null; match.results = []; match.winnerId = null; match.winnerName = null; match.message = message;
         this.markDirty(roomId);
     }
 
@@ -252,6 +363,7 @@ export class MatchManager {
             roomId, phase: match.phase, mode: match.mode, hostId: match.hostId,
             votes, alivePlayerIds: [...match.alivePlayerIds], voteEndsAt: match.voteEndsAt, startsAt: match.startsAt,
             endsAt: match.endsAt, results: match.results.map(result => ({ ...result })),
+            winnerId: match.winnerId, winnerName: match.winnerName,
             message: match.message
         };
     }
