@@ -90,6 +90,7 @@ export class AccountStore {
         if (!accountColumns.some(column => column.name === 'is_owner')) {
             this.db.exec('ALTER TABLE accounts ADD COLUMN is_owner INTEGER NOT NULL DEFAULT 0');
         }
+        this.importExistingProfileSkins();
     }
 
     createAccount(username: string, passwordHash: string): Account {
@@ -206,6 +207,19 @@ export class AccountStore {
         return Math.round(XP_BALANCE.baseForNextLevel * safeLevel ** XP_BALANCE.levelExponent);
     }
 
+    saveSkin(userId: string, skin: NonNullable<PlayerAppearance['skin']>): void {
+        this.db.prepare(
+            'INSERT INTO skins (id, user_id, url, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+        ).run(skin.id, userId, skin.url, skin.width, skin.height, Date.now());
+    }
+
+    ownsSkin(userId: string, skin: NonNullable<PlayerAppearance['skin']>): boolean {
+        const row = this.db.prepare(
+            'SELECT 1 AS owned FROM skins WHERE user_id = ? AND id = ? AND url = ? AND width = ? AND height = ?'
+        ).get(userId, skin.id, skin.url, skin.width, skin.height) as { owned: number } | undefined;
+        return row?.owned === 1;
+    }
+
     updateProfile(userId: string, change: { username?: string; appearance?: PlayerAppearance }): Account | undefined {
         this.db.exec('BEGIN IMMEDIATE');
         try {
@@ -224,6 +238,10 @@ export class AccountStore {
                     .run(change.username, nextUsernameKey, userId);
             }
             if (change.appearance !== undefined) {
+                if (change.appearance.mode === 'skin' &&
+                    (!change.appearance.skin || !this.ownsSkin(userId, change.appearance.skin))) {
+                    throw new Error('Skin asset does not belong to this account.');
+                }
                 this.db.prepare('UPDATE profiles SET appearance_json = ? WHERE user_id = ?')
                     .run(JSON.stringify(change.appearance), userId);
             }
@@ -241,6 +259,25 @@ export class AccountStore {
 
     close(): void {
         this.db.close();
+    }
+
+    private importExistingProfileSkins(): void {
+        const rows = this.db.prepare(
+            'SELECT user_id, appearance_json FROM profiles'
+        ).all() as Array<{ user_id: string; appearance_json: string }>;
+        const insert = this.db.prepare(
+            'INSERT OR IGNORE INTO skins (id, user_id, url, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        for (const row of rows) {
+            const appearance = this.parseAppearance(row.appearance_json);
+            const skin = appearance.mode === 'skin' ? appearance.skin : undefined;
+            if (!skin || !/^[a-f0-9-]+\.(png|jpg|webp)$/.test(skin.id) ||
+                skin.url !== '/skins/' + skin.id ||
+                !Number.isInteger(skin.width) || !Number.isInteger(skin.height) ||
+                skin.width < 1 || skin.height < 1 ||
+                skin.width > 512 || skin.height > 512) continue;
+            insert.run(skin.id, row.user_id, skin.url, skin.width, skin.height, Date.now());
+        }
     }
 
     private parseAppearance(value: string): PlayerAppearance {
