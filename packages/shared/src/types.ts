@@ -113,3 +113,5 @@ export type MatchStatePayload = {
 };
 export type MatchVotePayload = { mode: GameMode };
 export type HostStartMatchPayload = { mode: GameMode };
+
+export type MatchActionResultPayload = { ok: boolean; message: string };
