@@ -66,7 +66,7 @@ describe('ZombieManager', () => {
             const wave = manager.getState('boss-run');
             expect(wave.round).toBe(round);
             expect(wave.runPhase).toBe('wave');
-            manager.applyHits(wave.zombies.map(zombie => ({
+            manager.applyHits('boss-run', wave.zombies.map(zombie => ({
                 zombieId: zombie.id,
                 attackerId: survivor.id,
                 damage: zombie.maxHp
@@ -91,7 +91,30 @@ describe('ZombieManager', () => {
         expect(manager.getState('boss-run').runPhase).toBe('won');
     });
 
-    it('requires an 800ms telegraph before a giant charges', () => {
+    it('revives eliminated teammates at the next intermission with one life', () => {
+        const manager = new ZombieManager();
+        const survivor = player('survivor', 500, 400);
+        survivor.lives = 2;
+        const eliminated = player('eliminated', 800, 600);
+        eliminated.lives = 0;
+        eliminated.spectator = true;
+        eliminated.alive = false;
+        manager.reset('revive-run', map, [survivor, eliminated], 0);
+        const wave = manager.getState('revive-run');
+        manager.applyHits('revive-run', wave.zombies.map(zombie => ({
+            zombieId: zombie.id,
+            attackerId: survivor.id,
+            damage: zombie.maxHp
+        })), [survivor, eliminated]);
+        manager.step('revive-run', [survivor, eliminated], map, 50, 50);
+        const intermissionAt = 50 + ZOMBIE_BALANCE.intermissionMs;
+        const step = manager.step('revive-run', [survivor, eliminated], map, 50, intermissionAt);
+
+        expect(step?.revivedPlayerIds).toContain(eliminated.id);
+        expect(eliminated).toMatchObject({ alive: true, spectator: false, lives: 1 });
+    });
+
+
         const manager = new ZombieManager();
         const target = player('target', 480, 400);
         const state = manager.reset('room', map, [target], 0);
