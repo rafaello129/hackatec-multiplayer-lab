@@ -62,14 +62,14 @@ export class CombatManager {
             player.alive = false;
             player.deaths = (player.deaths ?? 0) + 1;
             if (attacker && attacker.id !== player.id) attacker.kills = (attacker.kills ?? 0) + 1;
-            s.respawn.set(player.id, now + 3000);
+            s.respawn.set(player.id, now + 5000);
         }
     }
     step(roomId: string, players: PlayerState[], map: GameMapState, dtMs: number, now: number): ProjectileState[] {
         const s = this.runtime(roomId);
         const byId = new Map(players.map(p => [p.id, p]));
         for (const player of players) {
-            if (player.alive === false) {
+            if (player.alive === false || player.spectator) {
                 if (now >= (s.respawn.get(player.id) ?? Infinity)) {
                     const candidates = Array.from({length: 32}, (_, i) => getSpawnPosition(i));
                     const spawn = candidates.find(point => !map.obstacles.some(o => o.type === 'wall' && overlaps(point.x, point.y, PLAYER_RADIUS, o)) && !players.some(other => other.id !== player.id && other.alive !== false && Math.hypot(other.x - point.x, other.y - point.y) < PLAYER_RADIUS * 2)) ?? getSpawnPosition(players.findIndex(p => p.id === player.id));
@@ -106,7 +106,7 @@ export class CombatManager {
                 if (p.x < 0 || p.x > map.width || p.y < 155 || p.y > 715 ||
                     map.obstacles.some(o => o.type === 'wall' && overlaps(p.x, p.y, PROJECTILE_RADIUS, o))) { hit = true; break; }
                 for (const target of players) {
-                    if (target.id === p.ownerId || target.alive === false) continue;
+                    if (target.id === p.ownerId || target.alive === false || target.spectator) continue;
                     if (Math.hypot(target.x - p.x, target.y - p.y) <= PLAYER_RADIUS + PROJECTILE_RADIUS) {
                         this.damage(roomId, target, WEAPONS[p.weapon].damage, now, byId.get(p.ownerId));
                         hit = true; break;
