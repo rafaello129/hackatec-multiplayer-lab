@@ -337,3 +337,129 @@ input:focus-visible {
         transition-duration: 0.01ms !important;
     }
 }
+
+
+.profile-panel {
+    position: fixed;
+    top: 14px;
+    right: 132px;
+    z-index: 880;
+    color: var(--color-text);
+}
+
+.profile-panel__toggle {
+    min-height: 38px;
+    padding: 9px 13px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 10px;
+    background: rgba(8, 20, 38, 0.94);
+    color: #dbeafe;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.profile-panel__toggle:hover {
+    border-color: #647995;
+    background: #172b48;
+}
+
+.profile-panel__content {
+    position: absolute;
+    top: 46px;
+    right: 0;
+    display: grid;
+    gap: 8px;
+    width: 250px;
+    padding: 16px;
+    border: 1px solid rgba(104, 143, 190, 0.32);
+    border-radius: 14px;
+    background: rgba(8, 19, 37, 0.98);
+    box-shadow: var(--shadow-panel);
+    backdrop-filter: blur(16px);
+}
+
+.profile-panel__content[hidden] {
+    display: none !important;
+}
+
+.profile-panel__heading {
+    margin-bottom: 3px;
+    color: #f8fbff;
+    font-size: 14px;
+    font-weight: 850;
+}
+
+.profile-panel__content label {
+    margin-top: 5px;
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.profile-panel__content input:not([type="color"]):not([type="file"]),
+.profile-panel__content select {
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: #071326;
+    color: var(--color-text);
+    font-size: 12px;
+}
+
+.profile-panel__content input[type="color"] {
+    width: 100%;
+    height: 36px;
+    padding: 3px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: #071326;
+}
+
+.profile-panel__content input[type="file"] {
+    width: 100%;
+    color: var(--color-muted);
+    font-size: 10px;
+}
+
+.profile-panel__save {
+    min-height: 38px;
+    margin-top: 6px;
+    border: 1px solid rgba(147, 197, 253, 0.22);
+    border-radius: 9px;
+    background: #1d4ed8;
+    color: white;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.profile-panel__save:hover {
+    background: #2563eb;
+}
+
+.profile-panel__status {
+    min-height: 16px;
+    color: #86efac;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.profile-panel__status.is-error {
+    color: #fda4af;
+}
+
+@media (max-width: 520px) {
+    .profile-panel {
+        top: 52px;
+        right: 8px;
+    }
+
+    .profile-panel__content {
+        width: min(250px, calc(100vw - 16px));
+    }
+}
