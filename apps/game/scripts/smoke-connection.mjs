@@ -23,6 +23,23 @@ function waitFor(socket, event, timeoutMs = 5000) {
     });
 }
 
+function waitForCombatPlayer(socket, playerId, spectator, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            socket.off('combat:state', handler);
+            reject(new Error('Timed out waiting for player combat state'));
+        }, timeoutMs);
+        const handler = (payload) => {
+            const player = payload?.players?.find(item => item.id === playerId);
+            if (!player || player.spectator !== spectator) return;
+            clearTimeout(timeout);
+            socket.off('combat:state', handler);
+            resolve(player);
+        };
+        socket.on('combat:state', handler);
+    });
+}
+
 function waitForMatchVote(socket, playerId, timeoutMs = 5000) {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
@@ -173,6 +190,7 @@ async function main() {
     const alphaAccount = await createAccount('Alpha');
     const betaAccount = await createAccount('Beta');
     const gammaAccount = await createAccount('Gamma');
+    const deltaAccount = await createAccount('Delta');
     await verifyAuthApi(alphaAccount);
     const betaLoginCookie = await loginAccount(betaAccount.username);
 
@@ -204,9 +222,27 @@ async function main() {
     const forcedStart = await alphaCountdown;
     assert(forcedStart.mode === 'classic', 'host should be able to force Classic mode');
 
+    const alphaPlaying = waitForMatchPhase(alpha, 'playing', 10000);
+    await alphaPlaying;
+    const delta = await connectClient('delta', deltaAccount.cookie);
+    const deltaState = await joinRoom(delta, 'hackatec');
+    const latePlayer = deltaState.players.find(player => player.id === delta.id);
+    assert(latePlayer?.spectator === true, 'a player joining during a match must enter as a spectator');
+
     const alphaStopped = waitForMatchPhase(alpha, 'waiting');
     alpha.emit('match:host-stop');
     await alphaStopped;
+
+    const deltaReactivated = waitForCombatPlayer(delta, delta.id, false);
+    const alphaRestarted = waitForMatchPhase(alpha, 'countdown');
+    alpha.emit('match:host-start', { mode: 'classic' });
+    await alphaRestarted;
+    const reactivatedPlayer = await deltaReactivated;
+    assert(reactivatedPlayer.spectator === false, 'spectators should become active when the next round is forced');
+
+    const alphaStoppedAgain = waitForMatchPhase(alpha, 'waiting');
+    alpha.emit('match:host-stop');
+    await alphaStoppedAgain;
     assert(
         betaState.players.some((player) => player.name === alphaAccount.username) &&
         betaState.players.some((player) => player.name === betaAccount.username),
@@ -228,6 +264,7 @@ async function main() {
     const left = await betaSawLeave;
     assert(left.playerId === alphaId, 'beta did not observe the previous host leaving');
     beta.disconnect();
+    delta.disconnect();
 
     console.log('[smoke] authenticated same-room join/state/leave verified');
     console.log('[smoke] room isolation verified');
