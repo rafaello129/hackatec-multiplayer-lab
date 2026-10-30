@@ -30,6 +30,9 @@ export class ChatManager {
         if (channel === 'spectators' && !player.spectator) {
             return { ok: false, error: 'Solo los espectadores pueden usar ese canal.' };
         }
+        if (channel === 'all' && player.spectator) {
+            return { ok: false, error: 'Los espectadores deben usar el canal de espectadores.' };
+        }
         if (typeof rawText !== 'string') return { ok: false, error: 'El mensaje debe ser texto.' };
 
         const text = rawText.replace(/[\u0000-\u001f\u007f]/g, '').trim();
