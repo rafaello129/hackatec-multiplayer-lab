@@ -57,6 +57,25 @@ describe('StormManager', () => {
         expect(completed.radius).toBe(STORM_BALANCE.minimumRadius);
     });
 
+    it('credits each survived phase exactly once and excludes eliminated players', () => {
+        const manager = new StormManager();
+        const active = player('active', 512, 435);
+        const eliminated = player('eliminated', 512, 435);
+        eliminated.alive = false;
+        eliminated.spectator = true;
+        manager.start('room', map, 0);
+
+        manager.step('room', [active, eliminated], map, 50, 75_000);
+        expect(active.survivedStormPhases).toBe(1);
+        expect(eliminated.survivedStormPhases).toBeUndefined();
+
+        manager.step('room', [active, eliminated], map, 50, 75_050);
+        expect(active.survivedStormPhases).toBe(1);
+
+        manager.step('room', [active, eliminated], map, 50, 375_000);
+        expect(active.survivedStormPhases).toBe(5);
+    });
+
     it('cleans room state when the last player leaves', () => {
         const manager = new StormManager();
         manager.start('room', map, 0);
