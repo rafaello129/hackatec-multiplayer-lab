@@ -216,8 +216,18 @@ export class ArenaScene extends Scene
         }
         if (state.phase === 'voting') {
             this.matchStatusText?.setText(labels[state.phase] + ' · ' + voteCount + ' voto(s)');
+        } else if (state.phase === 'results' && state.results.length > 0) {
+            const lines = state.results.slice(0, 5).map((result, index) => `${index + 1}. ${result.name}: ${result.kills} bajas / ${result.deaths} muertes`);
+            this.matchStatusText?.setText(labels[state.phase] + '\\n' + lines.join('\\n'));
         }
         this.updateMatchClock();
+    };
+
+    private readonly handleHostChanged = (payload: { hostId: string }): void => {
+        this.roomHostId = payload.hostId;
+        const isHost = this.roomHostId === this.selfId;
+        this.hostMenuButton?.setVisible(isHost);
+        if (!isHost) { this.hostStartButton?.setVisible(false); this.hostStopButton?.setVisible(false); }
     };
 
     private readonly handleMatchActionResult = (result: { ok: boolean; message: string }): void => {
@@ -401,6 +411,7 @@ private createInterface()
         this.socket.on(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
         this.socket.on(SOCKET_EVENTS.MATCH_STATE, this.handleMatchState);
         this.socket.on(SOCKET_EVENTS.MATCH_ACTION_RESULT, this.handleMatchActionResult);
+        this.socket.on(SOCKET_EVENTS.ROOM_HOST_CHANGED, this.handleHostChanged);
     }
 
     private detachSocketListeners()
@@ -416,6 +427,7 @@ private createInterface()
         this.socket.off(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
         this.socket.off(SOCKET_EVENTS.MATCH_STATE, this.handleMatchState);
         this.socket.off(SOCKET_EVENTS.MATCH_ACTION_RESULT, this.handleMatchActionResult);
+        this.socket.off(SOCKET_EVENTS.ROOM_HOST_CHANGED, this.handleHostChanged);
     }
 
     private joinRoom()
