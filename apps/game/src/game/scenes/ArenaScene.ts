@@ -135,12 +135,12 @@ export class ArenaScene extends Scene
         this.input.keyboard?.on('keydown-SIX', this.selectSlot6);
         this.input.keyboard?.on('keydown-SEVEN', this.selectSlot7);
         this.healthBar = this.add.graphics().setDepth(8).setScrollFactor(0);
-        this.scoreboard = this.add.text(765, 390, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
+        this.scoreboard = this.add.text(765, 390, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8).setScrollFactor(0);
         this.killFeedHud = this.add.text(36, 174, '', {
             fontFamily: 'Arial Black', fontSize: 12, color: '#f8fafc',
             backgroundColor: '#0f172acc', padding: { x: 8, y: 6 },
             fixedWidth: 270, lineSpacing: 3
-        }).setDepth(8);
+        }).setDepth(8).setScrollFactor(0);
         this.chatPanel = this.add.text(765, 175, CHAT_TEXTS.panelTitle, {
             fontFamily: 'Arial', fontSize: 11, color: '#e2e8f0',
             backgroundColor: '#0f172acc', padding: { x: 9, y: 7 },
@@ -150,7 +150,7 @@ export class ArenaScene extends Scene
         this.chatInputHud = this.add.text(765, 352, CHAT_TEXTS.inputIdle, {
             fontFamily: 'Arial', fontSize: 11, color: '#94a3b8',
             backgroundColor: '#0f172acc', padding: { x: 9, y: 6 }, fixedWidth: 235
-        }).setDepth(9);
+        }).setDepth(9).setScrollFactor(0);
         this.profilePanel = new ProfilePanel((username, appearance) => this.socket.emit(SOCKET_EVENTS.PROFILE_SET, { username: username || undefined, appearance }));
         this.attachSocketListeners();
 
