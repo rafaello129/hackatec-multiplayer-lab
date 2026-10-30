@@ -99,9 +99,9 @@ describe('CombatManager weapon authority', () => {
     });
 
     it('credits an assist to a player who damaged the victim before the final hit', () => {
-        const firstAttacker = player('first', 250);
-        const finalAttacker = player('final', 250);
-        const victim = player('victim', 300);
+        const firstAttacker = player('first', 250, 380);
+        const finalAttacker = player('final', 250, 420);
+        const victim = player('victim', 300, 400);
         victim.hp = 40;
         combat.initializePlayer('room', firstAttacker, false);
         combat.initializePlayer('room', finalAttacker, false);
@@ -112,7 +112,7 @@ describe('CombatManager weapon authority', () => {
         expect(victim.hp).toBe(20);
 
         combat.setFireIntent('room', firstAttacker, { angle: 0, firing: false }, 1_100);
-        combat.setFireIntent('room', finalAttacker, { angle: 0, firing: true }, 2_000);
+        combat.setFireIntent('room', finalAttacker, { angle: Math.atan2(-20, 50), firing: true }, 2_000);
         combat.step('room', [firstAttacker, finalAttacker, victim], map, 50, 2_000);
         combat.step('room', [firstAttacker, finalAttacker, victim], map, 50, 2_050);
 
