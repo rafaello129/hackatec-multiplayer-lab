@@ -252,7 +252,8 @@ export class MatchManager {
     private resolveModeOutcome(
         mode: GameMode | null,
         players: PlayerState[],
-        timeExpired: boolean
+        timeExpired: boolean,
+        zombieState?: ZombieStatePayload
     ): { finished: boolean; winnerId: string | null; message: string } {
         if (mode === 'zombies') {
             const phase = zombieState?.runPhase;
