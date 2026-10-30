@@ -112,7 +112,7 @@ describe('CombatManager weapon authority', () => {
         expect(shooter.hp).toBeLessThan(100);
         const before = shooter.x;
         combat.step('room', [shooter, target], map, 50, 1_050);
-        expect(shooter.x).toBeGreaterThan(before);
+        expect(shooter.x).toBeLessThan(before);
     });
 
     it('applies continuous laser damage at 40 DPS and exposes the beam state', () => {
