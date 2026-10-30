@@ -15,6 +15,9 @@ Juego web multijugador 2D desarrollado con TypeScript, Phaser 4, Node.js, Expres
 - Zombies gigante y escupidor con IA autoritativa, exclusivos del modo Zombies.
 - XP, niveles, asistencias, historial de progresión y chat con canal de espectadores.
 - HUD con hotbar, vida, escudo, roles, feed de eliminaciones, resultados, chat y burbujas de mensaje.
+- HUD minimalista conmutables desde el botón de la arena, conservando vida, escudo y armas.
+- Emotes sincronizados entre jugadores: giro (C), salto (V), agacharse (B) y sacudida (N).
+- Apariencia de jugador configurable mediante color o skin; la nave vectorial es la apariencia predeterminada.
 
 Consulta [el informe de cierre de Fase 11](docs/integration/PHASE_11_REPORT.md), [la auditoría histórica y las decisiones técnicas](docs/FULL_GAME_AUDIT.md), [la referencia de juego](docs/GAMEPLAY_SYSTEMS.md), [el ciclo de partidas](docs/MATCH_LIFECYCLE.md) y [autenticación](docs/AUTHENTICATION.md).
 
@@ -64,12 +67,16 @@ El servidor crea `apps/server/storage/accounts.sqlite` automáticamente. Para ca
 | Dash | Shift |
 | Apuntar | Mouse |
 | Disparar | Mantener clic izquierdo |
-| Seleccionar arma | Teclas 1–6 |
+| Seleccionar arma | Teclas 1–7 |
+| Emote: giro | C |
+| Emote: salto | V |
+| Emote: agacharse | B |
+| Emote: sacudida | N |
 | Abrir / enviar chat | Enter |
 | Cerrar chat | Escape |
 | Cambiar objetivo como espectador | A / D |
 
-En el chat, los jugadores activos escriben en el canal general. Los espectadores escriben en el canal de espectadores.
+El botón de la esquina superior derecha alterna entre HUD completo y HUD minimalista. En el chat, los jugadores activos escriben en el canal general. Los espectadores escriben en el canal de espectadores.
 
 ## Modos de juego
 
@@ -128,7 +135,7 @@ SERVIDOR: valida, simula y modifica el estado
 CLIENTES: renderizan el estado aprobado
 ```
 
-Los valores de armas, habilidades, tormenta, zombies, pickups, XP y chat están centralizados en `packages/shared/src/config/balance.ts`.
+Los valores de armas, habilidades, tormenta, zombies, pickups, XP y chat están centralizados en `packages/shared/src/config/balance.ts`. El láser ocupa la ranura 7; consulta [GAMEPLAY_SYSTEMS.md](docs/GAMEPLAY_SYSTEMS.md) para los valores actuales de daño, cadencia y respawn.
 
 ## Estado de aceptación
 
