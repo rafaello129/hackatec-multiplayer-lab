@@ -261,6 +261,14 @@ async function main() {
     assert(alphaState.players.length === 1, 'alpha should initially be alone');
     assert(alphaState.players[0]?.name === alphaAccount.username, 'server did not use the authenticated username');
 
+    const duplicateAlpha = await connectClient('duplicate-alpha', alphaAccount.cookie);
+    const duplicateErrorPromise = waitFor(duplicateAlpha, 'room:error');
+    duplicateAlpha.emit('room:join', { roomId: 'hackatec' });
+    const duplicateError = await duplicateErrorPromise;
+    assert(duplicateError.code === 'ACCOUNT_IN_ROOM',
+        'the same account must not occupy two player slots in one room');
+    duplicateAlpha.disconnect();
+
     const alphaSawJoin = waitFor(alpha, 'player:joined');
     const alphaVoting = waitForMatchPhase(alpha, 'voting');
     const beta = await connectClient('beta', betaLoginCookie);
@@ -336,13 +344,11 @@ async function main() {
     );
     assert(joined.player?.name === betaAccount.username, 'alpha did not observe beta joining');
 
-    // Load acceptance: fill the room to its documented 32-player capacity.
+    // Load acceptance: fill the room with 32 distinct authenticated accounts.
     const loadClients = [];
     let finalLoadSnapshot;
-    // One test account can open multiple authenticated sessions; this exercises
-    // socket/player capacity without mass-registering accounts from one CI IP.
-    const loadAccount = await createAccount('Load');
     for (let index = 0; index < 29; index += 1) {
+        const loadAccount = await createAccount('Load' + index);
         const loadSocket = await connectClient('load-' + index, loadAccount.cookie);
         const loadState = await joinRoom(loadSocket, 'hackatec');
         loadClients.push(loadSocket);
