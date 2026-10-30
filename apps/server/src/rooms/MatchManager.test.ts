@@ -69,6 +69,19 @@ describe('MatchManager', () => {
         expect(manager.getState('room-a')?.phase).toBe('voting');
     });
 
+
+    it('ends Classic early when a player reaches the configured kill limit', () => {
+        const manager = new MatchManager(100, 10, 1_000, 15);
+        manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
+        manager.advance(100, () => []);
+        manager.advance(110, () => []);
+        manager.advance(111, () => [player('a', 30), player('b', 2)]);
+        expect(manager.getState('room-a')).toMatchObject({
+            phase: 'results',
+            results: [{ playerId: 'a', kills: 30 }, { playerId: 'b', kills: 2 }]
+        });
+    });
+
     it('allows only the host to force a new match or stop one', () => {
         const manager = new MatchManager(100, 20, 1_000, 100);
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
