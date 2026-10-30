@@ -248,6 +248,11 @@ export class RoomManager
             player.kills = 0;
             player.deaths = 0;
             player.isDashing = false;
+            player.isInvulnerable = false;
+            player.spawnInvulnerableUntil = 0;
+            player.dashReadyAt = 0;
+            player.shield = 0;
+            player.selectedWeapon = 'pistol';
             player.immobilizedUntil = 0;
         }
         return { map, players: [...room.values()] };
