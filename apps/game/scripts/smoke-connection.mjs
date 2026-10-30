@@ -304,8 +304,10 @@ async function main() {
     // Load acceptance: fill the room to its documented 32-player capacity.
     const loadClients = [];
     let finalLoadSnapshot;
+    // One test account can open multiple authenticated sessions; this exercises
+    // socket/player capacity without mass-registering accounts from one CI IP.
+    const loadAccount = await createAccount('Load');
     for (let index = 0; index < 29; index += 1) {
-        const loadAccount = await createAccount('Load' + index);
         const loadSocket = await connectClient('load-' + index, loadAccount.cookie);
         const loadState = await joinRoom(loadSocket, 'hackatec');
         loadClients.push(loadSocket);
