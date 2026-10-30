@@ -14,6 +14,7 @@ import {
     type PickupCollectedPayload,
     type PlayerTrappedPayload,
     type PlayerHealedPayload,
+    type PlayerEmotePayload,
     type StormStatePayload,
     type ZombieStatePayload,
     type ProgressionStatePayload,
@@ -165,6 +166,7 @@ export class ArenaScene extends Scene
             };
             this.input.keyboard.enabled = true;
             this.input.keyboard.on('keydown', this.handleChatKeydown);
+            this.input.keyboard.on('keydown', this.handleEmoteKeydown);
         }
 
         this.events.once('shutdown', () => {
@@ -186,6 +188,7 @@ export class ArenaScene extends Scene
             this.input.keyboard?.off('keydown-SIX', this.selectSlot6);
             this.input.keyboard?.off('keydown-SEVEN', this.selectSlot7);
             this.input.keyboard?.off('keydown', this.handleChatKeydown);
+            this.input.keyboard?.off('keydown', this.handleEmoteKeydown);
         });
 
         if (this.socket.connected) {
@@ -420,6 +423,7 @@ export class ArenaScene extends Scene
         this.socket.on(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.on(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.on(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
+        this.socket.on(SOCKET_EVENTS.PLAYER_EMOTE, this.handlePlayerEmote);
         this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.on(SOCKET_EVENTS.STORM_STATE, this.handleStormState);
         this.socket.on(SOCKET_EVENTS.ZOMBIE_STATE, this.handleZombieState);
@@ -448,6 +452,7 @@ export class ArenaScene extends Scene
         this.socket.off(SOCKET_EVENTS.PLAYER_JOINED, this.handlePlayerJoined);
         this.socket.off(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.off(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
+        this.socket.off(SOCKET_EVENTS.PLAYER_EMOTE, this.handlePlayerEmote);
         this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.off(SOCKET_EVENTS.STORM_STATE, this.handleStormState);
         this.socket.off(SOCKET_EVENTS.ZOMBIE_STATE, this.handleZombieState);
@@ -545,6 +550,22 @@ export class ArenaScene extends Scene
     private readonly handlePlayerMoved = (payload: PlayerMovedPayload) => {
         this.playerRegistry.add(payload.player);
         this.upsertPlayerView(payload.player);
+    };
+
+    private readonly handlePlayerEmote = (payload: PlayerEmotePayload): void => {
+        this.playerViews.get(payload.playerId)?.playEmote(payload.emote);
+    };
+
+    private readonly handleEmoteKeydown = (event: KeyboardEvent): void => {
+        if (event.repeat || this.chatInputActive || !this.socket?.connected || !this.selfId) return;
+        const emotes: Record<string, PlayerEmotePayload['emote']> = {
+            c: 'spin', v: 'jump', b: 'crouch', n: 'shake'
+        };
+        const emote = emotes[event.key.toLowerCase()];
+        if (!emote) return;
+        const self = this.playerRegistry.get(this.selfId);
+        if (!self || self.spectator || self.alive === false) return;
+        this.socket.emit(SOCKET_EVENTS.PLAYER_EMOTE, { emote });
     };
 
     private readonly selectSlot1 = () => this.selectWeapon(1);
