@@ -37,7 +37,7 @@ Rutas HTTP:
 - `GET /api/auth/session` — recupera la sesión actual.
 - `POST /api/auth/logout` — revoca la sesión.
 
-La cuenta reservada `Gueta` requiere `GUETA_ACCOUNT_KEY`, una clave privada que debes configurar en `apps/server/.env` antes de registrarla. No compartas esa clave con otros jugadores. La cuenta queda marcada en el servidor y no puede renombrarse a otro usuario; la autorización futura de contenido exclusivo se basará en esa identidad de cuenta, no en datos enviados por el cliente.
+El primer registro exitoso del nombre `Gueta` (sin distinguir mayúsculas/minúsculas) obtiene automáticamente el estado de propietario en el servidor. No se necesita una clave adicional ni configuración especial del host. La base de datos impide registros duplicados y el propietario no puede cambiar su nombre; otras cuentas tampoco pueden apropiarse de `Gueta` mediante un cambio de nombre. La autorización de contenido exclusivo se basa en el indicador de propietario guardado en SQLite, no en datos enviados por el cliente. **Quien registre `Gueta` primero obtiene el privilegio**, así que el sistema no verifica la identidad personal de quien lo registra.
 
 El token de sesión se entrega mediante una cookie `HttpOnly`; el navegador no necesita leerlo desde JavaScript. La sesión dura siete días. El servidor vuelve a validar la sesión al establecer la conexión Socket.IO, y una conexión sin cuenta no puede entrar a una sala.
 
