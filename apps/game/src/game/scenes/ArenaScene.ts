@@ -602,6 +602,7 @@ private createInterface()
     };
 
     private readonly handleProfileResult = (result: {ok:boolean;message:string}) => {
+        this.profilePanel?.setStatus(result.message, !result.ok);
         if (!result.ok) this.errorText.setText(result.message).setVisible(true);
         else this.errorText.setVisible(false);
     };
