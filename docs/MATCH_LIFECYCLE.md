@@ -24,6 +24,7 @@ Cada sala tiene una única máquina de estados del servidor:
 | Todos contra uno | 4 min | Los cazadores ganan al eliminar al Titan. El Titan gana si resiste o elimina las vidas de todos los cazadores. |
 | Rocket para todos | 5 min | Solo ranura 6, lanzacohetes. |
 | Battle Royale | 7.5 min | Último jugador vivo. No hay respawn. Si el tiempo se agota, se desempata por supervivientes y salud. |
+| Zombies | 5 min | Supervivencia frente a oleadas de zombies; solo este modo activa la IA zombie. |
 
 Los valores son configurables en `packages/shared/src/config/balance.ts`.
 
@@ -31,7 +32,7 @@ Los valores son configurables en `packages/shared/src/config/balance.ts`.
 
 El servidor selecciona al azar un Titan. Su vida máxima es `500 + 100 × número de cazadores`. Cada cazador comienza con dos vidas. Al perder una vida reaparece tras 5 segundos; al perder la última se vuelve espectador. El Titan no reaparece. Si el Titan se desconecta, la ronda se cancela.
 
-Los zombies están activos en Clásico y Todos contra uno.
+Clásico, Todos contra uno, Rocket para todos y Battle Royale no tienen zombies. La IA zombie se inicia y se sincroniza únicamente cuando el modo activo es Zombies.
 
 ## Battle Royale
 
@@ -39,7 +40,7 @@ La tormenta tiene cinco fases. Cada fase espera 30 segundos y se cierra durante 
 
 ## Anfitrión y resultados
 
-El menú del anfitrión permite seleccionar cualquiera de los cuatro modos, iniciar y detener la ronda. Los resultados incluyen colocación, bajas, muertes, asistencias y zombies eliminados, además del ganador.
+El menú del anfitrión permite seleccionar cualquiera de los cinco modos, iniciar y detener la ronda. Los resultados incluyen colocación, bajas, muertes, asistencias y zombies eliminados, además del ganador.
 
 ## Pruebas automatizadas
 
