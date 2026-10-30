@@ -66,7 +66,7 @@ function createPickupPositions(map: GameMapState, count: number): Array<{ x: num
     // Deterministic fallback for unusually dense maps; the fallback is still obstacle-checked.
     if (selected.length < count) {
         for (let index = 0; index < PICKUP_BALANCE.fallbackSpawnCount && selected.length < count; index += 1) {
-            const spawn = getSpawnPosition(index);
+            const spawn = getSpawnPosition(index, map.width, map.height);
             const point = { x: spawn.x, y: spawn.y };
             if (intersectsObstacle(point.x, point.y, PICKUP_RADIUS + PICKUP_BALANCE.obstaclePaddingPx, map)) continue;
             if (selected.some(existing => Math.hypot(existing.x - point.x, existing.y - point.y) < PICKUP_BALANCE.fallbackMinimumSpacingPx)) continue;
