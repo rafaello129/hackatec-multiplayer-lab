@@ -115,6 +115,26 @@ export type ZombieStatePayload = {
     puddles: AcidPuddleState[];
 };
 export type ZombieHitPayload = { zombieId: string; attackerId: string; damage: number };
+export type ProgressionStatePayload = {
+    level: number;
+    xp: number;
+    totalXP: number;
+    xpToNextLevel: number;
+    awardedXP?: number;
+};
+export type ChatChannel = 'all' | 'spectators';
+export type ChatMessage = {
+    id: string;
+    roomId: string;
+    senderId: string;
+    senderName: string;
+    channel: ChatChannel;
+    text: string;
+    createdAt: number;
+};
+export type ChatSendPayload = { channel: ChatChannel; text: string };
+export type ChatHistoryPayload = { roomId: string; messages: ChatMessage[] };
+
 
 export type StormStatePayload = {
     roomId: string;
