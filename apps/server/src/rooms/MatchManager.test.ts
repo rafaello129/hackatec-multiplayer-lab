@@ -194,6 +194,23 @@ describe('MatchManager', () => {
         });
     });
 
+    it('does not end Todos contra uno while the last hunter is waiting to respawn', () => {
+        const manager = new MatchManager(10, 5, 1_000, 15);
+        const titan = player('titan');
+        titan.role = 'titan';
+        const hunter = player('hunter');
+        hunter.role = 'hunter';
+        hunter.alive = false;
+        hunter.lives = 1;
+        manager.syncRoom('room-respawn', [titan, hunter], 'titan', 0);
+        manager.vote('room-respawn', 'titan', 'titan', 'everyone-vs-one', 1);
+        manager.advance(10, () => [titan, hunter]);
+        manager.advance(15, () => [titan, hunter]);
+        manager.advance(16, () => [titan, hunter]);
+
+        expect(manager.getState('room-respawn')?.phase).toBe('playing');
+    });
+
     it('awards the Titan the win when all hunters run out of lives', () => {
         const manager = new MatchManager(10, 5, 1_000, 15);
         const titan = player('titan');
