@@ -83,7 +83,7 @@ export class ArenaScene extends Scene
     private hostMenuButton?: GameObjects.Text;
     private hostModeButton?: GameObjects.Text;
     private selectedHostMode: GameMode = 'classic';
-    private readonly gameModeOrder: GameMode[] = ['classic', 'everyone-vs-one', 'rockets', 'battleRoyale'];
+    private readonly gameModeOrder: GameMode[] = ['classic', 'everyone-vs-one', 'rockets', 'battleRoyale', 'zombies'];
     private hostStartButton?: GameObjects.Text;
     private hostStopButton?: GameObjects.Text;
     private matchCountdownText?: GameObjects.Text;
@@ -222,11 +222,12 @@ export class ArenaScene extends Scene
             { mode: 'classic', label: MATCH_TEXTS.modes.classic },
             { mode: 'everyone-vs-one', label: MATCH_TEXTS.modes.everyoneVsOne },
             { mode: 'rockets', label: MATCH_TEXTS.modes.rockets },
-            { mode: 'battleRoyale', label: MATCH_TEXTS.modes.battleRoyale }
+            { mode: 'battleRoyale', label: MATCH_TEXTS.modes.battleRoyale },
+            { mode: 'zombies', label: MATCH_TEXTS.modes.zombies }
         ];
-        const modeSpacing = 160;
+        const modeSpacing = 150;
         modeOptions.forEach(({ mode, label }, index) => {
-            const x = 512 + (index - 1.5) * modeSpacing;
+            const x = 512 + (index - (modeOptions.length - 1) / 2) * modeSpacing;
             const button = this.add.text(x, 220, label, {
                 fontFamily: 'Arial Black', fontSize: 13, color: '#ffffff',
                 backgroundColor: '#0369a1', padding: { x: 9, y: 8 },
@@ -324,6 +325,7 @@ export class ArenaScene extends Scene
             case 'everyone-vs-one': return MATCH_TEXTS.modes.everyoneVsOne;
             case 'rockets': return MATCH_TEXTS.modes.rockets;
             case 'battleRoyale': return MATCH_TEXTS.modes.battleRoyale;
+            case 'zombies': return MATCH_TEXTS.modes.zombies;
             case 'classic':
             default: return MATCH_TEXTS.modes.classic;
         }
@@ -528,17 +530,25 @@ export class ArenaScene extends Scene
         this.weaponState = state;
         this.weapon = state.selectedWeapon;
         this.selectedSlot = state.selectedSlot;
-        const labels: Record<WeaponType, string> = {
-            knife: 'Cuchillo', machineGun: 'Metralleta', shotgun: 'Escopeta',
-            pistol: 'Pistola', sniper: 'Sniper', rocketLauncher: 'Cohete', laser: 'Láser'
+        const labels: Record<number, string> = {
+            1: 'Cuchillo', 2: 'Metralleta', 3: 'Escopeta',
+            4: 'Pistola', 5: 'Sniper', 6: 'Cohete'
         };
-        const weapons: WeaponType[] = ['knife', 'machineGun', 'shotgun', 'pistol', 'sniper', 'rocketLauncher', 'laser'];
-        this.weaponHud?.setText(weapons.map((weapon, index) => {
-            const slot = index + 1;
+        const slots = [1, 2, 3, 4, 5, 6];
+        const canSeeSecretWeapon = state.availableSlots.includes(7);
+        if (canSeeSecretWeapon) {
+            labels[7] = 'Láser';
+            slots.push(7);
+        }
+        const hotbar = slots.map(slot => {
             const selected = slot === state.selectedSlot;
             const available = state.availableSlots.includes(slot as WeaponStatePayload['selectedSlot']);
-            return (selected ? '【' : '') + slot + ' ' + labels[weapon] + (available ? '' : ' 🔒') + (selected ? '】' : '');
-        }).join('   ') + '   Láser: ' + (state.laserEnergyMs / 1_000).toFixed(1) + 's');
+            return (selected ? '【' : '') + slot + ' ' + labels[slot] + (available ? '' : ' 🔒') + (selected ? '】' : '');
+        }).join('   ');
+        const secretEnergy = canSeeSecretWeapon && state.laserEnergyMs !== undefined
+            ? '   Láser: ' + (state.laserEnergyMs / 1_000).toFixed(1) + 's'
+            : '';
+        this.weaponHud?.setText(hotbar + secretEnergy);
     };
 
     private readonly handleWeaponResult = (result: { ok: boolean; message: string }) => {
