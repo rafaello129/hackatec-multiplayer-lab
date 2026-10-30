@@ -122,7 +122,7 @@ export class ArenaScene extends Scene
         this.progressionHud = this.add.text(280, 76, 'Nivel 1 · XP 0/100', {
             fontFamily: 'Arial Black', fontSize: 12, color: '#c4b5fd',
             stroke: '#020617', strokeThickness: 3
-        }).setDepth(8);
+        }).setDepth(8).setScrollFactor(0);
         this.weaponHud = this.add.text(512, 690, '', {
             fontFamily: 'Arial Black', fontSize: 11, color: '#e2e8f0',
             backgroundColor: '#0f172acc', padding: { x: 10, y: 6 }, align: 'center'
@@ -134,7 +134,7 @@ export class ArenaScene extends Scene
         this.input.keyboard?.on('keydown-FIVE', this.selectSlot5);
         this.input.keyboard?.on('keydown-SIX', this.selectSlot6);
         this.input.keyboard?.on('keydown-SEVEN', this.selectSlot7);
-        this.healthBar = this.add.graphics().setDepth(8);
+        this.healthBar = this.add.graphics().setDepth(8).setScrollFactor(0);
         this.scoreboard = this.add.text(765, 390, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
         this.killFeedHud = this.add.text(36, 174, '', {
             fontFamily: 'Arial Black', fontSize: 12, color: '#f8fafc',
@@ -146,7 +146,7 @@ export class ArenaScene extends Scene
             backgroundColor: '#0f172acc', padding: { x: 9, y: 7 },
             fixedWidth: 235, fixedHeight: 170, wordWrap: { width: 218 },
             lineSpacing: 3
-        }).setDepth(9);
+        }).setDepth(9).setScrollFactor(0);
         this.chatInputHud = this.add.text(765, 352, CHAT_TEXTS.inputIdle, {
             fontFamily: 'Arial', fontSize: 11, color: '#94a3b8',
             backgroundColor: '#0f172acc', padding: { x: 9, y: 6 }, fixedWidth: 235
@@ -228,7 +228,7 @@ export class ArenaScene extends Scene
         this.matchCountdownText = this.add.text(512, 178, '', {
             fontFamily: 'Arial Black', fontSize: 20, color: '#facc15',
             backgroundColor: '#0f172acc', padding: { x: 10, y: 5 }, align: 'center'
-        }).setOrigin(0.5).setDepth(320);
+        }).setOrigin(0.5).setDepth(320).setScrollFactor(0);
 
         const modeOptions: Array<{ mode: GameMode; label: string }> = [
             { mode: 'classic', label: MATCH_TEXTS.modes.classic },
