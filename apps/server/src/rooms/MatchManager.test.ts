@@ -111,10 +111,10 @@ describe('MatchManager', () => {
         const players = [player('socket-a'), player('socket-b')];
         manager.syncRoom('room-a', players, 'socket-a', 0,
             new Map([['socket-a', 'account-a'], ['socket-b', 'account-a']]));
-        expect(manager.vote('room-a', 'socket-a', 'a', 'classic', 1).ok).toBe(true);
-        expect(manager.vote('room-a', 'socket-b', 'a', 'classic', 2).ok).toBe(false);
-        expect(manager.vote('room-a', 'socket-a', 'a', 'classic', 100).ok).toBe(false);
-        expect(manager.vote('room-a', 'socket-b', 'a', 'classic', 300).ok).toBe(true);
+        expect(manager.vote('room-a', 'socket-a', 'account-a', 'classic', 1).ok).toBe(true);
+        expect(manager.vote('room-a', 'socket-b', 'account-a', 'classic', 2).ok).toBe(false);
+        expect(manager.vote('room-a', 'socket-a', 'account-a', 'classic', 100).ok).toBe(false);
+        expect(manager.vote('room-a', 'socket-b', 'account-a', 'classic', 300).ok).toBe(true);
         expect(manager.getState('room-a')?.votes).toEqual({ 'socket-b': 'classic' });
     });
 
