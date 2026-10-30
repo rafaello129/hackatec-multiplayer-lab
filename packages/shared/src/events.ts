@@ -9,6 +9,7 @@ export const SOCKET_EVENTS = {
     MATCH_VOTE: 'match:vote',
     MATCH_HOST_START: 'match:host-start',
     MATCH_HOST_STOP: 'match:host-stop',
+    MATCH_ACTION_RESULT: 'match:action-result',
 
     PLAYER_JOINED: 'player:joined',
     PLAYER_LEFT: 'player:left',
