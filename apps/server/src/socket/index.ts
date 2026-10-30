@@ -1,5 +1,6 @@
 import {
     SOCKET_EVENTS,
+    MATCH_BALANCE,
     type ConnectionReadyPayload,
     type PlayerInput,
     type PlayerInputPayload,
@@ -52,16 +53,46 @@ export function registerSocketHandlers(
     const resetRoomForMatch = (roomId: string): void => {
         const reset = roomManager.resetForMatch(roomId);
         if (!reset) return;
+        const mode = matches.getState(roomId)?.mode ?? null;
+
+        if (mode === 'everyone-vs-one') {
+            const titanIndex = Math.floor(Math.random() * reset.players.length);
+            const hunterCount = Math.max(1, reset.players.length - 1);
+            for (const [index, player] of reset.players.entries()) {
+                if (index === titanIndex) {
+                    player.role = 'titan';
+                    player.lives = undefined;
+                    player.maxHp = MATCH_BALANCE.titanBaseHealth +
+                        hunterCount * MATCH_BALANCE.titanHealthPerHunter;
+                    player.hp = player.maxHp;
+                } else {
+                    player.role = 'hunter';
+                    player.lives = MATCH_BALANCE.hunterLives;
+                    player.maxHp = MATCH_BALANCE.initialHealth;
+                    player.hp = MATCH_BALANCE.initialHealth;
+                }
+            }
+        } else if (mode === 'battleRoyale') {
+            for (const player of reset.players) {
+                player.role = 'survivor';
+                player.lives = 1;
+                player.maxHp = MATCH_BALANCE.initialHealth;
+                player.hp = MATCH_BALANCE.initialHealth;
+            }
+        } else {
+            for (const player of reset.players) {
+                player.role = undefined;
+                player.lives = undefined;
+                player.maxHp = MATCH_BALANCE.initialHealth;
+                player.hp = MATCH_BALANCE.initialHealth;
+            }
+        }
+
         combat.resetRoom(roomId);
         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ROOM_MAP, reset.map);
         const pickupState = pickupManager.reset(roomId, reset.map);
         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PICKUP_STATE, { roomId, pickups: pickupState });
         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players: reset.players, projectiles: [], beams: [], explosions: [], trapped: [], heals: [] });
-        const mode = matches.getState(roomId)?.mode ?? null;
-        for (const player of reset.players) {
-            const weaponState = combat.initializePlayer(roomId, player, laserPermissions.get(player.id) === true, mode);
-            io.to(player.id).emit(SOCKET_EVENTS.WEAPON_STATE, weaponState);
-        }
         for (const [socketId] of movement) {
             if (roomManager.getRoomId(socketId) === roomId) movement.set(socketId, createMovementRuntime());
         }
