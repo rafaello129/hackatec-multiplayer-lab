@@ -162,7 +162,7 @@ describe('CombatManager weapon authority', () => {
         expect(shooter.x).toBeLessThan(before);
     });
 
-    it('applies continuous laser damage at 40 DPS and exposes the beam state', () => {
+    it('applies continuous laser damage at 60 DPS and exposes the beam state', () => {
         const shooter = player('gueta', 250);
         const target = player('target', 500);
         combat.initializePlayer('room', shooter, true);
@@ -173,7 +173,7 @@ describe('CombatManager weapon authority', () => {
         const second = combat.step('room', [shooter, target], map, 50, 1_100);
         expect(first.beams).toHaveLength(1);
         expect(second.beams).toHaveLength(1);
-        expect(target.hp).toBe(92);
+        expect(target.hp).toBe(88);
     });
 
     it('permanently eliminates Battle Royale players instead of scheduling respawn', () => {
@@ -249,7 +249,7 @@ describe('CombatManager weapon authority', () => {
         combat.selectWeapon('laser-room', laserUser, 7, 'classic', 1_000);
         combat.setFireIntent('laser-room', laserUser, { angle: 0, firing: true }, 1_000);
         const laser = combat.step('laser-room', [laserUser], map, 50, 1_000, 'classic', [laserTarget]);
-        expect(laser.zombieHits[0]?.damage).toBe(4);
+        expect(laser.zombieHits[0]?.damage).toBe(6);
     });
 
     it('restricts Rocket para todos to slot six on the server tick', () => {
