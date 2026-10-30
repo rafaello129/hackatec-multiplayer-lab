@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { CHAT_BALANCE, type ChatChannel, type ChatHistoryPayload, type ChatMessage, type PlayerState } from '@hackatec/shared';
+import { CHAT_BALANCE, CHAT_TEXTS, type ChatChannel, type ChatHistoryPayload, type ChatMessage, type PlayerState } from '@hackatec/shared';
 
 export type ChatSendResult = {
     ok: boolean;
@@ -25,20 +25,20 @@ export class ChatManager {
         now: number
     ): ChatSendResult {
         if (channel !== 'all' && channel !== 'spectators') {
-            return { ok: false, error: 'Canal de chat inválido.' };
+            return { ok: false, error: CHAT_TEXTS.errors.invalidChannel };
         }
         if (channel === 'spectators' && !player.spectator) {
-            return { ok: false, error: 'Solo los espectadores pueden usar ese canal.' };
+            return { ok: false, error: CHAT_TEXTS.errors.spectatorOnly };
         }
         if (channel === 'all' && player.spectator) {
-            return { ok: false, error: 'Los espectadores deben usar el canal de espectadores.' };
+            return { ok: false, error: CHAT_TEXTS.errors.activeOnly };
         }
-        if (typeof rawText !== 'string') return { ok: false, error: 'El mensaje debe ser texto.' };
+        if (typeof rawText !== 'string') return { ok: false, error: CHAT_TEXTS.errors.invalidText };
 
         const text = rawText.replace(/[\u0000-\u001f\u007f]/g, '').trim();
-        if (!text) return { ok: false, error: 'Escribe un mensaje antes de enviarlo.' };
+        if (!text) return { ok: false, error: CHAT_TEXTS.errors.empty };
         if ([...text].length > CHAT_BALANCE.maxLength) {
-            return { ok: false, error: 'El mensaje supera los 120 caracteres.' };
+            return { ok: false, error: CHAT_TEXTS.errors.tooLong };
         }
 
         const rateLimitKey = roomId + ':' + accountId;
@@ -46,7 +46,7 @@ export class ChatManager {
             .filter(timestamp => now - timestamp < CHAT_BALANCE.windowMs);
         if (recent.length >= CHAT_BALANCE.messageLimit) {
             this.sentAtByAccount.set(rateLimitKey, recent);
-            return { ok: false, error: 'Estás enviando mensajes demasiado rápido.' };
+            return { ok: false, error: CHAT_TEXTS.errors.rateLimit };
         }
         recent.push(now);
         this.sentAtByAccount.set(rateLimitKey, recent);
