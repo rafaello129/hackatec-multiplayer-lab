@@ -5,7 +5,7 @@ Estado de referencia: rama `work/full-game-completion`. Esta lista separa implem
 ## Fases de implementación
 
 - [x] **Fase 0 — auditoría:** brechas, decisiones, riesgos y plan registrados en `FULL_GAME_AUDIT.md` (snapshot histórico).
-- [x] **Fase 1 — cuentas:** registro, inicio/cierre de sesión, Argon2id, SQLite, cookies HttpOnly, alias `/api/auth/me`, identidad persistente y láser reservado.
+- [x] **Fase 1 — cuentas:** registro, inicio/cierre de sesión, Argon2id, SQLite, cookies HttpOnly, alias `/api/auth/me`, identidad persistente, rate limits y un jugador por cuenta en cada sala.
 - [x] **Fase 2 — ciclo de partidas:** WAITING, VOTING, COUNTDOWN, PLAYING, RESULTS; anfitrión, votos, cambios de voto, desempate, espectadores tardíos, mapa con semilla y desconexiones.
 - [x] **Fase 3 — armas:** cuchillo, metralleta, escopeta, pistola, sniper, lanzacohetes y láser; slots y reglas autoritativas en el servidor.
 - [x] **Fase 4 — habilidades/objetos:** dash con invulnerabilidad limitada, trampas, cactus, botiquines, escudos, respawn y curación al eliminar.
