@@ -250,7 +250,20 @@ describe('CombatManager weapon authority', () => {
         combat.selectWeapon('laser-room', laserUser, 7, 'classic', 1_000);
         combat.setFireIntent('laser-room', laserUser, { angle: 0, firing: true }, 1_000);
         const laser = combat.step('laser-room', [laserUser], map, 50, 1_000, 'classic', [laserTarget]);
-        expect(laser.zombieHits[0]?.damage).toBe(8);
+        expect(laser.zombieHits[0]?.damage).toBe(10);
+    });
+
+    it('gives the Titan a damaging dash shockwave with a cooldown', () => {
+        const titan = player('titan', 250);
+        titan.role = 'titan';
+        titan.isDashing = true;
+        const hunter = player('hunter', 340);
+        hunter.role = 'hunter';
+        combat.initializePlayer('titan-room', titan, false, 'everyone-vs-one');
+        combat.step('titan-room', [titan, hunter], map, 50, 1_000, 'everyone-vs-one');
+        expect(hunter.hp).toBe(65);
+        combat.step('titan-room', [titan, hunter], map, 50, 1_050, 'everyone-vs-one');
+        expect(hunter.hp).toBe(65);
     });
 
     it('restricts Rocket para todos to slot six on the server tick', () => {
