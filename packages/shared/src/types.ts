@@ -32,6 +32,8 @@ export interface PlayerState {
     deaths?: number;
     immobilizedUntil?: number;
     selectedWeapon?: WeaponType;
+    role?: 'titan' | 'hunter' | 'survivor';
+    lives?: number;
     appearance?: PlayerAppearance;
 }
 
@@ -157,7 +159,7 @@ export type SkinAsset = { id: string; url: string; width: number; height: number
 export type PlayerAppearance = { mode: 'color' | 'skin'; colorHex: string; skin?: SkinAsset };
 export type ProfileUpdatePayload = { username?: string; appearance?: PlayerAppearance };
 
-export type GameMode = 'classic' | 'team' | 'zombies' | 'everyone-vs-one' | 'rockets' | 'battleRoyale';
+export type GameMode = 'classic' | 'everyone-vs-one' | 'rockets' | 'battleRoyale';
 export type MatchPhase = 'waiting' | 'voting' | 'countdown' | 'playing' | 'results';
 export type MatchStatePayload = {
     roomId: string;
@@ -169,7 +171,9 @@ export type MatchStatePayload = {
     voteEndsAt: number | null;
     startsAt: number | null;
     endsAt: number | null;
-    results: Array<{ playerId: string; name: string; kills: number; deaths: number }>;
+    results: Array<{ playerId: string; name: string; kills: number; deaths: number; placement?: number }>;
+    winnerId?: string | null;
+    winnerName?: string | null;
     message?: string;
 };
 export type MatchVotePayload = { mode: GameMode };
