@@ -38,6 +38,22 @@ export function registerSocketHandlers(
     const matches = new MatchManager();
     const identities = new Map<string, string>();
 
+    const resetRoomForMatch = (roomId: string): void => {
+        for (const player of roomManager.getPlayers(roomId)) {
+            player.hp = 100;
+            player.maxHp = 100;
+            player.alive = true;
+            player.kills = 0;
+            player.deaths = 0;
+            player.isDashing = false;
+            player.immobilizedUntil = 0;
+        }
+        combat.resetRoom(roomId);
+        for (const [socketId] of movement) {
+            if (roomManager.getRoomId(socketId) === roomId) movement.set(socketId, createMovementRuntime());
+        }
+    };
+
     io.use((socket, next) => {
         const origin = socket.handshake.headers.origin;
         const allowedOrigins = getAllowedOrigins(corsOrigin);
@@ -85,16 +101,7 @@ export function registerSocketHandlers(
             const players = roomManager.getPlayers(roomId);
             matches.syncRoom(roomId, players, roomManager.getHostId(roomId), now);
             for (const transition of matches.advance(now, id => roomManager.getPlayers(id))) {
-                const roundPlayers = roomManager.getPlayers(transition.roomId);
-                for (const player of roundPlayers) {
-                    player.hp = 100; player.maxHp = 100; player.alive = true;
-                    player.kills = 0; player.deaths = 0; player.isDashing = false;
-                    player.immobilizedUntil = 0;
-                }
-                combat.resetRoom(transition.roomId);
-                movement.forEach((runtime, socketId) => {
-                    if (roomManager.getRoomId(socketId) === transition.roomId) movement.set(socketId, createMovementRuntime());
-                });
+                if (transition.resetPlayers) resetRoomForMatch(transition.roomId);
             }
             if (matches.isPlaying(roomId)) {
                 const projectiles = combat.step(roomId, players, map, 50, now);
@@ -284,6 +291,7 @@ export function registerSocketHandlers(
             const mode = (raw as Partial<HostStartMatchPayload>).mode;
             if (typeof mode !== 'string') return;
             const result = matches.forceStart(roomId, socket.id, mode as GameMode, Date.now());
+            if (result.ok) resetRoomForMatch(roomId);
             socket.emit(SOCKET_EVENTS.MATCH_ACTION_RESULT, result);
             for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
         });
