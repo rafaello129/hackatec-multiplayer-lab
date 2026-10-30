@@ -23,12 +23,12 @@ function waitFor(socket, event, timeoutMs = 5000) {
     });
 }
 
-async function createAccount(label, ownerKey) {
+async function createAccount(label) {
     const username = label === 'Gueta' ? 'Gueta' : `${label}${suffix}`;
     const response = await fetch(`${url}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, ...(ownerKey ? { ownerKey } : {}) })
+        body: JSON.stringify({ username, password })
     });
     const body = await response.json();
     assert(response.status === 201, `could not register smoke account ${label}: ${body.error}`);
@@ -134,14 +134,9 @@ async function joinRoom(socket, roomId) {
 async function main() {
     await verifyUnauthenticatedSocketIsRejected();
 
-    const unkeyedOwnerAttempt = await fetch(`${url}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'Gueta', password })
-    });
-    assert(unkeyedOwnerAttempt.status === 403, 'the reserved Gueta account must require its private registration key');
-    const ownerAccount = await createAccount('Gueta', 'smoke-test-owner-key');
-    assert(ownerAccount.username === 'Gueta', 'reserved account username was changed unexpectedly');
+    // The first successful registration of Gueta claims owner status; no client-supplied key is used.
+    const ownerAccount = await createAccount('Gueta');
+    assert(ownerAccount.username === 'Gueta', 'owner account username was changed unexpectedly');
 
     const alphaAccount = await createAccount('Alpha');
     const betaAccount = await createAccount('Beta');
