@@ -4,6 +4,11 @@ export const SOCKET_EVENTS = {
     ROOM_JOIN: 'room:join',
     ROOM_STATE: 'room:state',
     ROOM_ERROR: 'room:error',
+    ROOM_HOST_CHANGED: 'room:host-changed',
+    MATCH_STATE: 'match:state',
+    MATCH_VOTE: 'match:vote',
+    MATCH_HOST_START: 'match:host-start',
+    MATCH_HOST_STOP: 'match:host-stop',
 
     PLAYER_JOINED: 'player:joined',
     PLAYER_LEFT: 'player:left',
