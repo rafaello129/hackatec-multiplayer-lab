@@ -7,6 +7,15 @@ const player = (id: string, kills = 0, deaths = 0): PlayerState => ({
 });
 
 describe('MatchManager', () => {
+
+    it('publishes the server-authoritative alive-player roster', () => {
+        const manager = new MatchManager();
+        const eliminated = player('b');
+        eliminated.alive = false;
+        manager.syncRoom('room-a', [player('a'), eliminated], 'a', 0);
+        expect(manager.getState('room-a')?.alivePlayerIds).toEqual(['a']);
+    });
+
     it('opens voting automatically when the second player joins', () => {
         const manager = new MatchManager();
         manager.syncRoom('room-a', [player('a')], 'a', 100);
