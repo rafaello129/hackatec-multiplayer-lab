@@ -293,6 +293,16 @@ describe('MatchManager', () => {
         });
     });
 
+    it('offers a dedicated Zombies mode with its own round duration', () => {
+        const manager = new MatchManager(10, 5, 99_000, 15);
+        const players = [player('a'), player('b')];
+        manager.syncRoom('room-zombies', players, 'a', 0);
+        expect(manager.vote('room-zombies', 'a', 'a', 'zombies', 1).ok).toBe(true);
+        manager.advance(10, () => players);
+        manager.advance(15, () => players);
+        expect(manager.getState('room-zombies')).toMatchObject({ phase: 'playing', mode: 'zombies', endsAt: 300_015 });
+    });
+
     it('removes lifecycle state when the room becomes empty', () => {
         const manager = new MatchManager();
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
