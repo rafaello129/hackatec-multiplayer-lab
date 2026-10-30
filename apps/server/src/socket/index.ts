@@ -40,7 +40,8 @@ export function registerSocketHandlers(
 
     const syncMatchRoom = (roomId: string, now: number): void => {
         const players = roomManager.getPlayers(roomId);
-        const accountIds = new Map(players.map(player => [player.id, identities.get(player.id) ?? player.id]));
+        const accountIds = new Map<string, string>();
+        for (const player of players) accountIds.set(player.id, identities.get(player.id) ?? player.id);
         matches.syncRoom(roomId, players, roomManager.getHostId(roomId), now, accountIds);
     };
 
