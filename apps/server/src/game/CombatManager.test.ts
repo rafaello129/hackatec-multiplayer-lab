@@ -163,6 +163,7 @@ describe('CombatManager weapon authority', () => {
         const hunterVictim = player('hunter-victim', 280);
         hunterVictim.role = 'hunter';
         hunterVictim.lives = 2;
+        hunterVictim.hp = 10;
         const titanShooter = player('titan-shooter', 250);
         combat.initializePlayer('room-hunter', titanShooter, false);
         combat.setFireIntent('room-hunter', titanShooter, { angle: 0, firing: true }, 2_000);
