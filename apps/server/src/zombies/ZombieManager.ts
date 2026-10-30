@@ -25,7 +25,7 @@ type Runtime = {
     runPhase: 'wave' | 'intermission' | 'boss' | 'won' | 'lost';
     intermissionEndsAt: number | null;
     nextBossSummonAt: number;
-
+    playerCount: number;
 };
 
 export type ZombieStepResult = {
@@ -129,7 +129,10 @@ export class ZombieManager {
             changed = true;
             if (zombie.hp <= 0) {
                 zombie.alive = false;
-                if (zombie.type === 'boss') runtime.runPhase = 'won';
+                if (zombie.type === 'boss') {
+                    runtime.runPhase = 'won';
+                    for (const remaining of runtime.zombies.values()) remaining.alive = false;
+                }
                 const attacker = playerById.get(hit.attackerId);
                 if (attacker) attacker.zombieKills = (attacker.zombieKills ?? 0) + 1;
             }
