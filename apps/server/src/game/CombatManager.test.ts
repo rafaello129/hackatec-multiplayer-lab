@@ -46,6 +46,14 @@ describe('CombatManager weapon authority', () => {
         expect(ownerState.laserEnergyMaxMs).toBeDefined();
     });
 
+    it('forces the rocket launcher as the selected weapon in Rocket mode', () => {
+        const shooter = player('shooter', 250);
+        const state = combat.initializePlayer('room', shooter, false, 'rockets');
+        expect(state.selectedSlot).toBe(6);
+        expect(state.availableSlots).toEqual([6]);
+        expect(state.selectedWeapon).toBe('rocketLauncher');
+    });
+
     it('ignores invalid and rate-limited weapon selection', () => {
         const shooter = player('shooter', 250);
         combat.initializePlayer('room', shooter, false);
