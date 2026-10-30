@@ -11,7 +11,9 @@ import {
     type RoomStatePayload,
     type GameMode,
     type MatchVotePayload,
-    type HostStartMatchPayload
+    type HostStartMatchPayload,
+    type ChatSendPayload,
+    type ChatChannel
 } from '@hackatec/shared';
 import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
@@ -19,6 +21,8 @@ import { CombatManager } from '../game/CombatManager.js';
 import { PickupManager } from '../pickups/PickupManager.js';
 import { StormManager } from '../storm/StormManager.js';
 import { ZombieManager } from '../zombies/ZombieManager.js';
+import { ChatManager } from '../chat/ChatManager.js';
+import { calculateMatchAwards, RoundActivityTracker } from '../progression/ProgressionManager.js';
 import { AccountStore, normalizeUsername, SESSION_COOKIE, type Account } from '../auth/AccountStore.js';
 import { getAllowedOrigins } from '../config/env.js';
 import { RoomManager } from '../rooms/RoomManager.js';
@@ -42,6 +46,8 @@ export function registerSocketHandlers(
     const pickupManager = new PickupManager();
     const stormManager = new StormManager();
     const zombieManager = new ZombieManager();
+    const chatManager = new ChatManager();
+    const activityTracker = new RoundActivityTracker();
     const matches = new MatchManager();
     const identities = new Map<string, string>();
     const laserPermissions = new Map<string, boolean>();
@@ -180,8 +186,39 @@ export function registerSocketHandlers(
             syncMatchRoom(roomId, now);
         }
 
+        for (const roomId of rooms) activityTracker.tick(roomId, now);
         for (const transition of matches.advance(now, id => roomManager.getPlayers(id))) {
             if (transition.resetPlayers) resetRoomForMatch(transition.roomId);
+            if (transition.previousPhase === 'countdown' && transition.phase === 'playing') {
+                const match = matches.getState(transition.roomId);
+                const duration = match?.endsAt ? Math.max(1, match.endsAt - now) : MATCH_BALANCE.classicDurationMs;
+                activityTracker.start(transition.roomId, roomManager.getPlayers(transition.roomId), now, duration);
+            }
+            if (transition.previousPhase === 'playing' && transition.phase === 'results') {
+                const match = matches.getState(transition.roomId);
+                if (match?.mode) {
+                    const players = roomManager.getPlayers(transition.roomId);
+                    const awards = calculateMatchAwards(players, match.results, match.mode, match.winnerId ?? null);
+                    for (const award of awards) {
+                        if (award.xp <= 0 || !activityTracker.isEligible(transition.roomId, award.playerId)) continue;
+                        const accountId = identities.get(award.playerId);
+                        if (!accountId) continue;
+                        try {
+                            const progression = accounts.addXP(accountId, award.xp);
+                            if (progression) io.to(award.playerId).emit(SOCKET_EVENTS.PROGRESSION_STATE, {
+                                ...progression,
+                                awardedXP: award.xp
+                            });
+                        } catch (error) {
+                            console.error('[progression] award failed:', error instanceof Error ? error.message : 'unknown error');
+                        }
+                    }
+                }
+                activityTracker.removeRoom(transition.roomId);
+            }
+            if (transition.phase === 'waiting' && transition.previousPhase === 'results') {
+                activityTracker.removeRoom(transition.roomId);
+            }
         }
 
         for (const roomId of rooms) {
@@ -342,6 +379,8 @@ export function registerSocketHandlers(
                     pickupManager.removeRoom(previousRoomId);
                     stormManager.removeRoom(previousRoomId);
                     zombieManager.removeRoom(previousRoomId);
+                    chatManager.removeRoom(previousRoomId);
+                    activityTracker.removeRoom(previousRoomId);
                 }
             }
             if (!movement.has(socket.id) || previousRoomId !== result.roomId) movement.set(socket.id, createMovementRuntime());
@@ -365,6 +404,9 @@ export function registerSocketHandlers(
             const stormState = stormManager.getState(result.roomId, Date.now());
             if (stormState) socket.emit(SOCKET_EVENTS.STORM_STATE, stormState);
             socket.emit(SOCKET_EVENTS.ZOMBIE_STATE, zombieManager.getState(result.roomId));
+            const progression = accounts.getProgression(account.id);
+            if (progression) socket.emit(SOCKET_EVENTS.PROGRESSION_STATE, progression);
+            socket.emit(SOCKET_EVENTS.CHAT_HISTORY, chatManager.getHistory(result.roomId, result.player.spectator === true));
             for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
 
             if (previousRoomId !== result.roomId)
@@ -379,6 +421,27 @@ export function registerSocketHandlers(
                 console.log(
                     `[room] ${socket.id} joined ${result.roomId} as ${result.player.name}`
                 );
+            }
+        });
+
+        socket.on(SOCKET_EVENTS.CHAT_SEND, (raw: unknown) => {
+            const roomId = roomManager.getRoomId(socket.id);
+            const player = roomManager.getPlayer(socket.id);
+            const accountId = identities.get(socket.id);
+            if (!roomId || !player || !accountId || !raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+            const payload = raw as Partial<ChatSendPayload>;
+            const channel: ChatChannel = payload.channel === 'spectators' ? 'spectators' : 'all';
+            const result = chatManager.send(roomId, player, accountId, channel, payload.text, Date.now());
+            if (!result.ok || !result.message) {
+                socket.emit(SOCKET_EVENTS.CHAT_MESSAGE, { error: result.error });
+                return;
+            }
+            if (channel === 'all') {
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.CHAT_MESSAGE, result.message);
+            } else {
+                for (const spectator of roomManager.getPlayers(roomId).filter(candidate => candidate.spectator)) {
+                    io.to(spectator.id).emit(SOCKET_EVENTS.CHAT_MESSAGE, result.message);
+                }
             }
         });
 
@@ -486,6 +549,9 @@ export function registerSocketHandlers(
             const state = movement.get(socket.id);
             const previousDashReadyAt = activePlayer?.dashReadyAt;
             if (state) acceptMovementInput(state, input, Date.now(), activePlayer);
+            if (input.up || input.down || input.left || input.right || input.dash) {
+                activityTracker.mark(activeRoom, socket.id, Date.now());
+            }
             if (activePlayer && activePlayer.dashReadyAt !== previousDashReadyAt) {
                 io.to(socketRoom(activeRoom)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player: activePlayer });
             }
@@ -507,7 +573,11 @@ export function registerSocketHandlers(
             const roomId = roomManager.getRoomId(socket.id);
             const player = roomManager.getPlayer(socket.id);
             if (roomId && player && !player.spectator && player.alive !== false && matches.isPlaying(roomId)) {
-                combat.setFireIntent(roomId, player, payload, Date.now());
+                const now = Date.now();
+                combat.setFireIntent(roomId, player, payload, now);
+                if (payload && typeof payload === 'object' && (payload as { firing?: unknown }).firing === true) {
+                    activityTracker.mark(roomId, socket.id, now);
+                }
             }
         });
 
@@ -535,6 +605,8 @@ export function registerSocketHandlers(
                     pickupManager.removeRoom(left.roomId);
                     stormManager.removeRoom(left.roomId);
                     zombieManager.removeRoom(left.roomId);
+                    chatManager.removeRoom(left.roomId);
+                    activityTracker.removeRoom(left.roomId);
                 }
                 syncMatchRoom(left.roomId, Date.now());
                 for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
