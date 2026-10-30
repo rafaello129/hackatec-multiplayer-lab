@@ -146,7 +146,10 @@ export function getImageDimensions(
     if (mimeType === 'image/png')
     {
         const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-        if (buffer.length < 24 || !signature.every((byte, index) => buffer[index] === byte))
+        if (buffer.length < 33 ||
+            !signature.every((byte, index) => buffer[index] === byte) ||
+            buffer.readUInt32BE(8) !== 13 ||
+            buffer.toString('ascii', 12, 16) !== 'IHDR')
         {
             return undefined;
         }
@@ -159,7 +162,8 @@ export function getImageDimensions(
 
     if (mimeType === 'image/jpeg')
     {
-        return getJpegDimensions(buffer);
+        const dimensions = getJpegDimensions(buffer);
+        return dimensions && dimensions.width > 0 && dimensions.height > 0 ? dimensions : undefined;
     }
 
     if (mimeType === 'image/webp')
@@ -248,7 +252,7 @@ function getWebpDimensions(
 ): { width: number; height: number } | undefined
 {
     if (
-        buffer.length < 30 ||
+        buffer.length < 21 ||
         buffer.toString('ascii', 0, 4) !== 'RIFF' ||
         buffer.toString('ascii', 8, 12) !== 'WEBP'
     )
@@ -256,24 +260,38 @@ function getWebpDimensions(
         return undefined;
     }
 
-    const chunk = buffer.toString(
-        'ascii',
-        12,
-        16
-    );
+    const chunk = buffer.toString('ascii', 12, 16);
+    let width = 0;
+    let height = 0;
 
     if (chunk === 'VP8X')
     {
-        return {
-            width:
-                1 +
-                buffer.readUIntLE(24, 3),
-
-            height:
-                1 +
-                buffer.readUIntLE(27, 3)
-        };
+        if (buffer.length < 30) return undefined;
+        width = 1 + buffer.readUIntLE(24, 3);
+        height = 1 + buffer.readUIntLE(27, 3);
+    }
+    else if (chunk === 'VP8L')
+    {
+        if (buffer.length < 25 || buffer[20] !== 0x2f) return undefined;
+        const b1 = buffer[21]!;
+        const b2 = buffer[22]!;
+        const b3 = buffer[23]!;
+        const b4 = buffer[24]!;
+        width = 1 + (((b2 & 0x3f) << 8) | b1);
+        height = 1 + (((b4 & 0x0f) << 10) | (b3 << 2) | ((b2 & 0xc0) >> 6));
+    }
+    else if (chunk === 'VP8 ')
+    {
+        if (buffer.length < 30 ||
+            buffer[23] !== 0x9d || buffer[24] !== 0x01 || buffer[25] !== 0x2a) return undefined;
+        width = buffer.readUInt16LE(26) & 0x3fff;
+        height = buffer.readUInt16LE(28) & 0x3fff;
+    }
+    else
+    {
+        return undefined;
     }
 
-    return undefined;
+    if (width < 1 || height < 1) return undefined;
+    return { width, height };
 }
