@@ -10,6 +10,10 @@ import {
     type CombatSnapshot,
     type WeaponType,
     type WeaponStatePayload,
+    type PickupStatePayload,
+    type PickupCollectedPayload,
+    type PlayerTrappedPayload,
+    type PlayerHealedPayload,
     type RoomErrorPayload,
     type RoomStatePayload,
     type MatchStatePayload,
@@ -20,6 +24,7 @@ import { Scene, type GameObjects, Input } from 'phaser';
 import type { Socket } from 'socket.io-client';
 import { ProfilePanel } from '../ui/ProfilePanel';
 import { MapView } from '../map/MapView';
+import { PickupView } from '../map/PickupView';
 import { PlayerView } from '../entities/PlayerView';
 import { getClientIdentity, type ClientIdentity } from '../../network/identity';
 import { getSocket } from '../../network/socket';
@@ -41,6 +46,7 @@ export class ArenaScene extends Scene
     private selfId = '';
     private roomHostId = '';
     private mapView?: MapView;
+    private pickupView?: PickupView;
     private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
     private previousInput = '';
     private lastInputSent = 0;
@@ -102,6 +108,7 @@ export class ArenaScene extends Scene
         this.zombieGroup = this.physics.add.group({ maxSize: 100 });
         this.createInterface();
         this.mapView = new MapView(this);
+        this.pickupView = new PickupView(this);
         this.bullets = this.add.graphics().setDepth(3);
         this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(5);
         this.input.keyboard?.on('keydown-ONE', this.selectSlot1);
@@ -133,6 +140,7 @@ export class ArenaScene extends Scene
             this.detachSocketListeners();
             this.clearPlayerViews();
             this.mapView?.destroy();
+            this.pickupView?.destroy();
             this.profilePanel?.destroy();
             this.input.keyboard?.off('keydown-ONE', this.selectSlot1);
             this.input.keyboard?.off('keydown-TWO', this.selectSlot2);
@@ -426,6 +434,10 @@ private createInterface()
         this.socket.on(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.on(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
+        this.socket.on(SOCKET_EVENTS.PICKUP_STATE, this.handlePickupState);
+        this.socket.on(SOCKET_EVENTS.PICKUP_COLLECTED, this.handlePickupCollected);
+        this.socket.on(SOCKET_EVENTS.PLAYER_TRAPPED, this.handlePlayerTrapped);
+        this.socket.on(SOCKET_EVENTS.PLAYER_HEALED, this.handlePlayerHealed);
         this.socket.on(SOCKET_EVENTS.WEAPON_STATE, this.handleWeaponState);
         this.socket.on(SOCKET_EVENTS.WEAPON_RESULT, this.handleWeaponResult);
         this.socket.on(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
@@ -445,6 +457,10 @@ private createInterface()
         this.socket.off(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.off(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
+        this.socket.off(SOCKET_EVENTS.PICKUP_STATE, this.handlePickupState);
+        this.socket.off(SOCKET_EVENTS.PICKUP_COLLECTED, this.handlePickupCollected);
+        this.socket.off(SOCKET_EVENTS.PLAYER_TRAPPED, this.handlePlayerTrapped);
+        this.socket.off(SOCKET_EVENTS.PLAYER_HEALED, this.handlePlayerHealed);
         this.socket.off(SOCKET_EVENTS.WEAPON_STATE, this.handleWeaponState);
         this.socket.off(SOCKET_EVENTS.WEAPON_RESULT, this.handleWeaponResult);
         this.socket.off(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
@@ -481,6 +497,7 @@ private createInterface()
         this.roomHostId = '';
         this.previousInput = '';
         this.mapView?.clear();
+        this.pickupView?.clear();
         this.bullets?.clear();
         this.syncPlayerViews();
     };
@@ -551,6 +568,26 @@ private createInterface()
     private readonly handleProfileResult = (result: {ok:boolean;message:string}) => {
         if (!result.ok) this.errorText.setText(result.message).setVisible(true);
         else this.errorText.setVisible(false);
+    };
+
+    private readonly handlePickupState = (payload: PickupStatePayload) => {
+        this.pickupView?.sync(payload.pickups);
+    };
+
+    private readonly handlePickupCollected = (payload: PickupCollectedPayload) => {
+        const view = this.playerViews.get(payload.playerId);
+        view?.showHeal(payload.restored);
+    };
+
+    private readonly handlePlayerTrapped = (payload: PlayerTrappedPayload) => {
+        const player = this.playerRegistry.get(payload.playerId);
+        if (!player) return;
+        player.immobilizedUntil = payload.trappedUntil;
+        this.playerViews.get(payload.playerId)?.update(player);
+    };
+
+    private readonly handlePlayerHealed = (payload: PlayerHealedPayload) => {
+        this.playerViews.get(payload.playerId)?.showHeal(payload.amount);
     };
 
     private readonly handleCombat = (state: CombatSnapshot) => {
