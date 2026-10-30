@@ -377,7 +377,7 @@ export class CombatManager {
             }
             const energyUsed = Math.min(WEAPON_BALANCE.laser.tickMs, weaponState.laserEnergyMs);
             const trace = this.traceRay(player, weaponState.angle, WEAPON_BALANCE.laser.range, players, map, zombies);
-            beams.push({ ownerId: player.id, x1: player.x, y1: player.y, x2: trace.x, y2: trace.y });
+            beams.push({ ownerId: player.id, x1: player.x, y1: player.y, x2: trace.x, y2: trace.y, weapon: 'laser' });
             const laserDamage = WEAPON_BALANCE.laser.damagePerSecond * energyUsed / 1_000;
             if (trace.target) this.damage(state, trace.target, laserDamage, now, player);
             else if (trace.zombie) zombieHits.push({ zombieId: trace.zombie.id, attackerId: player.id, damage: laserDamage });
@@ -394,6 +394,7 @@ export class CombatManager {
                 break;
             case 'sniper': {
                 const trace = this.traceRay(player, weaponState.angle, WEAPON_BALANCE.sniper.range, players, map, zombies);
+                beams.push({ ownerId: player.id, x1: player.x, y1: player.y, x2: trace.x, y2: trace.y, weapon: 'sniper' });
                 if (trace.target) this.damage(state, trace.target, WEAPON_BALANCE.sniper.damage, now, player);
                 else if (trace.zombie) zombieHits.push({ zombieId: trace.zombie.id, attackerId: player.id, damage: WEAPON_BALANCE.sniper.damage });
                 break;
