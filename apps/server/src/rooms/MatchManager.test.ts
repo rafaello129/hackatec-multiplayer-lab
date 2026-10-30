@@ -170,6 +170,91 @@ describe('MatchManager', () => {
         random.mockRestore();
     });
 
+    it('ends Todos contra uno when the Titan is eliminated and declares the hunters winner', () => {
+        const manager = new MatchManager(10, 5, 1_000, 15);
+        const titan = player('titan');
+        titan.role = 'titan';
+        const hunter = player('hunter');
+        hunter.role = 'hunter';
+        hunter.lives = 2;
+        manager.syncRoom('room-titan', [titan, hunter], 'titan', 0);
+        manager.vote('room-titan', 'titan', 'titan', 'everyone-vs-one', 1);
+        manager.advance(10, () => [titan, hunter]);
+        manager.advance(15, () => [titan, hunter]);
+
+        titan.alive = false;
+        titan.hp = 0;
+        manager.advance(16, () => [titan, hunter]);
+
+        expect(manager.getState('room-titan')).toMatchObject({
+            phase: 'results',
+            mode: 'everyone-vs-one',
+            winnerId: 'hunter',
+            winnerName: 'hunter'
+        });
+    });
+
+    it('awards the Titan the win when all hunters run out of lives', () => {
+        const manager = new MatchManager(10, 5, 1_000, 15);
+        const titan = player('titan');
+        titan.role = 'titan';
+        const hunterA = player('hunter-a');
+        hunterA.role = 'hunter';
+        hunterA.lives = 0;
+        hunterA.spectator = true;
+        const hunterB = player('hunter-b');
+        hunterB.role = 'hunter';
+        hunterB.lives = 0;
+        hunterB.spectator = true;
+        manager.syncRoom('room-titan', [titan, hunterA, hunterB], 'titan', 0);
+        manager.vote('room-titan', 'titan', 'titan', 'everyone-vs-one', 1);
+        manager.advance(10, () => [titan, hunterA, hunterB]);
+        manager.advance(15, () => [titan, hunterA, hunterB]);
+        manager.advance(16, () => [titan, hunterA, hunterB]);
+
+        expect(manager.getState('room-titan')).toMatchObject({
+            phase: 'results',
+            winnerId: 'titan'
+        });
+    });
+
+    it('ends Battle Royale when one survivor remains and ranks them first', () => {
+        const manager = new MatchManager(10, 5, 1_000, 15);
+        const survivor = player('survivor');
+        survivor.role = 'survivor';
+        const eliminated = player('eliminated');
+        eliminated.role = 'survivor';
+        eliminated.alive = false;
+        eliminated.spectator = true;
+        manager.syncRoom('room-br', [survivor, eliminated], 'survivor', 0);
+        manager.vote('room-br', 'survivor', 'survivor', 'battleRoyale', 1);
+        manager.advance(10, () => [survivor, eliminated]);
+        manager.advance(15, () => [survivor, eliminated]);
+        manager.advance(16, () => [survivor, eliminated]);
+
+        expect(manager.getState('room-br')).toMatchObject({
+            phase: 'results',
+            mode: 'battleRoyale',
+            winnerId: 'survivor',
+            results: [{ playerId: 'survivor', placement: 1 }]
+        });
+    });
+
+    it('gives Rocket para todos its own match duration', () => {
+        const manager = new MatchManager(10, 5, 99_000, 15);
+        const players = [player('a'), player('b')];
+        manager.syncRoom('room-rockets', players, 'a', 0);
+        manager.vote('room-rockets', 'a', 'a', 'rockets', 1);
+        manager.advance(10, () => players);
+        manager.advance(15, () => players);
+
+        expect(manager.getState('room-rockets')).toMatchObject({
+            phase: 'playing',
+            mode: 'rockets',
+            endsAt: 300_015
+        });
+    });
+
     it('removes lifecycle state when the room becomes empty', () => {
         const manager = new MatchManager();
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
