@@ -121,6 +121,8 @@ export const PROFILE_TEXTS = {
         noUploadFile: 'No se recibió ninguna imagen.',
         unreadableImage: 'No se pudo leer la imagen.',
         imageTooLarge: 'La imagen no puede superar 512x512 píxeles.',
-        uploadFailed: 'No se pudo guardar la skin.'
+        uploadFailed: 'No se pudo guardar la skin.',
+        sessionExpired: 'La sesión ya no es válida.',
+        unsupportedFormat: 'Formato de imagen no permitido.'
     }
 } as const;
