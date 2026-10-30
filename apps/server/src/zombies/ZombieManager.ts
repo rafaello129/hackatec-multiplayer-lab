@@ -40,6 +40,7 @@ function blocked(x: number, y: number, radius: number, map: GameMapState): boole
         y < COMBAT_BALANCE.playableTop + radius ||
         y > COMBAT_BALANCE.playableBottom - radius) return true;
     return map.obstacles.some(obstacle => {
+        if (obstacle.type !== 'wall') return false;
         const dx = Math.max(Math.abs(x - obstacle.x) - obstacle.width / 2, 0);
         const dy = Math.max(Math.abs(y - obstacle.y) - obstacle.height / 2, 0);
         return dx * dx + dy * dy < radius * radius;
@@ -123,7 +124,9 @@ export class ZombieManager {
             const target = nearestPlayer(zombie.x, zombie.y, activePlayers);
             if (!target) continue;
             zombie.targetId = target.id;
-            zombie.angle = Math.atan2(target.y - zombie.y, target.x - zombie.x);
+            if (zombie.type !== 'giant' || (zombie.phase !== 'telegraph' && zombie.phase !== 'charge')) {
+                zombie.angle = Math.atan2(target.y - zombie.y, target.x - zombie.x);
+            }
 
             if (zombie.type === 'giant') {
                 this.stepGiant(zombie, target, map, dt, now, damage);
