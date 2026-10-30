@@ -3,12 +3,15 @@ import {
     MATCH_BALANCE,
     WEAPON_BALANCE,
     WEAPON_TEXTS,
+    PICKUP_BALANCE,
     type ExplosionState,
     type GameMapState,
     type LaserBeamState,
     type PlayerState,
     type ProjectileState,
     type ProjectileWeaponType,
+    type PlayerTrappedPayload,
+    type PlayerHealedPayload,
     type WeaponFirePayload,
     type WeaponSlot,
     type WeaponStatePayload,
@@ -42,12 +45,15 @@ type Runtime = {
     knockback: Map<string, KnockbackRuntime>;
     projectileCounter: number;
     explosionCounter: number;
+    heals: PlayerHealedPayload[];
 };
 
 export type CombatStepResult = {
     projectiles: ProjectileState[];
     beams: LaserBeamState[];
     explosions: ExplosionState[];
+    trapped: PlayerTrappedPayload[];
+    heals: PlayerHealedPayload[];
 };
 
 export type WeaponActionResult = { ok: boolean; message: string };
@@ -87,7 +93,8 @@ export class CombatManager {
                 laserOwners: new Set(),
                 knockback: new Map(),
                 projectileCounter: 0,
-                explosionCounter: 0
+                explosionCounter: 0,
+                heals: []
             };
             this.rooms.set(roomId, state);
         }
@@ -227,6 +234,8 @@ export class CombatManager {
         const dt = Math.min(Math.max(dtMs, 0), COMBAT_BALANCE.serverTickMs);
         const explosions: ExplosionState[] = [];
         const beams: LaserBeamState[] = [];
+        const trapped: PlayerTrappedPayload[] = [];
+        state.heals = [];
         const byId = new Map(players.map(player => [player.id, player]));
         const playerRadius = COMBAT_BALANCE.playerRadius;
         const projectileRadius = COMBAT_BALANCE.projectileRadius;
@@ -268,6 +277,7 @@ export class CombatManager {
                     if (!player.isDashing && !previousTraps.has(obstacle.id) &&
                         (player.immobilizedUntil ?? 0) <= now) {
                         player.immobilizedUntil = now + COMBAT_BALANCE.trapDurationMs;
+                        trapped.push({ playerId: player.id, trappedUntil: player.immobilizedUntil });
                     }
                 }
                 if (obstacle.type === 'cactus' && now >= (state.cactus.get(player.id) ?? 0)) {
@@ -284,7 +294,9 @@ export class CombatManager {
         return {
             projectiles: [...state.projectiles.values()],
             beams,
-            explosions
+            explosions,
+            trapped,
+            heals: [...state.heals]
         };
     }
 
@@ -596,7 +608,16 @@ export class CombatManager {
             player.immobilizedUntil = 0;
             player.alive = false;
             player.deaths = (player.deaths ?? 0) + 1;
-            if (attacker && attacker.id !== player.id) attacker.kills = (attacker.kills ?? 0) + 1;
+            if (attacker && attacker.id !== player.id) {
+                attacker.kills = (attacker.kills ?? 0) + 1;
+                const previousHealth = attacker.hp ?? MATCH_BALANCE.initialHealth;
+                const maximumHealth = attacker.maxHp ?? MATCH_BALANCE.initialHealth;
+                const nextHealth = Math.min(maximumHealth, previousHealth + PICKUP_BALANCE.healOnKill);
+                attacker.hp = nextHealth;
+                if (nextHealth > previousHealth) {
+                    state.heals.push({ playerId: attacker.id, x: attacker.x, y: attacker.y, amount: nextHealth - previousHealth });
+                }
+            }
             state.respawn.set(player.id, now + MATCH_BALANCE.classicRespawnMs);
         }
         return true;
