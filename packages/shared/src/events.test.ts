@@ -15,5 +15,6 @@ describe('shared socket contracts', () =>
         expect(SOCKET_EVENTS.ROOM_ERROR).toBe('room:error');
         expect(SOCKET_EVENTS.PLAYER_JOINED).toBe('player:joined');
         expect(SOCKET_EVENTS.PLAYER_LEFT).toBe('player:left');
+        expect(SOCKET_EVENTS.PLAYER_EMOTE).toBe('player:emote');
     });
 });
