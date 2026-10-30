@@ -169,7 +169,8 @@ export class ZombieManager {
         if (runtime.runPhase === 'boss' && now >= runtime.nextBossSummonAt && currentPlayers.length > 0) {
             const positions = this.spawnPositions(map, currentPlayers, 2, runtime);
             for (const position of positions) this.addZombie(runtime, roomId, 'spitter', position, now);
-            runtime.nextBossSummonAt = now + 12_000;
+            const boss = [...runtime.zombies.values()].find(zombie => zombie.type === 'boss' && zombie.alive);
+            runtime.nextBossSummonAt = now + (boss && boss.hp <= boss.maxHp * 0.5 ? 8_000 : 12_000);
         }
 
         return { state: this.getState(roomId), damage, revivedPlayerIds };
@@ -321,8 +322,16 @@ export class ZombieManager {
         now: number,
         damage: Array<{ playerId: string; amount: number }>
     ): void {
+        const enragedBoss = zombie.type === 'boss' && zombie.hp <= zombie.maxHp * 0.5;
         const balance = zombie.type === 'boss'
-            ? { ...ZOMBIE_BALANCE.giant, chargeDamage: 55, cooldownMs: 4_500, moveSpeed: 88, chargeSpeed: 460, chargeRangePx: 280 }
+            ? {
+                ...ZOMBIE_BALANCE.giant,
+                chargeDamage: enragedBoss ? 75 : 55,
+                cooldownMs: enragedBoss ? 3_000 : 4_500,
+                moveSpeed: enragedBoss ? 112 : 88,
+                chargeSpeed: enragedBoss ? 560 : 460,
+                chargeRangePx: enragedBoss ? 340 : 280
+            }
             : ZOMBIE_BALANCE.giant;
         if (zombie.phase === 'stunned') {
             if (now < zombie.phaseEndsAt) return;
@@ -362,7 +371,7 @@ export class ZombieManager {
         const dx = target.x - zombie.x;
         const dy = target.y - zombie.y;
         const distance = Math.hypot(dx, dy) || 1;
-        if (distance <= ZOMBIE_BALANCE.giant.chargeRangePx && now >= zombie.phaseEndsAt) {
+        if (distance <= balance.chargeRangePx && now >= zombie.phaseEndsAt) {
             zombie.phase = 'telegraph';
             zombie.phaseEndsAt = now + balance.telegraphMs;
             zombie.angle = Math.atan2(dy, dx);
