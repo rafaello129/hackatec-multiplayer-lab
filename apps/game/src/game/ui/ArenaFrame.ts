@@ -11,7 +11,7 @@ export class ArenaFrame {
 
     constructor(scene: Scene, roomId: string) {
         // Keep the arena plate behind the map and all gameplay entities.
-        this.background = scene.add.graphics().setDepth(-1);
+        this.background = scene.add.graphics().setDepth(-1).setScrollFactor(0);
         this.background
             .fillStyle(0x0b172b, 0.97)
             .fillRoundedRect(20, 14, 984, 100, 14)
@@ -29,7 +29,7 @@ export class ArenaFrame {
             fontSize: 19,
             color: '#f8fafc',
             letterSpacing: 1.2
-        }).setDepth(10));
+        }).setDepth(10).setScrollFactor(0));
 
         this.chrome.push(scene.add.text(39, 49, ARENA_UI_TEXTS.subtitle, {
             fontFamily: 'Arial Black',
@@ -42,7 +42,7 @@ export class ArenaFrame {
             fontFamily: 'Arial',
             fontSize: 13,
             color: '#b8c8dc'
-        }).setDepth(10);
+        }).setDepth(10).setScrollFactor(0);
         this.chrome.push(this.roomText);
 
         this.chrome.push(scene.add.rectangle(512, 62, 1, 54, 0x3b526e, 0.6).setDepth(10));
@@ -52,7 +52,7 @@ export class ArenaFrame {
             fontSize: 15,
             color: '#f8fafc',
             align: 'center'
-        }).setOrigin(0.5, 0).setDepth(10);
+        }).setOrigin(0.5, 0).setDepth(10).setScrollFactor(0);
         this.chrome.push(this.playerCountText);
 
         this.chrome.push(scene.add.text(512, 67, ARENA_UI_TEXTS.sharedArena, {
@@ -68,7 +68,7 @@ export class ArenaFrame {
             fontSize: 12,
             color: '#facc15',
             align: 'right'
-        }).setOrigin(1, 0).setDepth(10);
+        }).setOrigin(1, 0).setDepth(10).setScrollFactor(0);
         this.chrome.push(this.connectionText);
 
         this.chrome.push(scene.add.text(985, 57, ARENA_UI_TEXTS.movementHelp, {
