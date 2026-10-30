@@ -153,6 +153,26 @@ describe('MatchManager', () => {
         expect(manager.getState('room-a')?.phase).toBe('results');
     });
 
+    it('does not award Classic victory or placement to a late spectator', () => {
+        const manager = new MatchManager(100, 10, 100, 15, ['classic']);
+        const first = player('z-player');
+        const second = player('b-player');
+        manager.syncRoom('room-spectator', [first, second], first.id, 0);
+        manager.vote('room-spectator', first.id, first.id, 'classic', 1);
+        manager.advance(100, () => [first, second]);
+        manager.advance(110, () => [first, second]);
+
+        const lateSpectator = player('aardvark');
+        manager.syncRoom('room-spectator', [first, second, lateSpectator], first.id, 120);
+        expect(lateSpectator.spectator).toBe(true);
+        manager.advance(210, () => [first, second, lateSpectator]);
+
+        const result = manager.getState('room-spectator');
+        expect(result?.winnerId).not.toBe(lateSpectator.id);
+        expect(result?.results.at(-1)).toMatchObject({ playerId: lateSpectator.id, placement: 3 });
+        expect(result?.results[0]?.playerId).not.toBe(lateSpectator.id);
+    });
+
     it('chooses randomly among tied modes and when no one votes', () => {
         const random = vi.spyOn(Math, 'random').mockReturnValue(0.99);
         const tiedManager = new MatchManager(10, 5, 100, 15, ['classic', 'everyone-vs-one']);
