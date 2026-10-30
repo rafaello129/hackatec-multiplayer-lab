@@ -18,7 +18,7 @@ export class ArenaFrame {
             .strokeRoundedRect(20, 14, 984, 100, 14)
             .fillStyle(0x3b82f6, 0.95)
             .fillRoundedRect(20, 14, 4, 100, 2)
-            .fillStyle(0x020617, 0.44)
+            .fillStyle(0x6b4323, 0.10)
             .fillRoundedRect(32, 128, 960, 600, 12)
             .lineStyle(1, 0x263c59, 0.85)
             .strokeRoundedRect(32, 128, 960, 600, 12);
