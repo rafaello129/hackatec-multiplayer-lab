@@ -8,6 +8,7 @@ import { getAllowedOrigins, getServerConfig } from './config/env.js';
 import { AccountStore, normalizeUsername, SESSION_COOKIE, SESSION_TTL_MS } from './auth/AccountStore.js';
 import { AttemptLimiter } from './auth/AttemptLimiter.js';
 import { uploadSkin, skinsUploadHandler } from './http/skins.js';
+import { PROFILE_TEXTS } from '@hackatec/shared';
 import { healthHandler } from './http/health.js';
 import { registerSocketHandlers } from './socket/index.js';
 
@@ -206,7 +207,7 @@ const requireAuthenticatedUpload: RequestHandler = (request, response, next) => 
     const token = readCookie(request.headers.cookie, SESSION_COOKIE);
     const account = accounts.getAccountBySessionToken(token);
     if (!account) {
-        response.status(401).json({ error: 'Inicia sesión para subir una skin.' });
+        response.status(401).json({ error: PROFILE_TEXTS.errors.uploadUnauthorized });
         return;
     }
     response.locals.accountId = account.id;
