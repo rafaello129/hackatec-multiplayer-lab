@@ -160,7 +160,7 @@ describe('CombatManager weapon authority', () => {
         expect(titan.alive).toBe(false);
         expect(titan.spectator).toBe(true);
 
-        const hunterVictim = player('hunter-victim', 400);
+        const hunterVictim = player('hunter-victim', 280);
         hunterVictim.role = 'hunter';
         hunterVictim.lives = 2;
         const titanShooter = player('titan-shooter', 250);
