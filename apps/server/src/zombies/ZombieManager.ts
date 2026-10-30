@@ -208,7 +208,8 @@ export class ZombieManager {
         const candidates: Array<{ x: number; y: number }> = [];
         // Full rooms occupy almost every spawn grid cell; keep a smaller, safe buffer
         // at high occupancy rather than silently disabling zombie spawns.
-        const minimumPlayerDistance = players.length >= 16 ? 85 : players.length >= 8 ? 130 : 190;
+        const minimumPlayerDistance = players.length >= 16 ? 75 : players.length >= 8 ? 130 : 190;
+        const minimumZombieSeparation = players.length >= 16 ? 90 : 180;
         for (let y = COMBAT_BALANCE.playableTop + 45; y <= COMBAT_BALANCE.playableBottom - 45; y += 55) {
             for (let x = 55; x <= map.width - 55; x += 60) {
                 if (blockedSpawn(x, y, 32, map)) continue;
@@ -223,7 +224,7 @@ export class ZombieManager {
         }
         const selected: Array<{ x: number; y: number }> = [];
         for (const candidate of candidates) {
-            if (selected.some(point => Math.hypot(point.x - candidate.x, point.y - candidate.y) < 180)) continue;
+            if (selected.some(point => Math.hypot(point.x - candidate.x, point.y - candidate.y) < minimumZombieSeparation)) continue;
             selected.push(candidate);
             if (selected.length >= count) break;
         }
