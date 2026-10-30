@@ -273,8 +273,9 @@ export class MatchManager {
             // The Titan is not replaced if they disconnect; this round is cancelled.
             if (!titan) return { finished: true, winnerId: null, message: 'El Titan se desconectó. Ronda cancelada.' };
             const hunters = players.filter(player => player.role === 'hunter');
+            // A hunter who is waiting for their remaining life to respawn still keeps the team alive.
             const activeHunters = hunters.filter(player =>
-                player.alive !== false && !player.spectator && (player.lives ?? 0) > 0
+                !player.spectator && (player.lives ?? 0) > 0
             );
             if (titan.alive === false || (titan.hp ?? 0) <= 0) {
                 const winner = [...activeHunters].sort((a, b) =>
