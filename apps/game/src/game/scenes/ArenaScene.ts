@@ -16,6 +16,9 @@ import {
     type PlayerHealedPayload,
     type StormStatePayload,
     type ZombieStatePayload,
+    type ProgressionStatePayload,
+    type ChatMessage,
+    type ChatHistoryPayload,
     type RoomErrorPayload,
     type RoomStatePayload,
     type MatchStatePayload,
@@ -68,6 +71,13 @@ export class ArenaScene extends Scene
     private bullets?: GameObjects.Graphics;
     private combatText?: GameObjects.Text;
     private weaponHud?: GameObjects.Text;
+    private progressionHud?: GameObjects.Text;
+    private chatPanel?: GameObjects.Text;
+    private chatInputHud?: GameObjects.Text;
+    private readonly chatLines: string[] = [];
+    private chatInputActive = false;
+    private chatDraft = '';
+    private progression?: ProgressionStatePayload;
     private matchState?: MatchStatePayload;
     private matchStatusText?: GameObjects.Text;
     private readonly voteButtons = new Map<GameMode, GameObjects.Text>();
@@ -126,6 +136,10 @@ export class ArenaScene extends Scene
         this.zombieView = new ZombieView(this);
         this.bullets = this.add.graphics().setDepth(3);
         this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(8);
+        this.progressionHud = this.add.text(36, 85, 'Nivel 1 · XP 0/100', {
+            fontFamily: 'Arial Black', fontSize: 12, color: '#c4b5fd',
+            stroke: '#020617', strokeThickness: 3
+        }).setDepth(8);
         this.weaponHud = this.add.text(512, 690, '', {
             fontFamily: 'Arial Black', fontSize: 11, color: '#e2e8f0',
             backgroundColor: '#0f172acc', padding: { x: 10, y: 6 }, align: 'center'
@@ -139,6 +153,16 @@ export class ArenaScene extends Scene
         this.input.keyboard?.on('keydown-SEVEN', this.selectSlot7);
         this.healthBar = this.add.graphics().setDepth(8);
         this.scoreboard = this.add.text(765, 390, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
+        this.chatPanel = this.add.text(765, 175, 'CHAT · ENTER para escribir', {
+            fontFamily: 'Arial', fontSize: 11, color: '#e2e8f0',
+            backgroundColor: '#0f172acc', padding: { x: 9, y: 7 },
+            fixedWidth: 235, fixedHeight: 170, wordWrap: { width: 218 },
+            lineSpacing: 3
+        }).setDepth(9);
+        this.chatInputHud = this.add.text(765, 352, 'ENTER · Escribir mensaje', {
+            fontFamily: 'Arial', fontSize: 11, color: '#94a3b8',
+            backgroundColor: '#0f172acc', padding: { x: 9, y: 6 }, fixedWidth: 235
+        }).setDepth(9);
         this.profilePanel = new ProfilePanel((username, appearance) => this.socket.emit(SOCKET_EVENTS.PROFILE_SET, { username: username || undefined, appearance }));
         this.attachSocketListeners();
 
@@ -153,6 +177,7 @@ export class ArenaScene extends Scene
                 shift: this.input.keyboard.addKey(Input.Keyboard.KeyCodes.SHIFT)
             };
             this.input.keyboard.enabled = true;
+            this.input.keyboard.on('keydown', this.handleChatKeydown);
         }
 
         this.events.once('shutdown', () => {
@@ -170,6 +195,7 @@ export class ArenaScene extends Scene
             this.input.keyboard?.off('keydown-FIVE', this.selectSlot5);
             this.input.keyboard?.off('keydown-SIX', this.selectSlot6);
             this.input.keyboard?.off('keydown-SEVEN', this.selectSlot7);
+            this.input.keyboard?.off('keydown', this.handleChatKeydown);
         });
 
         if (this.socket.connected) {
@@ -522,6 +548,9 @@ private createInterface()
         this.socket.on(SOCKET_EVENTS.WEAPON_RESULT, this.handleWeaponResult);
         this.socket.on(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
         this.socket.on(SOCKET_EVENTS.MATCH_STATE, this.handleMatchState);
+        this.socket.on(SOCKET_EVENTS.PROGRESSION_STATE, this.handleProgressionState);
+        this.socket.on(SOCKET_EVENTS.CHAT_HISTORY, this.handleChatHistory);
+        this.socket.on(SOCKET_EVENTS.CHAT_MESSAGE, this.handleChatMessage);
         this.socket.on(SOCKET_EVENTS.ROOM_MAP, this.handleRoomMap);
         this.socket.on(SOCKET_EVENTS.MATCH_ACTION_RESULT, this.handleMatchActionResult);
         this.socket.on(SOCKET_EVENTS.ROOM_HOST_CHANGED, this.handleHostChanged);
@@ -547,6 +576,9 @@ private createInterface()
         this.socket.off(SOCKET_EVENTS.WEAPON_RESULT, this.handleWeaponResult);
         this.socket.off(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
         this.socket.off(SOCKET_EVENTS.MATCH_STATE, this.handleMatchState);
+        this.socket.off(SOCKET_EVENTS.PROGRESSION_STATE, this.handleProgressionState);
+        this.socket.off(SOCKET_EVENTS.CHAT_HISTORY, this.handleChatHistory);
+        this.socket.off(SOCKET_EVENTS.CHAT_MESSAGE, this.handleChatMessage);
         this.socket.off(SOCKET_EVENTS.ROOM_MAP, this.handleRoomMap);
         this.socket.off(SOCKET_EVENTS.MATCH_ACTION_RESULT, this.handleMatchActionResult);
         this.socket.off(SOCKET_EVENTS.ROOM_HOST_CHANGED, this.handleHostChanged);
@@ -577,6 +609,13 @@ private createInterface()
         this.selfId = '';
         this.matchState = undefined;
         this.spectatorTargetId = '';
+        this.chatInputActive = false;
+        this.chatDraft = '';
+        this.chatLines.length = 0;
+        this.chatPanel?.setText('CHAT · ENTER para escribir');
+        this.chatInputHud?.setText('ENTER · Escribir mensaje');
+        this.progression = undefined;
+        this.progressionHud?.setText('Nivel 1 · XP 0/100');
         this.cameras.main.stopFollow();
         this.spectatorStatusText?.setVisible(false);
         this.roomHostId = '';
@@ -637,6 +676,7 @@ private createInterface()
     private readonly selectSlot7 = () => this.selectWeapon(7);
 
     private selectWeapon(slot: number): void {
+        if (this.chatInputActive) return;
         if (this.weaponState && !this.weaponState.availableSlots.includes(slot as WeaponStatePayload['selectedSlot'])) return;
         if (!this.socket?.connected || !this.selfId) return;
         this.socket.emit(SOCKET_EVENTS.WEAPON_SELECT, { slot });
@@ -666,6 +706,87 @@ private createInterface()
     private readonly handleProfileResult = (result: {ok:boolean;message:string}) => {
         if (!result.ok) this.errorText.setText(result.message).setVisible(true);
         else this.errorText.setVisible(false);
+    };
+
+    private readonly handleProgressionState = (state: ProgressionStatePayload) => {
+        this.progression = state;
+        this.progressionHud?.setText(
+            'Nivel ' + state.level + ' · XP ' + state.xp + '/' + state.xpToNextLevel +
+            ' · Total ' + state.totalXP
+        );
+        if (state.awardedXP && state.awardedXP > 0) {
+            this.pushChatLine('Sistema: +' + state.awardedXP + ' XP por la partida');
+        }
+    };
+
+    private readonly handleChatHistory = (payload: ChatHistoryPayload) => {
+        this.chatLines.length = 0;
+        for (const message of payload.messages) this.chatLines.push(this.formatChatMessage(message));
+        this.renderChatPanel();
+    };
+
+    private readonly handleChatMessage = (payload: ChatMessage | { error?: string }) => {
+        if ('error' in payload) {
+            if (payload.error) this.errorText.setText(payload.error).setVisible(true);
+            return;
+        }
+        this.pushChatLine(this.formatChatMessage(payload));
+        this.playerViews.get(payload.senderId)?.showChat(payload.text);
+    };
+
+    private formatChatMessage(message: ChatMessage): string {
+        const date = new Date(message.createdAt);
+        const time = date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        const channel = message.channel === 'spectators' ? '[ESPECTADORES] ' : '';
+        return time + ' ' + channel + message.senderName + ': ' + message.text;
+    }
+
+    private pushChatLine(line: string): void {
+        this.chatLines.push(line);
+        if (this.chatLines.length > 8) this.chatLines.splice(0, this.chatLines.length - 8);
+        this.renderChatPanel();
+    }
+
+    private renderChatPanel(): void {
+        const heading = 'CHAT · ENTER para escribir';
+        this.chatPanel?.setText([heading, ...this.chatLines].join('\\n'));
+    }
+
+    private readonly handleChatKeydown = (event: KeyboardEvent): void => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            if (!this.chatInputActive) {
+                this.chatInputActive = true;
+                this.chatDraft = '';
+                this.chatInputHud?.setText('> Escribe y pulsa ENTER');
+            } else {
+                const text = this.chatDraft.trim();
+                if (text && this.socket?.connected) {
+                    const self = this.playerRegistry.get(this.selfId);
+                    this.socket.emit(SOCKET_EVENTS.CHAT_SEND, {
+                        channel: self?.spectator ? 'spectators' : 'all',
+                        text
+                    });
+                }
+                this.chatInputActive = false;
+                this.chatDraft = '';
+                this.chatInputHud?.setText('ENTER · Escribir mensaje');
+            }
+            return;
+        }
+        if (!this.chatInputActive) return;
+        event.preventDefault();
+        if (event.key === 'Escape') {
+            this.chatInputActive = false;
+            this.chatDraft = '';
+            this.chatInputHud?.setText('ENTER · Escribir mensaje');
+        } else if (event.key === 'Backspace') {
+            this.chatDraft = [...this.chatDraft].slice(0, -1).join('');
+            this.chatInputHud?.setText('> ' + this.chatDraft + '▌');
+        } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && [...this.chatDraft].length < 120) {
+            this.chatDraft += event.key;
+            this.chatInputHud?.setText('> ' + this.chatDraft + '▌');
+        }
     };
 
     private readonly handlePickupState = (payload: PickupStatePayload) => {
@@ -736,6 +857,7 @@ private createInterface()
     update(time: number) {
         this.stormView?.update();
         if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors) return;
+        if (this.chatInputActive) return;
         const self = this.playerRegistry.get(this.selfId);
         if (self?.spectator) {
             if (Input.Keyboard.JustDown(this.keys.a)) this.cycleSpectatorTarget(-1);
