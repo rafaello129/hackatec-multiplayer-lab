@@ -1,4 +1,4 @@
-import type { GameMapState, PlayerState, ProjectileState, ShootPayload, WeaponType } from '@hackatec/shared';
+import { MATCH_BALANCE, type GameMapState, type PlayerState, type ProjectileState, type ShootPayload, type WeaponType } from '@hackatec/shared';
 import { getSpawnPosition } from './spawn.js';
 
 const WEAPONS: Record<WeaponType, { cooldown: number; speed: number; damage: number; spread: number[] }> = {
@@ -54,7 +54,7 @@ export class CombatManager {
     private damage(roomId: string, player: PlayerState, amount: number, now: number, attacker?: PlayerState): void {
         const s = this.runtime(roomId);
         if (player.alive === false || player.isDashing || now < (s.invulnerable.get(player.id) ?? 0)) return;
-        player.hp = Math.max(0, (player.hp ?? 100) - amount);
+        player.hp = Math.max(0, (player.hp ?? MATCH_BALANCE.initialHealth) - amount);
         s.invulnerable.set(player.id, now + 1000);
         if (player.hp === 0) {
             player.isDashing = false;
@@ -62,7 +62,7 @@ export class CombatManager {
             player.alive = false;
             player.deaths = (player.deaths ?? 0) + 1;
             if (attacker && attacker.id !== player.id) attacker.kills = (attacker.kills ?? 0) + 1;
-            s.respawn.set(player.id, now + 5000);
+            s.respawn.set(player.id, now + MATCH_BALANCE.classicRespawnMs);
         }
     }
     step(roomId: string, players: PlayerState[], map: GameMapState, dtMs: number, now: number): ProjectileState[] {
@@ -74,7 +74,7 @@ export class CombatManager {
                     const candidates = Array.from({length: 32}, (_, i) => getSpawnPosition(i));
                     const spawn = candidates.find(point => !map.obstacles.some(o => o.type === 'wall' && overlaps(point.x, point.y, PLAYER_RADIUS, o)) && !players.some(other => other.id !== player.id && other.alive !== false && Math.hypot(other.x - point.x, other.y - point.y) < PLAYER_RADIUS * 2)) ?? getSpawnPosition(players.findIndex(p => p.id === player.id));
                     player.x = spawn.x; player.y = spawn.y;
-                    player.hp = 100; player.alive = true; player.immobilizedUntil = 0;
+                    player.hp = MATCH_BALANCE.initialHealth; player.alive = true; player.immobilizedUntil = 0;
                     s.traps.delete(player.id);
                     s.invulnerable.set(player.id, now + 1000);
                     s.respawn.delete(player.id);
