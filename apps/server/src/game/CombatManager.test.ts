@@ -100,7 +100,7 @@ describe('CombatManager weapon authority', () => {
 
     it('applies rocket splash damage, reduced self-damage and knockback', () => {
         const shooter = player('shooter', 250);
-        const target = player('target', 270);
+        const target = player('target', 260);
         combat.initializePlayer('room', shooter, false);
         combat.selectWeapon('room', shooter, 6, 'classic', 1_000);
         combat.setFireIntent('room', shooter, { angle: 0, firing: true }, 1_000);
