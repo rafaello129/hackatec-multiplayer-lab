@@ -14,6 +14,7 @@ import {
     type PickupCollectedPayload,
     type PlayerTrappedPayload,
     type PlayerHealedPayload,
+    type StormStatePayload,
     type RoomErrorPayload,
     type RoomStatePayload,
     type MatchStatePayload,
@@ -26,6 +27,7 @@ import type { Socket } from 'socket.io-client';
 import { ProfilePanel } from '../ui/ProfilePanel';
 import { MapView } from '../map/MapView';
 import { PickupView } from '../map/PickupView';
+import { StormView } from '../map/StormView';
 import { PlayerView } from '../entities/PlayerView';
 import { getClientIdentity, type ClientIdentity } from '../../network/identity';
 import { getSocket } from '../../network/socket';
@@ -48,6 +50,7 @@ export class ArenaScene extends Scene
     private roomHostId = '';
     private mapView?: MapView;
     private pickupView?: PickupView;
+    private stormView?: StormView;
     private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
     private previousInput = '';
     private lastInputSent = 0;
@@ -113,6 +116,7 @@ export class ArenaScene extends Scene
         this.createInterface();
         this.mapView = new MapView(this);
         this.pickupView = new PickupView(this);
+        this.stormView = new StormView(this);
         this.bullets = this.add.graphics().setDepth(3);
         this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(5);
         this.input.keyboard?.on('keydown-ONE', this.selectSlot1);
@@ -145,6 +149,7 @@ export class ArenaScene extends Scene
             this.clearPlayerViews();
             this.mapView?.destroy();
             this.pickupView?.destroy();
+            this.stormView?.destroy();
             this.profilePanel?.destroy();
             this.input.keyboard?.off('keydown-ONE', this.selectSlot1);
             this.input.keyboard?.off('keydown-TWO', this.selectSlot2);
@@ -247,6 +252,7 @@ export class ArenaScene extends Scene
 
     private readonly handleMatchState = (state: MatchStatePayload): void => {
         this.matchState = state;
+        this.stormView?.setActive(state.mode === 'battleRoyale' && state.phase === 'playing');
         this.roomHostId = state.hostId ?? '';
         const labels: Record<MatchStatePayload['phase'], string> = {
             waiting: MATCH_TEXTS.phases.waiting,
@@ -288,6 +294,11 @@ export class ArenaScene extends Scene
             default: return MATCH_TEXTS.modes.classic;
         }
     }
+
+    private readonly handleStormState = (state: StormStatePayload): void => {
+        this.stormView?.render(state);
+        this.stormView?.setActive(this.matchState?.mode === 'battleRoyale' && this.matchState.phase === 'playing');
+    };
 
     private readonly handleRoomMap = (map: GameMapState): void => {
         this.mapView?.render(map);
@@ -478,6 +489,7 @@ private createInterface()
         this.socket.on(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.on(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
+        this.socket.on(SOCKET_EVENTS.STORM_STATE, this.handleStormState);
         this.socket.on(SOCKET_EVENTS.PICKUP_STATE, this.handlePickupState);
         this.socket.on(SOCKET_EVENTS.PICKUP_COLLECTED, this.handlePickupCollected);
         this.socket.on(SOCKET_EVENTS.PLAYER_TRAPPED, this.handlePlayerTrapped);
@@ -501,6 +513,7 @@ private createInterface()
         this.socket.off(SOCKET_EVENTS.PLAYER_LEFT, this.handlePlayerLeft);
         this.socket.off(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
+        this.socket.off(SOCKET_EVENTS.STORM_STATE, this.handleStormState);
         this.socket.off(SOCKET_EVENTS.PICKUP_STATE, this.handlePickupState);
         this.socket.off(SOCKET_EVENTS.PICKUP_COLLECTED, this.handlePickupCollected);
         this.socket.off(SOCKET_EVENTS.PLAYER_TRAPPED, this.handlePlayerTrapped);
@@ -542,6 +555,7 @@ private createInterface()
         this.previousInput = '';
         this.mapView?.clear();
         this.pickupView?.clear();
+        this.stormView?.clear();
         this.bullets?.clear();
         this.syncPlayerViews();
     };
@@ -667,6 +681,7 @@ private createInterface()
     };
 
     update(time: number) {
+        this.stormView?.update();
         if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors) return;
         const pad = this.input.gamepad?.getPad(0);
         const x = pad?.leftStick.x ?? 0;
