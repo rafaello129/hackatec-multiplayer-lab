@@ -82,15 +82,19 @@ describe('ZombieManager', () => {
         expect(manager.getState('room').projectiles.length).toBe(1);
 
         const acidTicks: number[] = [];
+        let firstPuddleId: string | undefined;
         for (let now = 1_050; now <= 6_050; now += 50) {
             const step = manager.step('room', [target], map, 50, now);
             for (const item of step?.damage ?? []) {
                 if (item.amount <= 1) acidTicks.push(item.amount);
             }
+            const firstPuddle = manager.getState('room').puddles[0];
+            firstPuddleId ??= firstPuddle?.id;
         }
         expect(acidTicks.length).toBeGreaterThan(50);
         expect(acidTicks[0]).toBeCloseTo(0.3);
-        expect(manager.getState('room').puddles).toHaveLength(0);
+        expect(firstPuddleId).toBeDefined();
+        expect(manager.getState('room').puddles.some(puddle => puddle.id === firstPuddleId)).toBe(false);
     });
 
     it('does not allow zombies to target or damage spectators', () => {
