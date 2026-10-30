@@ -112,13 +112,13 @@ export class CombatManager {
         return weapon;
     }
 
-    initializePlayer(roomId: string, player: PlayerState, canUseLaser: boolean): WeaponStatePayload {
+    initializePlayer(roomId: string, player: PlayerState, canUseLaser: boolean, mode: string | null = null): WeaponStatePayload {
         const state = this.runtime(roomId);
         if (canUseLaser) state.laserOwners.add(player.id);
         else state.laserOwners.delete(player.id);
         const weapon = this.weaponRuntime(state, player.id);
         player.selectedWeapon = weaponForSlot(weapon.selectedSlot) ?? 'pistol';
-        return this.getWeaponState(roomId, player.id, Date.now());
+        return this.getWeaponState(roomId, player.id, Date.now(), mode);
     }
 
     resetRoom(roomId: string): void {
