@@ -47,6 +47,17 @@ function blocked(x: number, y: number, radius: number, map: GameMapState): boole
     });
 }
 
+function blockedSpawn(x: number, y: number, radius: number, map: GameMapState): boolean {
+    if (x < radius || x > map.width - radius ||
+        y < COMBAT_BALANCE.playableTop + radius ||
+        y > COMBAT_BALANCE.playableBottom - radius) return true;
+    return map.obstacles.some(obstacle => {
+        const dx = Math.max(Math.abs(x - obstacle.x) - obstacle.width / 2, 0);
+        const dy = Math.max(Math.abs(y - obstacle.y) - obstacle.height / 2, 0);
+        return dx * dx + dy * dy < radius * radius;
+    });
+}
+
 function nearestPlayer(x: number, y: number, players: PlayerState[]): PlayerState | undefined {
     return players
         .filter(player => player.alive !== false && !player.spectator)
@@ -197,7 +208,7 @@ export class ZombieManager {
         const candidates: Array<{ x: number; y: number }> = [];
         for (let y = COMBAT_BALANCE.playableTop + 45; y <= COMBAT_BALANCE.playableBottom - 45; y += 55) {
             for (let x = 55; x <= map.width - 55; x += 60) {
-                if (blocked(x, y, 32, map)) continue;
+                if (blockedSpawn(x, y, 32, map)) continue;
                 if (players.some(player => Math.hypot(player.x - x, player.y - y) < 190)) continue;
                 candidates.push({ x, y });
             }
