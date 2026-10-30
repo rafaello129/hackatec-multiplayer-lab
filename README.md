@@ -104,7 +104,7 @@ npm run check
 npm run smoke -w @hackatec/game
 ```
 
-`npm run check` ejecuta pruebas y builds. El smoke de CI inicia el servidor, comprueba autenticación y salas, y valida el límite de 32 jugadores al completar su extensión de carga.
+`npm run check` ejecuta pruebas y builds. El smoke de CI inicia el servidor, comprueba autenticación y aislamiento de salas, reúne 32 jugadores autenticados en una sola sala, inicia una ronda con los 32 y verifica que el servidor aplica un dash durante ese tick activo. Esto valida el roster y una acción sincronizada bajo ese tamaño, no una prueba de varios minutos con los 32 jugadores combatiendo.
 
 ## Arquitectura
 
