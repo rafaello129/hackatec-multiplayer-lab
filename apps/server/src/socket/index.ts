@@ -616,7 +616,7 @@ export function registerSocketHandlers(
             io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_EMOTE, payload);
         });
 
-        socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) =>
+        socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) => {
             const now = Date.now();
             const previousPacketAt = lastMovementPacketAt.get(socket.id) ?? Number.NEGATIVE_INFINITY;
             if (now - previousPacketAt < MOVEMENT_PACKET_MIN_INTERVAL_MS) return;
