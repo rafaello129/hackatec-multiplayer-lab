@@ -34,7 +34,7 @@ describe('MatchManager', () => {
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
 
         expect(manager.vote('room-a', 'outsider', 'account-x', 'classic', 1).ok).toBe(false);
-        expect(manager.vote('room-a', 'a', 'a', 'team', 1).ok).toBe(false);
+        expect(manager.vote('room-a', 'a', 'a', 'everyone-vs-one', 1).ok).toBe(false);
         expect(manager.vote('room-a', 'a', 'a', 'classic', 1).ok).toBe(true);
         expect(manager.vote('room-a', 'a', 'a', 'classic', 300).ok).toBe(true);
         expect(manager.getState('room-a')?.votes).toEqual({ a: 'classic' });
@@ -155,15 +155,15 @@ describe('MatchManager', () => {
 
     it('chooses randomly among tied modes and when no one votes', () => {
         const random = vi.spyOn(Math, 'random').mockReturnValue(0.99);
-        const tiedManager = new MatchManager(10, 5, 100, 15, ['classic', 'team']);
+        const tiedManager = new MatchManager(10, 5, 100, 15, ['classic', 'everyone-vs-one']);
         tiedManager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
         tiedManager.vote('room-a', 'a', 'a', 'classic', 1);
-        tiedManager.vote('room-a', 'b', 'b', 'team', 1);
+        tiedManager.vote('room-a', 'b', 'b', 'everyone-vs-one', 1);
         tiedManager.advance(10, () => []);
-        expect(tiedManager.getState('room-a')?.mode).toBe('team');
+        expect(tiedManager.getState('room-a')?.mode).toBe('everyone-vs-one');
 
         random.mockReturnValue(0);
-        const emptyManager = new MatchManager(10, 5, 100, 15, ['classic', 'team']);
+        const emptyManager = new MatchManager(10, 5, 100, 15, ['classic', 'everyone-vs-one']);
         emptyManager.syncRoom('room-b', [player('c'), player('d')], 'c', 0);
         emptyManager.advance(10, () => []);
         expect(emptyManager.getState('room-b')?.mode).toBe('classic');
