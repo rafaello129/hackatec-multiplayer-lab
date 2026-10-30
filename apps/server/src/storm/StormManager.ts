@@ -22,6 +22,7 @@ type StormRuntime = {
     targetCenterY: number;
     targetRadius: number;
     completed: boolean;
+    lastRewardedPhase: number;
 };
 
 export type StormStepResult = {
@@ -68,7 +69,8 @@ export class StormManager {
             targetCenterX: centerX,
             targetCenterY: centerY,
             targetRadius: TARGET_RADII[0],
-            completed: false
+            completed: false,
+            lastRewardedPhase: 0
         };
         this.rooms.set(roomId, runtime);
         this.prepareTarget(runtime, map);
@@ -102,8 +104,21 @@ export class StormManager {
     }
 
     step(roomId: string, players: PlayerState[], map: GameMapState, dtMs: number, now: number): StormStepResult | undefined {
+        const runtime = this.rooms.get(roomId);
         const state = this.getState(roomId, now);
-        if (!state) return undefined;
+        if (!runtime || !state) return undefined;
+
+        const completedPhases = state.phase - 1 + (state.completed ? 1 : 0);
+        const newlySurvived = Math.max(0, completedPhases - runtime.lastRewardedPhase);
+        if (newlySurvived > 0) {
+            for (const player of players) {
+                if (player.alive !== false && !player.spectator) {
+                    player.survivedStormPhases = (player.survivedStormPhases ?? 0) + newlySurvived;
+                }
+            }
+            runtime.lastRewardedPhase = completedPhases;
+        }
+
         const elapsed = Math.max(0, Math.min(dtMs, COMBAT_BALANCE.serverTickMs)) / 1_000;
         const damage = players
             .filter(player => player.alive !== false && !player.spectator)
