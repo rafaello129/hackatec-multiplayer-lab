@@ -131,17 +131,19 @@ describe('MatchManager', () => {
     });
 
     it('chooses randomly among tied modes and when no one votes', () => {
-        const manager = new MatchManager(10, 5, 100, 15, ['classic', 'team']);
-        manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
-        manager.vote('room-a', 'a', 'a', 'classic', 1);
-        manager.vote('room-a', 'b', 'b', 'team', 1);
         const random = vi.spyOn(Math, 'random').mockReturnValue(0.99);
-        manager.advance(10, () => []);
-        expect(manager.getState('room-a')?.mode).toBe('team');
+        const tiedManager = new MatchManager(10, 5, 100, 15, ['classic', 'team']);
+        tiedManager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
+        tiedManager.vote('room-a', 'a', 'a', 'classic', 1);
+        tiedManager.vote('room-a', 'b', 'b', 'team', 1);
+        tiedManager.advance(10, () => []);
+        expect(tiedManager.getState('room-a')?.mode).toBe('team');
+
         random.mockReturnValue(0);
-        manager.syncRoom('room-b', [player('c'), player('d')], 'c', 0);
-        manager.advance(10, () => []);
-        expect(manager.getState('room-b')?.mode).toBe('classic');
+        const emptyManager = new MatchManager(10, 5, 100, 15, ['classic', 'team']);
+        emptyManager.syncRoom('room-b', [player('c'), player('d')], 'c', 0);
+        emptyManager.advance(10, () => []);
+        expect(emptyManager.getState('room-b')?.mode).toBe('classic');
         random.mockRestore();
     });
 
