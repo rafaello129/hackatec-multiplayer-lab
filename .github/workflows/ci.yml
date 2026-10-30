@@ -26,6 +26,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Inspect dependency advisories
+        run: |
+          npm audit --json > /tmp/npm-audit.json || true
+          node -e "const a=require('/tmp/npm-audit.json'); for (const [name,v] of Object.entries(a.vulnerabilities || {})) console.log(JSON.stringify({name,severity:v.severity,isDirect:v.isDirect,range:v.range,nodes:v.nodes,fixAvailable:v.fixAvailable,via:v.via.map(x => typeof x === 'string' ? x : {title:x.title,url:x.url,range:x.range})}))"
+
       - name: Unit tests and build
         run: npm run check
 
