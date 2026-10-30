@@ -44,7 +44,7 @@ export const WEAPON_BALANCE = {
         lifetimeMs: 5_000
     },
     laser: {
-        damagePerSecond: 40,
+        damagePerSecond: 60,
         tickMs: 100,
         energyMs: 4_000,
         rechargeMs: 3_000,
@@ -75,8 +75,8 @@ export const PICKUP_BALANCE = {
     healOnKill: 15,
     respawnMs: 60_000,
     battleRoyaleRespawnMs: 120_000,
-    medkitRespawnMs: 120_000,
-    battleRoyaleMedkitRespawnMs: 180_000,
+    medkitRespawnMs: 75_000,
+    battleRoyaleMedkitRespawnMs: 120_000,
     radiusPx: 15,
     obstaclePaddingPx: 8,
     spawnMarginX: 70,
