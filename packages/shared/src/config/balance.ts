@@ -115,7 +115,6 @@ export const CHAT_BALANCE = {
 export const COMBAT_BALANCE = {
     playerRadius: 21,
     projectileRadius: 5,
-    damageInvulnerabilityMs: 1_000,
     cactusDamageCooldownMs: 1_000,
     trapDurationMs: 5_000,
     respawnInvulnerabilityMs: 1_000,
