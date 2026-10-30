@@ -253,6 +253,27 @@ describe('CombatManager weapon authority', () => {
         expect(laser.zombieHits[0]?.damage).toBe(10);
     });
 
+    it('blocks shots with rocks but lets projectiles pass through lakes', () => {
+        const fireThrough = (type: 'rock' | 'lake'): number => {
+            const manager = new CombatManager();
+            const shooter = player('shooter', 250);
+            const target = player('target', 420);
+            const terrain: GameMapState = {
+                ...map,
+                obstacles: [{ id: type, type, x: 330, y: 400, width: 70, height: 90 }]
+            };
+            manager.initializePlayer('terrain-room', shooter, false);
+            manager.setFireIntent('terrain-room', shooter, { angle: 0, firing: true }, 1_000);
+            for (let now = 1_000; now <= 1_300; now += 50) {
+                manager.step('terrain-room', [shooter, target], terrain, 50, now, 'classic');
+            }
+            return target.hp ?? 0;
+        };
+
+        expect(fireThrough('rock')).toBe(100);
+        expect(fireThrough('lake')).toBe(80);
+    });
+
     it('decrements zombie lives and eliminates a player after the third death', () => {
         const survivor = player('survivor', 250);
         survivor.lives = 3;
