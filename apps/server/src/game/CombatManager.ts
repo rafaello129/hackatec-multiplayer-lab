@@ -201,14 +201,14 @@ export class CombatManager {
         weapon.firing = request.firing;
     }
 
-    getWeaponState(roomId: string, playerId: string, now: number): WeaponStatePayload {
+    getWeaponState(roomId: string, playerId: string, now: number, mode: string | null = null): WeaponStatePayload {
         const state = this.runtime(roomId);
         const weapon = this.weaponRuntime(state, playerId);
         const selectedWeapon = weaponForSlot(weapon.selectedSlot) ?? 'pistol';
         return {
             selectedSlot: weapon.selectedSlot,
             selectedWeapon,
-            availableSlots: availableWeaponSlots(state.laserOwners.has(playerId)),
+            availableSlots: availableWeaponSlots(state.laserOwners.has(playerId), mode),
             cooldownRemainingMs: Math.max(0, weapon.cooldownUntil - now),
             laserEnergyMs: Math.floor(weapon.laserEnergyMs),
             laserEnergyMaxMs: WEAPON_BALANCE.laser.energyMs
@@ -304,9 +304,18 @@ export class CombatManager {
         const weaponState = this.weaponRuntime(state, player.id);
         if (weaponState.firing && now - weaponState.lastIntentAt > 220) weaponState.firing = false;
 
-        const weapon = weaponForSlot(weaponState.selectedSlot) ?? 'pistol';
+        let weapon = weaponForSlot(weaponState.selectedSlot) ?? 'pistol';
+        if (mode === 'rockets' && weapon !== 'rocketLauncher') {
+            weaponState.selectedSlot = 6;
+            weaponState.firing = false;
+            weaponState.justPressed = false;
+            weapon = 'rocketLauncher';
+            player.selectedWeapon = weapon;
+        }
         const definition = WEAPON_DEFINITIONS[weapon];
-        const shouldFire = definition.fireMode === 'semi' ? weaponState.justPressed : weaponState.firing;
+        const shouldFire = definition.fireMode === 'semi'
+            ? weaponState.justPressed
+            : weaponState.firing || weaponState.justPressed;
         weaponState.justPressed = false;
 
         if (!shouldFire || player.alive === false || player.spectator) {
@@ -364,7 +373,6 @@ export class CombatManager {
                 break;
         }
 
-        if (mode === 'rockets' && weapon !== 'rocketLauncher') return;
     }
 
     private rechargeLaser(weapon: WeaponRuntime, dtMs: number): void {
