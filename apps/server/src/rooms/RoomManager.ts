@@ -16,6 +16,7 @@ const MAX_PLAYER_NAME_LENGTH = 20;
 type LeaveResult = {
     roomId: string;
     player: PlayerState;
+    hostId?: string;
 };
 
 export type JoinSuccess = {
@@ -24,6 +25,7 @@ export type JoinSuccess = {
     player: PlayerState;
     players: PlayerState[];
     map: GameMapState;
+    hostId: string;
     previous?: LeaveResult;
 };
 
@@ -63,6 +65,8 @@ export class RoomManager
     private readonly rooms = new Map<string, Map<string, PlayerState>>();
     private readonly roomMaps = new Map<string, GameMapState>();
     private readonly socketRooms = new Map<string, string>();
+    // Map insertion order is join order, so the first remaining player is host.
+    private readonly roomHosts = new Map<string, string>();
 
     join(
         roomId: string,
@@ -93,7 +97,8 @@ export class RoomManager
                     roomId,
                     player: existingPlayer,
                     players: [...currentRoom.values()],
-                    map: this.getOrCreateMap(roomId)
+                    map: this.getOrCreateMap(roomId),
+                    hostId: this.roomHosts.get(roomId) ?? socketId
                 };
             }
         }
@@ -135,6 +140,7 @@ export class RoomManager
 
         room.set(socketId, player);
         this.socketRooms.set(socketId, roomId);
+        if (!this.roomHosts.has(roomId)) this.roomHosts.set(roomId, socketId);
 
         return {
             ok: true,
@@ -142,6 +148,7 @@ export class RoomManager
             player,
             players: [...room.values()],
             map,
+            hostId: this.roomHosts.get(roomId) ?? socketId,
             previous
         };
     }
@@ -166,16 +173,23 @@ export class RoomManager
         }
 
         room.delete(socketId);
+        if (this.roomHosts.get(roomId) === socketId) {
+            const nextHostId = room.keys().next().value as string | undefined;
+            if (nextHostId) this.roomHosts.set(roomId, nextHostId);
+            else this.roomHosts.delete(roomId);
+        }
 
         if (room.size === 0)
         {
             this.rooms.delete(roomId);
             this.roomMaps.delete(roomId);
+            this.roomHosts.delete(roomId);
         }
 
         return {
             roomId,
-            player
+            player,
+            hostId: this.roomHosts.get(roomId)
         };
     }
 
@@ -213,6 +227,11 @@ export class RoomManager
     hasRoom(roomId: string): boolean
     {
         return this.rooms.has(roomId);
+    }
+
+    getHostId(roomId: string): string | undefined
+    {
+        return this.roomHosts.get(roomId);
     }
 
     private findAvailableSpawnIndex(room: Map<string, PlayerState>): number
