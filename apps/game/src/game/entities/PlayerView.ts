@@ -10,6 +10,7 @@ export class PlayerView
     private readonly scene: Scene;
     private readonly skin: GameObjects.Image;
     private currentSkin = '';
+    private destroyed = false;
     private readonly nameText: GameObjects.Text;
     private readonly trapText: GameObjects.Text;
     private readonly trapBar: GameObjects.Graphics;
@@ -89,6 +90,8 @@ export class PlayerView
         this.body.setFillStyle(player.alive === false ? 0x64748b : color);
         this.body.setScale(player.role === 'titan' ? 1.45 : 1);
         this.body.setAlpha(player.isInvulnerable ? 0.5 : player.alive === false ? 0.35 : 1);
+        this.skin.setAlpha(player.isInvulnerable ? 0.5 : player.alive === false ? 0.35 : 1);
+        this.syncSkin(player);
         const prefix = player.role === 'titan' ? 'TITAN · ' : player.role === 'hunter' ? 'CAZADOR · ' : '';
         this.nameText.setText(prefix + player.name);
 
@@ -102,6 +105,56 @@ export class PlayerView
             this.trapBar.fillStyle(0x450a0a, 0.9).fillRect(-32, -49, 64, 5);
             this.trapBar.fillStyle(0xf87171, 1).fillRect(-32, -49, 64 * progress, 5);
         }
+    }
+
+    private syncSkin(player: PlayerState): void
+    {
+        const skinPath = player.appearance?.mode === 'skin'
+            ? player.appearance.skin?.url
+            : undefined;
+        if (!skinPath) {
+            this.currentSkin = '';
+            this.skin.setVisible(false);
+            this.body.setVisible(true);
+            return;
+        }
+
+        const url = new URL(skinPath, serverUrl).toString();
+        const textureKey = this.skinTextureKey(url);
+        if (this.scene.textures.exists(textureKey)) {
+            this.applySkin(textureKey, url);
+            return;
+        }
+
+        if (this.currentSkin === url) return;
+        this.currentSkin = url;
+        this.skin.setVisible(false);
+        this.body.setVisible(true);
+
+        this.scene.load.once('filecomplete-image-' + textureKey, () => {
+            if (this.destroyed || this.currentSkin !== url) return;
+            this.applySkin(textureKey, url);
+        });
+        this.scene.load.image(textureKey, url);
+        if (!this.scene.load.isLoading()) this.scene.load.start();
+    }
+
+    private skinTextureKey(url: string): string
+    {
+        let hash = 2_166_136_261;
+        for (let index = 0; index < url.length; index += 1) {
+            hash ^= url.charCodeAt(index);
+            hash = Math.imul(hash, 16_777_619);
+        }
+        return 'player-skin-' + (hash >>> 0).toString(36);
+    }
+
+    private applySkin(textureKey: string, url: string): void
+    {
+        if (this.destroyed || this.currentSkin !== url || !this.scene.textures.exists(textureKey)) return;
+        const size = 42 * (this.body.scaleX || 1);
+        this.skin.setTexture(textureKey).setDisplaySize(size, size).setVisible(true);
+        this.body.setVisible(false);
     }
 
     showChat(message: string): void
@@ -249,6 +302,7 @@ export class PlayerView
 
     destroy()
     {
+        this.destroyed = true;
         this.container.destroy(true);
     }
 }
