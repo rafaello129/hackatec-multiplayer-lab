@@ -1,3 +1,4 @@
+import { MATCH_BALANCE } from '@hackatec/shared';
 import type {
     PlayerState,
     GameMapState,
@@ -135,7 +136,7 @@ export class RoomManager
             x: spawn.x,
             y: spawn.y,
             color: PLAYER_COLORS[spawnIndex % PLAYER_COLORS.length],
-            hp: 100, maxHp: 100, alive: true, kills: 0, deaths: 0
+            hp: MATCH_BALANCE.initialHealth, maxHp: MATCH_BALANCE.initialHealth, alive: true, kills: 0, deaths: 0
         };
 
         room.set(socketId, player);
@@ -240,8 +241,8 @@ export class RoomManager
             const spawn = getSpawnPosition(index++);
             player.x = spawn.x;
             player.y = spawn.y;
-            player.hp = 100;
-            player.maxHp = 100;
+            player.hp = MATCH_BALANCE.initialHealth;
+            player.maxHp = MATCH_BALANCE.initialHealth;
             player.alive = true;
             player.spectator = false;
             player.kills = 0;
