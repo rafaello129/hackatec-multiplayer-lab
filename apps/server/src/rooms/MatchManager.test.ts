@@ -153,6 +153,21 @@ describe('MatchManager', () => {
         expect(manager.getState('room-a')?.phase).toBe('results');
     });
 
+    it('excludes a late-joining spectator from the alive-player roster immediately', () => {
+        const manager = new MatchManager(100, 10, 100, 15, ['classic']);
+        const first = player('a');
+        const second = player('b');
+        manager.syncRoom('room-late-roster', [first, second], first.id, 0);
+        manager.advance(100, () => [first, second]);
+        manager.advance(110, () => [first, second]);
+
+        const lateSpectator = player('late');
+        manager.syncRoom('room-late-roster', [first, second, lateSpectator], first.id, 120);
+
+        expect(lateSpectator.spectator).toBe(true);
+        expect(manager.getState('room-late-roster')?.alivePlayerIds).toEqual(['a', 'b']);
+    });
+
     it('does not award Classic victory or placement to a late spectator', () => {
         const manager = new MatchManager(100, 10, 100, 15, ['classic']);
         const first = player('z-player');
