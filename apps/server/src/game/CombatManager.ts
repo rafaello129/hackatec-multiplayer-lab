@@ -1,6 +1,7 @@
 import {
     COMBAT_BALANCE,
     MATCH_BALANCE,
+    ZOMBIE_BALANCE,
     WEAPON_BALANCE,
     WEAPON_TEXTS,
     PICKUP_BALANCE,
@@ -157,6 +158,19 @@ export class CombatManager {
         state.playersById.clear();
         state.damageContributions.clear();
         state.killFeed = [];
+    }
+
+    revivePlayer(roomId: string, player: PlayerState, now: number): void {
+        const state = this.runtime(roomId);
+        state.respawn.delete(player.id);
+        state.traps.delete(player.id);
+        state.invulnerable.set(player.id, now + COMBAT_BALANCE.respawnInvulnerabilityMs);
+        player.alive = true;
+        player.spectator = false;
+        player.hp = player.maxHp ?? MATCH_BALANCE.initialHealth;
+        player.shield = 0;
+        player.isInvulnerable = true;
+        player.immobilizedUntil = 0;
     }
 
     leave(roomId: string, playerId: string, roomEmpty: boolean): void {
@@ -730,7 +744,15 @@ export class CombatManager {
             }
 
             state.damageContributions.delete(player.id);
-            if (state.mode === 'battleRoyale' || (state.mode === 'everyone-vs-one' && player.role === 'titan')) {
+            if (state.mode === 'zombies') {
+                player.lives = Math.max(0, (player.lives ?? ZOMBIE_BALANCE.initialLives) - 1);
+                if (player.lives === 0) {
+                    player.spectator = true;
+                    state.respawn.delete(player.id);
+                } else {
+                    state.respawn.set(player.id, now + MATCH_BALANCE.classicRespawnMs);
+                }
+            } else if (state.mode === 'battleRoyale' || (state.mode === 'everyone-vs-one' && player.role === 'titan')) {
                 player.spectator = true;
                 state.respawn.delete(player.id);
             } else if (state.mode === 'everyone-vs-one' && player.role === 'hunter') {
