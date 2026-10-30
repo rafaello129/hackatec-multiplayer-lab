@@ -307,7 +307,7 @@ export class ArenaScene extends Scene
         };
         const voteCount = Object.keys(state.votes).length;
         const host = this.roomHostId === this.selfId;
-        this.matchStatusText?.setText(state.message ? labels[state.phase] + '\\n' + state.message : labels[state.phase]);
+        this.matchStatusText?.setText(state.message ? labels[state.phase] + '\n' + state.message : labels[state.phase]);
         for (const [mode, button] of this.voteButtons) {
             const selected = state.votes[this.selfId] === mode;
             button.setText((selected ? '✓ ' : '') + this.getModeLabel(mode));
@@ -325,9 +325,9 @@ export class ArenaScene extends Scene
             const lines = state.results.slice(0, 5).map((result, index) =>
                 `${index + 1}. ${result.name}: ${result.kills} bajas · ${result.deaths} muertes · ${result.assists ?? 0} asistencias · ${result.zombieKills ?? 0} zombies`
             );
-            this.scoreboard?.setText('RESULTADOS\\n' + lines.join('\\n'));
-            const winner = state.winnerName ? 'Ganador: ' + state.winnerName + '\\n' : '';
-            this.matchStatusText?.setText(labels[state.phase] + '\\n' + winner + (state.message ?? ''));
+            this.scoreboard?.setText('RESULTADOS\n' + lines.join('\n'));
+            const winner = state.winnerName ? 'Ganador: ' + state.winnerName + '\n' : '';
+            this.matchStatusText?.setText(labels[state.phase] + '\n' + winner + (state.message ?? ''));
         }
         this.updateMatchClock();
     };
@@ -662,7 +662,7 @@ export class ArenaScene extends Scene
 
     private renderChatPanel(): void {
         const heading = CHAT_TEXTS.panelTitle;
-        this.chatPanel?.setText([heading, ...this.chatLines].join('\\n'));
+        this.chatPanel?.setText([heading, ...this.chatLines].join('\n'));
     }
 
     private readonly handleChatKeydown = (event: KeyboardEvent): void => {
@@ -731,7 +731,7 @@ export class ArenaScene extends Scene
             this.killFeedLines.push(kill.killerName + '  ☠  ' + kill.victimName);
             if (this.killFeedLines.length > 6) this.killFeedLines.shift();
         }
-        this.killFeedHud?.setText(this.killFeedLines.join('\\n'));
+        this.killFeedHud?.setText(this.killFeedLines.join('\n'));
         const self = state.players.find(player => player.id === this.selfId);
         if (self?.spectator) this.syncSpectatorCamera(state.players);
         this.scoreboard?.setText('CLASIFICACIÓN\n' + [...state.players].sort((a,b)=>(b.kills??0)-(a.kills??0)).slice(0,8).map((p,i)=>`${i+1}. ${p.name}: ${p.kills??0} / ${p.deaths??0}`).join('\n'));
