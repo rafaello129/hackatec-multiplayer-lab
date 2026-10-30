@@ -47,7 +47,7 @@ export const WEAPON_BALANCE = {
         damagePerSecond: 80,
         tickMs: 100,
         energyMs: 4_000,
-        rechargeMs: 3_000,
+        rechargeMs: 0,
         range: 1_800
     },
     selectionCooldownMs: 120,
