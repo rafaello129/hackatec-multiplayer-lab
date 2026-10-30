@@ -28,7 +28,7 @@ export class ZombieView {
             visual.container.setAlpha(zombie.alive ? 1 : 0.25);
             visual.label.setText(zombie.type === 'boss' ? 'JEFE FINAL' : zombie.type === 'giant' ? 'GIGANTE' : 'ESCUPIDOR');
             visual.health.clear();
-            visual.health.fillStyle(0x334155, 0.95).fillRect(-24, -40, 48, 5);
+            visual.health.fillStyle(0x334155, 0.95).fillRect(zombie.type === 'boss' ? -42 : -24, -40, zombie.type === 'boss' ? 84 : 48, 6);
             visual.health.fillStyle(zombie.type === 'boss' ? 0xf97316 : zombie.type === 'giant' ? 0xef4444 : 0xa78bfa, 1)
                 .fillRect(zombie.type === 'boss' ? -42 : -24, -40, (zombie.type === 'boss' ? 84 : 48) * Math.max(0, zombie.hp) / Math.max(1, zombie.maxHp), 6);
             if (zombie.phase === 'telegraph') {
