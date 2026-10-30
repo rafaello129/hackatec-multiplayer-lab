@@ -34,6 +34,7 @@ export interface PlayerState {
     selectedWeapon?: WeaponType;
     role?: 'titan' | 'hunter' | 'survivor';
     lives?: number;
+    zombieKills?: number;
     appearance?: PlayerAppearance;
 }
 
@@ -74,6 +75,45 @@ export type PickupCollectedPayload = {
     playerId: string;
     restored: number;
 };
+export type ZombieType = 'giant' | 'spitter';
+export type ZombiePhase = 'approach' | 'telegraph' | 'charge' | 'stunned' | 'spit';
+export type ZombieState = {
+    id: string;
+    type: ZombieType;
+    x: number;
+    y: number;
+    hp: number;
+    maxHp: number;
+    radius: number;
+    alive: boolean;
+    phase: ZombiePhase;
+    phaseEndsAt: number;
+    targetId: string | null;
+    angle: number;
+};
+export type AcidProjectileState = {
+    id: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    createdAt: number;
+};
+export type AcidPuddleState = {
+    id: string;
+    x: number;
+    y: number;
+    radius: number;
+    expiresAt: number;
+};
+export type ZombieStatePayload = {
+    roomId: string;
+    zombies: ZombieState[];
+    projectiles: AcidProjectileState[];
+    puddles: AcidPuddleState[];
+};
+export type ZombieHitPayload = { zombieId: string; attackerId: string; damage: number };
+
 export type StormStatePayload = {
     roomId: string;
     phase: number;
