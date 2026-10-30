@@ -107,6 +107,7 @@ export type MatchStatePayload = {
     mode: GameMode | null;
     hostId: string | null;
     votes: Record<string, GameMode>;
+    alivePlayerIds: string[];
     voteEndsAt: number | null;
     startsAt: number | null;
     endsAt: number | null;
