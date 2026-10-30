@@ -62,6 +62,9 @@ export class ArenaScene extends Scene
     private lastInputSent = 0;
     private profilePanel?: ProfilePanel;
     private scoreboard?: GameObjects.Text;
+    private killFeedHud?: GameObjects.Text;
+    private readonly killFeedIds = new Set<string>();
+    private readonly killFeedLines: string[] = [];
     private healthBar?: GameObjects.Graphics;
     private weapon: WeaponType = 'pistol';
     private selectedSlot = 4;
@@ -153,6 +156,11 @@ export class ArenaScene extends Scene
         this.input.keyboard?.on('keydown-SEVEN', this.selectSlot7);
         this.healthBar = this.add.graphics().setDepth(8);
         this.scoreboard = this.add.text(765, 390, '', { fontFamily:'Arial',fontSize:14,color:'#f8fafc',backgroundColor:'#0f172acc',padding:{x:10,y:8} }).setDepth(8);
+        this.killFeedHud = this.add.text(36, 174, '', {
+            fontFamily: 'Arial Black', fontSize: 12, color: '#f8fafc',
+            backgroundColor: '#0f172acc', padding: { x: 8, y: 6 },
+            fixedWidth: 270, lineSpacing: 3
+        }).setDepth(8);
         this.chatPanel = this.add.text(765, 175, 'CHAT · ENTER para escribir', {
             fontFamily: 'Arial', fontSize: 11, color: '#e2e8f0',
             backgroundColor: '#0f172acc', padding: { x: 9, y: 7 },
@@ -322,7 +330,9 @@ export class ArenaScene extends Scene
         if (state.phase === 'voting') {
             this.matchStatusText?.setText(labels[state.phase] + ' · ' + voteCount + ' voto(s)');
         } else if (state.phase === 'results' && state.results.length > 0) {
-            const lines = state.results.slice(0, 5).map((result, index) => `${index + 1}. ${result.name}: ${result.kills} bajas / ${result.deaths} muertes`);
+            const lines = state.results.slice(0, 5).map((result, index) =>
+                `${index + 1}. ${result.name}: ${result.kills} bajas · ${result.deaths} muertes · ${result.assists ?? 0} asistencias · ${result.zombieKills ?? 0} zombies`
+            );
             this.scoreboard?.setText('RESULTADOS\\n' + lines.join('\\n'));
             const winner = state.winnerName ? 'Ganador: ' + state.winnerName + '\\n' : '';
             this.matchStatusText?.setText(labels[state.phase] + '\\n' + winner + (state.message ?? ''));
@@ -612,6 +622,9 @@ private createInterface()
         this.chatInputActive = false;
         this.chatDraft = '';
         this.chatLines.length = 0;
+        this.killFeedIds.clear();
+        this.killFeedLines.length = 0;
+        this.killFeedHud?.setText('');
         this.chatPanel?.setText('CHAT · ENTER para escribir');
         this.chatInputHud?.setText('ENTER · Escribir mensaje');
         this.progression = undefined;
@@ -814,6 +827,13 @@ private createInterface()
     private readonly handleCombat = (state: CombatSnapshot) => {
         this.playerRegistry.replaceAll(state.players);
         this.syncPlayerViews();
+        for (const kill of state.killFeed ?? []) {
+            if (this.killFeedIds.has(kill.id)) continue;
+            this.killFeedIds.add(kill.id);
+            this.killFeedLines.push(kill.killerName + '  ☠  ' + kill.victimName);
+            if (this.killFeedLines.length > 6) this.killFeedLines.shift();
+        }
+        this.killFeedHud?.setText(this.killFeedLines.join('\\n'));
         const self = state.players.find(player => player.id === this.selfId);
         if (self?.spectator) this.syncSpectatorCamera(state.players);
         this.scoreboard?.setText('CLASIFICACIÓN\n' + [...state.players].sort((a,b)=>(b.kills??0)-(a.kills??0)).slice(0,8).map((p,i)=>`${i+1}. ${p.name}: ${p.kills??0} / ${p.deaths??0}`).join('\n'));
