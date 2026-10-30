@@ -417,6 +417,23 @@ async function main() {
     );
     assert(joined.player?.name === betaAccount.username, 'alpha did not observe beta joining');
 
+    // Verify the Rocket mode loadout is selected by the server.
+    const modeAlpha = await connectClient('mode-alpha', modeAAccount.cookie);
+    await joinRoom(modeAlpha, 'mode-smoke');
+    const modeBeta = await connectClient('mode-beta', modeBAccount.cookie);
+    await joinRoom(modeBeta, 'mode-smoke');
+    const rocketStatePromise = waitFor(modeAlpha, 'weapon:state');
+    const rocketCountdownPromise = waitForMatchPhase(modeAlpha, 'countdown');
+    modeAlpha.emit('match:host-start', { mode: 'rockets' });
+    const rocketCountdown = await rocketCountdownPromise;
+    const rocketState = await rocketStatePromise;
+    assert(rocketCountdown.mode === 'rockets', 'Rocket mode should start');
+    assert(rocketState.selectedSlot === 6 && rocketState.availableSlots.length === 1 &&
+        rocketState.availableSlots[0] === 6, 'Rocket mode must lock the loadout to slot six');
+    const rocketStopped = waitForMatchPhase(modeAlpha, 'waiting');
+    modeAlpha.emit('match:host-stop');
+    await rocketStopped;
+
     // Load acceptance: fill the room with 32 distinct authenticated accounts.
     const loadClients = [];
     let finalLoadSnapshot;
