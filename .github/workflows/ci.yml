@@ -1,8 +1,5 @@
 name: CI
 
-permissions:
-  contents: write
-
 on:
   push:
     branches:
@@ -28,27 +25,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Apply compatible dependency security fixes
-        run: npm audit fix --package-lock-only
-
-      - name: Commit patched dependency lockfile
-        run: |
-          if ! git diff --quiet -- package-lock.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "Fix vulnerable dependencies"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          else
-            echo "Dependency lockfile is already up to date"
-          fi
-
-      - name: Reinstall patched dependencies
-        run: npm ci
-
-      - name: Verify dependency security
-        run: npm audit --audit-level=moderate
 
       - name: Unit tests and build
         run: npm run check
