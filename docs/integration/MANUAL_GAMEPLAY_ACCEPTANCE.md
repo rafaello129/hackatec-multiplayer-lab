@@ -1,34 +1,74 @@
 # Verificación manual de una partida — HackaTec Multiplayer Lab
 
-Este documento es una lista de aceptación **manual**, no una prueba automatizada. La compilación y el smoke test de Socket.IO no sustituyen la validación visual de una partida.
+Esta lista cubre la aceptación visual y de interacción. No es sustituida por las pruebas unitarias, la compilación ni el smoke test de Socket.IO. Marca una casilla únicamente después de ejecutarla y observar el resultado.
 
 ## Preparación
-- Node.js 22 o superior.
-- Ejecutar `npm ci && npm run dev` desde la raíz.
-- Abrir `http://localhost:5173/?room=clase&name=Ana` y `http://localhost:5173/?room=clase&name=Luis` en dos navegadores/perfiles separados. Utilizar perfiles de navegador separados para que los identificadores persistentes no coincidan.
-- Si se conecta desde otra PC, configurar `VITE_SERVER_URL` con la IP del equipo servidor y usar la IP del host de Vite.
 
-## Recorrido de aceptación
-- [ ] Ambos jugadores entran y se ven mutuamente con nombres e identificadores distintos.
-- [ ] Ambos ven el mismo mapa (mismos obstáculos y posiciones).
-- [ ] WASD/flechas mueven al jugador correcto y el otro cliente lo ve en tiempo real.
-- [ ] No se atraviesan paredes ni límites; el dash (Shift) respeta cooldown.
-- [ ] Una trampa inmoviliza cinco segundos; después permite salir sin volver a atraparlo indefinidamente.
-- [ ] Los cactus reducen HP; el dash evita daño según regla de invulnerabilidad.
-- [ ] Cambiar con 1/2/3 y disparar con clic: pistola, ametralladora y escopeta muestran proyectiles en ambos clientes.
-- [ ] Disparar sobre otros jugadores reduce HP; al morir se cuentan kills/deaths y hay respawn tras tres segundos.
-- [ ] El respawn no aparece encima de otro jugador o dentro de una pared, cuando hay una posición libre.
-- [ ] Cambiar username, color y subir skin: el otro jugador ve la apariencia y los cambios sobreviven una recarga.
-- [ ] El HUD refleja HP, muertes, kills y scoreboard.
-- [ ] Clic en el panel de personalización no dispara accidentalmente.
-- [ ] Desconectar y reconectar uno de los clientes no deja un jugador fantasma.
-- [ ] Abrir una sala distinta aísla jugadores, proyectiles y mapa.
+- Node.js 22 o superior y npm 10 o superior.
+- En la raíz del repositorio: `npm ci && npm run dev`.
+- Abrir `http://localhost:5173/?room=clase` en dos navegadores o perfiles separados.
+- Crear o iniciar sesión con una cuenta distinta en cada perfil.
+- Para probar desde otra PC, configurar `VITE_SERVER_URL` con la dirección LAN del servidor y permitir los puertos necesarios en el firewall.
 
-## Registro rápido
-Anotar por cada casilla que falle: reproducción, navegador, sala, mensaje de consola y evidencia visual. No marcar ningún punto como superado sin ejecución real.
+## Acceso, perfiles y salas
 
-## Problemas conocidos y alcance
-- La identidad de perfil local todavía no está autenticada; usar solo en demostraciones privadas.
-- La subida de imágenes requiere más endurecimiento antes de exponer el servidor públicamente.
-- El movimiento puede verse entrecortado sin interpolación.
-- Las verificaciones de CI cubren compilación/Socket.IO, no esta lista visual.
+- [ ] Registro con usuario válido y contraseña de al menos 8 caracteres.
+- [ ] Inicio de sesión, recarga de página y recuperación de sesión persistente.
+- [ ] Cierre de sesión invalida la sesión y requiere volver a autenticarse.
+- [ ] Dos cuentas distintas se ven con su identidad correcta; el servidor no acepta nombres arbitrarios enviados por el cliente.
+- [ ] Cambiar nombre y color de apariencia; comprobar que persisten tras recargar.
+- [ ] Subir una skin válida y seleccionarla; comprobar que otro jugador la ve.
+- [ ] Cambiar entre skin e identidad vectorial/color y comprobar que ambas apariencias se representan correctamente.
+- [ ] Una sala distinta no muestra jugadores, proyectiles, chat ni estado de la primera sala.
+
+## Mapa, movimiento y combate
+
+- [ ] El terreno de arena cubre el área jugable; rocas, vegetación seca, cactus, cercas y obstáculos se muestran correctamente.
+- [ ] Ambos clientes muestran el mismo mapa y las mismas posiciones de obstáculos.
+- [ ] WASD y flechas mueven al jugador correcto; el otro cliente observa el movimiento.
+- [ ] No se atraviesan paredes ni límites del mapa.
+- [ ] Shift ejecuta el dash, respeta cooldown e invulnerabilidad.
+- [ ] Las trampas inmovilizan durante el tiempo configurado y los cactus aplican daño con su cooldown.
+- [ ] Probar las ranuras 1 a 7: cuchillo, metralleta, escopeta, pistola, sniper, lanzacohetes y láser.
+- [ ] Verificar cadencias, proyectiles, impactos y daño entre dos clientes.
+- [ ] El sniper muestra su trazador e impacto visual; el láser muestra el haz y consume energía durante su duración.
+- [ ] Botiquines y escudos restauran los valores correctos; un pickup que no puede beneficiar al jugador no se consume.
+- [ ] Las bajas, muertes, curación por baja y respawn se reflejan en ambos clientes.
+
+## Emotes y HUD
+
+- [ ] C ejecuta giro, V salto, B agacharse y N sacudida.
+- [ ] Cada emote se reproduce en el cliente local y en el cliente remoto.
+- [ ] Los emotes funcionan con la nave vectorial y con una skin personalizada.
+- [ ] Tras cada emote, el jugador vuelve a su posición, ángulo y escala normales.
+- [ ] Un jugador Titan conserva su tamaño después de usar los cuatro emotes.
+- [ ] El botón de la esquina superior derecha alterna HUD completo y minimalista.
+- [ ] El HUD minimalista conserva vida, escudo y armas, y oculta elementos secundarios.
+- [ ] Al restaurar el HUD, vuelven a estar disponibles chat, votación y controles del anfitrión cuando corresponda.
+- [ ] Chat, feed, scoreboard, resultados y estados de conexión siguen siendo legibles.
+
+## Modos de juego
+
+- [ ] Clásico: ronda, límite de bajas, combate y respawn.
+- [ ] Todos contra uno: rol Titan y cazadores, salud y vidas correspondientes.
+- [ ] Rocket para todos: todos usan el lanzacohetes y no pueden cambiar a otras armas.
+- [ ] Battle Royale: tormenta de cinco fases, eliminación definitiva y espectadores.
+- [ ] Zombies: aparecen gigantes y escupidores; la IA y sus ataques se sincronizan.
+- [ ] En Clásico, Todos contra uno, Rocket para todos y Battle Royale no aparecen zombies.
+- [ ] En modos distintos de Battle Royale no aparece la tormenta.
+
+## Multijugador, reconexión y LAN
+
+- [ ] Desconectar y reconectar un cliente no deja un jugador fantasma.
+- [ ] Los espectadores no pueden moverse, disparar ni usar emotes como jugadores activos.
+- [ ] Los eventos de una sala no afectan a otra.
+- [ ] Probar dos computadoras conectadas a la misma red LAN.
+- [ ] Probar una partida con varios jugadores y observar CPU, latencia, sincronización y estabilidad durante varios minutos.
+
+## Registro de resultados
+
+Por cada fallo, anotar: paso, sala, cuentas usadas (sin contraseñas ni tokens), navegador, reproducción, consola del cliente, logs del servidor y captura de pantalla o video cuando sea útil.
+
+## Alcance de CI
+
+CI comprueba pruebas automatizadas, compilación y smoke multicliente. El smoke test de 32 cuentas valida autenticación, roster y una acción autoritativa durante la ronda; no equivale a una partida prolongada de 32 jugadores combatiendo. No marcar las casillas visuales, de LAN o de rendimiento como completadas sin una ejecución real.
