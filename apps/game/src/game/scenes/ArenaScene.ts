@@ -40,13 +40,6 @@ import { PlayerRegistry } from '../../state/PlayerRegistry';
 
 export class ArenaScene extends Scene
 {
-    private timeRemaining: number = 300;
-    private timerText!: Phaser.GameObjects.Text;
-    private gameTimer?: Phaser.Time.TimerEvent;
-    private currentMode: string = 'normal';
-    private playerTeam: 'none' | 'red' | 'blue' = 'none';
-    private zombieGroup!: Phaser.Physics.Arcade.Group;
-    private zombieSpawnTimer?: Phaser.Time.TimerEvent;
     private socket!: Socket;
     private identity!: ClientIdentity;
     private readonly playerRegistry = new PlayerRegistry();
@@ -99,25 +92,7 @@ export class ArenaScene extends Scene
     private connectionText!: GameObjects.Text;
     private errorText!: GameObjects.Text;
 
-    // --- NUEVAS PROPIEDADES PARA CONTROLES Y DASH ---
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-    private wasd!: {
-        up: Input.Keyboard.Key;
-        down: Input.Keyboard.Key;
-        left: Input.Keyboard.Key;
-        right: Input.Keyboard.Key;
-    };
-    
-    private shiftKey!: Input.Keyboard.Key;
-    private localX: number = 512;
-    private localY: number = 438;
-    private lastDashTime: number = 0;
-    private dashCooldown: number = 4000; // 4 segundos en milisegundos
-    private playerSpeed: number = 5;
-    private isInvulnerable: boolean = false;
-    private mapWidth: number = 960;  // Ancho basado en el rectángulo de juego original
-    private mapHeight: number = 600; // Alto basado en el rectángulo de juego original
-    private playerRadius: number = 20;
 
     constructor()
     {
@@ -131,7 +106,6 @@ export class ArenaScene extends Scene
         this.identity = getClientIdentity(window.location.search);
         this.socket = getSocket();
 
-        this.zombieGroup = this.physics.add.group({ maxSize: 100 });
         this.createInterface();
         this.mapView = new MapView(this);
         this.pickupView = new PickupView(this);
@@ -393,91 +367,6 @@ export class ArenaScene extends Scene
             state.phase === 'results' ? 'Resultados: ' : 'Tiempo: ';
         this.matchCountdownText.setText(prefix + minutes + ':' + remainder);
     }
-
-    private spawnZombieBot(): void {
-
-    // Distancia mínima y máxima del jugador
-    const minDistance = 250;
-    const maxDistance = 450;
-
-    // Ángulo aleatorio alrededor del jugador
-    const angle = Math.random() * Math.PI * 2;
-
-    // Distancia aleatoria
-    const distance =
-        minDistance + Math.random() * (maxDistance - minDistance);
-
-    // Posición aleatoria alrededor del jugador
-    const spawnX = this.localX + Math.cos(angle) * distance;
-    const spawnY = this.localY + Math.sin(angle) * distance;
-
-    const zombie = this.zombieGroup.create(
-        spawnX,
-        spawnY,
-        'zombie_bot_skin'
-    ) as Phaser.Physics.Arcade.Sprite;
-
-    zombie.setAlpha(1);
-    zombie.setScale(2);
-    zombie.setPosition(spawnX, spawnY);
-    zombie.setDepth(100);
-    zombie.setVisible(true);
-    zombie.setActive(true);
-    zombie.setCollideWorldBounds(true);
-
-    console.log('Zombi creado:', {
-        x: zombie.x,
-        y: zombie.y,
-        total: this.zombieGroup.countActive()
-    });
-}
-
-private startZombieSpawner(): void {
-    if (this.zombieSpawnTimer) {
-        this.zombieSpawnTimer.remove(false);
-    }
-
-    const spawnNextZombie = () => {
-
-        // Máximo 30 zombis activos
-        const activeZombies = this.zombieGroup
-            ? this.zombieGroup.getChildren().filter(
-                child => child.active
-            ).length
-            : 0;
-
-        if (activeZombies < 30 && this.currentMode === 'zombie') {
-            this.spawnZombieBot();
-        }
-
-        // Tiempo transcurrido
-        const elapsed = 300 - this.timeRemaining;
-
-        // Cooldown según el tiempo de partida
-        let cooldown = 1000;
-
-        if (elapsed >= 240) {
-            cooldown = 250;
-        } else if (elapsed >= 180) {
-            cooldown = 350;
-        } else if (elapsed >= 120) {
-            cooldown = 500;
-        } else if (elapsed >= 60) {
-            cooldown = 750;
-        }
-
-        // Programar el siguiente zombi
-        if (this.currentMode === 'zombie') {
-            this.zombieSpawnTimer = this.time.delayedCall(
-                cooldown,
-                spawnNextZombie
-            );
-        }
-    };
-
-    // Primer zombi
-    spawnNextZombie();
-}
 
 private createInterface()
 
