@@ -25,6 +25,7 @@ export class MapView
 {
     private readonly ground: GameObjects.TileSprite;
     private readonly graphics: GameObjects.Graphics;
+    private mapWidth = 1_024;
 
     constructor(private readonly scene: Scene)
     {
@@ -33,7 +34,7 @@ export class MapView
         this.ground = scene.add.tileSprite(
             ARENA.x + ARENA.width / 2,
             ARENA.y + ARENA.height / 2,
-            ARENA.width,
+            mapWidth - ARENA.x * 2,
             ARENA.height,
             GROUND_TEXTURE
         ).setDepth(-2);
@@ -44,14 +45,17 @@ export class MapView
     render(map: GameMapState): void
     {
         this.graphics.clear();
-        this.drawGroundDetails(map.seed, map.obstacles);
+        this.mapWidth = map.width;
+        this.ground.setPosition(ARENA.x + (map.width - ARENA.x * 2) / 2, ARENA.y + ARENA.height / 2)
+            .setSize(map.width - ARENA.x * 2, ARENA.height);
+        this.drawGroundDetails(map.seed, map.obstacles, map.width);
 
         for (const obstacle of map.obstacles)
         {
             this.drawObstacle(obstacle);
         }
 
-        this.drawArenaEdge();
+        this.drawArenaEdge(map.width);
     }
 
     clear(): void
@@ -99,7 +103,7 @@ export class MapView
         tile.destroy();
     }
 
-    private drawArenaEdge(): void
+    private drawArenaEdge(mapWidth: number): void
     {
         this.graphics.lineStyle(5, 0x8a5a32, 0.9);
         this.graphics.strokeRoundedRect(
@@ -113,13 +117,13 @@ export class MapView
         this.graphics.strokeRoundedRect(
             ARENA.x + 5,
             ARENA.y + 5,
-            ARENA.width - 10,
+            mapWidth - ARENA.x * 2 - 10,
             ARENA.height - 10,
             8
         );
     }
 
-    private drawGroundDetails(seed: number, obstacles: MapObstacle[]): void
+    private drawGroundDetails(seed: number, obstacles: MapObstacle[], mapWidth: number): void
     {
         const random = seededRandom(seed ^ 0x51A7D00D);
         let placed = 0;
@@ -129,7 +133,7 @@ export class MapView
         while (placed < 34 && attempts < 180)
         {
             attempts += 1;
-            const x = ARENA.x + 24 + random() * (ARENA.width - 48);
+            const x = ARENA.x + 24 + random() * (mapWidth - ARENA.x * 2 - 48);
             const y = ARENA.y + 24 + random() * (ARENA.height - 48);
             const radius = 3 + random() * 5;
 
@@ -153,7 +157,7 @@ export class MapView
         // Sparse dry grass tufts, kept subtle so they do not compete with players.
         for (let index = 0; index < 22; index += 1)
         {
-            const x = ARENA.x + 20 + random() * (ARENA.width - 40);
+            const x = ARENA.x + 20 + random() * (mapWidth - ARENA.x * 2 - 40);
             const y = ARENA.y + 20 + random() * (ARENA.height - 40);
             const nearObstacle = obstacles.some((obstacle) =>
                 Math.abs(x - obstacle.x) < obstacle.width / 2 + 18 &&
@@ -183,9 +187,18 @@ export class MapView
 
     private drawObstacle(obstacle: MapObstacle): void
     {
-        if (obstacle.type === 'wall')
+        if (obstacle.type === 'wall' || obstacle.type === 'fence')
         {
             this.drawFence(obstacle);
+            return;
+        }
+
+        if (obstacle.type === 'rock') {
+            this.drawLargeRock(obstacle);
+            return;
+        }
+        if (obstacle.type === 'lake') {
+            this.drawLake(obstacle);
             return;
         }
 
@@ -251,6 +264,23 @@ export class MapView
                 this.graphics.fillRect(cross - thickness / 2 + 2, position - postWidth / 2 + 2, thickness - 4, 2);
             }
         }
+    }
+
+    private drawLargeRock(obstacle: MapObstacle): void
+    {
+        this.graphics.fillStyle(0x4b3b2b, 0.3).fillEllipse(obstacle.x + 4, obstacle.y + 9, obstacle.width * 1.05, obstacle.height * 0.9);
+        this.graphics.fillStyle(0x77766f, 1).fillRoundedRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height, 22);
+        this.graphics.fillStyle(0xb0aa99, 0.85).fillEllipse(obstacle.x - obstacle.width * 0.12, obstacle.y - obstacle.height * 0.2, obstacle.width * 0.48, obstacle.height * 0.3);
+        this.graphics.lineStyle(3, 0x4d4c46, 0.85).strokeRoundedRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height, 22);
+    }
+
+    private drawLake(obstacle: MapObstacle): void
+    {
+        this.graphics.fillStyle(0x59462f, 0.35).fillEllipse(obstacle.x, obstacle.y + 5, obstacle.width + 18, obstacle.height + 18);
+        this.graphics.fillStyle(0x155e75, 1).fillEllipse(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        this.graphics.fillStyle(0x38bdf8, 0.42).fillEllipse(obstacle.x - obstacle.width * 0.12, obstacle.y - obstacle.height * 0.12, obstacle.width * 0.62, obstacle.height * 0.38);
+        this.graphics.lineStyle(4, 0x0e7490, 0.95).strokeEllipse(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        this.graphics.lineStyle(2, 0xbae6fd, 0.55).strokeEllipse(obstacle.x, obstacle.y, obstacle.width * 0.82, obstacle.height * 0.76);
     }
 
     private drawTrap(obstacle: MapObstacle): void
