@@ -11,7 +11,7 @@ const player = (id: string, x: number, y: number): PlayerState => ({
 
 function blockedAt(x: number, y: number, sourceMap: GameMapState): boolean {
     return sourceMap.obstacles.some(obstacle => {
-        if (obstacle.type !== 'wall') return false;
+        if (obstacle.type === 'trap') return false;
         const dx = Math.max(Math.abs(x - obstacle.x) - obstacle.width / 2, 0);
         const dy = Math.max(Math.abs(y - obstacle.y) - obstacle.height / 2, 0);
         return dx * dx + dy * dy < 32 * 32;
@@ -25,7 +25,7 @@ describe('ZombieManager', () => {
             expect(isZombieMode(mode)).toBe(false);
         }
     });
-    it('spawns a deterministic giant and spitter outside walls and away from players', () => {
+    it('spawns a deterministic first wave outside obstacles and away from players', () => {
         const a = new ZombieManager();
         const b = new ZombieManager();
         const players = [player('a', 500, 420), player('b', 550, 420)];
@@ -33,13 +33,15 @@ describe('ZombieManager', () => {
         const stateB = b.reset('room', map, players, 0);
 
         expect(stateA).toEqual(stateB);
-        expect(stateA.zombies.map(zombie => zombie.type).sort()).toEqual(['giant', 'spitter']);
+        expect(stateA.zombies.length).toBeGreaterThanOrEqual(ZOMBIE_BALANCE.initialSpawnCount);
+        expect(stateA.round).toBe(1);
+        expect(stateA.runPhase).toBe('wave');
         for (const zombie of stateA.zombies) {
             expect(Math.hypot(zombie.x - 500, zombie.y - 420)).toBeGreaterThan(150);
         }
     });
 
-    it('still places giant and spitter in a room with 32 spread-out players', () => {
+    it('still places a wave in a room with 32 spread-out players', () => {
         const players = Array.from({ length: 32 }, (_, index) => {
             const spawn = getSpawnPosition(index);
             return player('p' + index, spawn.x, spawn.y);
@@ -47,7 +49,7 @@ describe('ZombieManager', () => {
         const manager = new ZombieManager();
         const state = manager.reset('full-room', map, players, 0);
 
-        expect(state.zombies).toHaveLength(2);
+        expect(state.zombies.length).toBeGreaterThanOrEqual(ZOMBIE_BALANCE.initialSpawnCount);
         for (const zombie of state.zombies) {
             expect(players.every(item => Math.hypot(item.x - zombie.x, item.y - zombie.y) >= 75)).toBe(true);
             expect(blockedAt(zombie.x, zombie.y, map)).toBe(false);
