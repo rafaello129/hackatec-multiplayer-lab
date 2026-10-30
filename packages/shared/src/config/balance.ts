@@ -110,3 +110,17 @@ export const CHAT_BALANCE = {
     bubbleDurationMs: 4_000,
     historyLimit: 40
 } as const;
+
+
+export const COMBAT_BALANCE = {
+    playerRadius: 21,
+    projectileRadius: 5,
+    damageInvulnerabilityMs: 1_000,
+    cactusDamageCooldownMs: 1_000,
+    trapDurationMs: 5_000,
+    respawnInvulnerabilityMs: 1_000,
+    maxProjectileSubstepPx: 8,
+    serverTickMs: 50,
+    playableTop: 155,
+    playableBottom: 715
+} as const;
