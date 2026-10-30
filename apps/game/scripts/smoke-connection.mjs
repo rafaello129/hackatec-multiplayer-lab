@@ -143,6 +143,14 @@ async function verifyAuthApi(account) {
     assert(sessionResponse.status === 200, 'registered account session could not be recovered');
     assert(session.account?.username === account.username, 'session endpoint returned the wrong account');
 
+    const meResponse = await fetch(`${url}/api/auth/me`, {
+        headers: { Cookie: account.cookie },
+        cache: 'no-store'
+    });
+    const me = await meResponse.json();
+    assert(meResponse.status === 200 && me.account?.id === session.account?.id,
+        'the /api/auth/me alias should resolve the same authenticated account');
+
     const wrongPasswordResponse = await fetch(`${url}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -238,6 +246,11 @@ async function main() {
     const beta = await connectClient('beta', betaLoginCookie);
     const betaVoting = waitForMatchPhase(beta, 'voting');
     const betaState = await joinRoom(beta, 'hackatec');
+    const publicChatPromise = waitFor(beta, 'chat:message');
+    alpha.emit('chat:send', { channel: 'all', text: '  Hola\\u0000 desde smoke  ' });
+    const publicChat = await publicChatPromise;
+    assert(publicChat.channel === 'all' && publicChat.text === 'Hola desde smoke',
+        'public chat should be sanitized and broadcast to room members');
     const joined = await alphaSawJoin;
     const votingState = await alphaVoting;
     const betaMatchState = await betaVoting;
@@ -261,6 +274,11 @@ async function main() {
     const deltaState = await joinRoom(delta, 'hackatec');
     const latePlayer = deltaState.players.find(player => player.id === delta.id);
     assert(latePlayer?.spectator === true, 'a player joining during a match must enter as a spectator');
+    const spectatorChatPromise = waitFor(delta, 'chat:message');
+    delta.emit('chat:send', { channel: 'spectators', text: 'Canal de espectadores' });
+    const spectatorChat = await spectatorChatPromise;
+    assert(spectatorChat.channel === 'spectators' && spectatorChat.senderId === delta.id,
+        'spectator chat should be delivered in its private channel');
 
     const alphaStopped = waitForMatchPhase(alpha, 'waiting');
     alpha.emit('match:host-stop');
