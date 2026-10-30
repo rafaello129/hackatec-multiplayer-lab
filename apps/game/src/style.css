@@ -463,3 +463,9 @@ input:focus-visible {
         width: min(250px, calc(100vw - 16px));
     }
 }
+
+/* The in-game clean HUD mode also hides the surrounding account controls. */
+body.hud-minimal .profile-panel,
+body.hud-minimal .session-logout {
+    display: none !important;
+}
