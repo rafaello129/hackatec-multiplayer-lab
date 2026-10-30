@@ -32,7 +32,7 @@ export const MAP_GENERATION_CONFIG = {
     bottomBoundary: 715,
     obstacleGap: 18,
     spawnClearance: 58,
-    maxPlacementAttempts: 120
+    maxPlacementAttempts: 360
 } as const;
 
 const CACTUS_CONFIG: Record<CactusSize, { size: number; damage: number }> = {
@@ -276,6 +276,8 @@ export function generateMap(seed: number, playerCount = 2, mode: string | null =
     const width = Math.min(2_560, ARENA_WIDTH + Math.max(0, playerCount - 2) * 48 + (mode === 'battleRoyale' ? 512 : 0));
     const spawnSafeZones = getSpawnSafeZones(width);
 
+    addObstacles(obstacles, 'lake', Math.round(MAP_GENERATION_CONFIG.counts.lake * width / ARENA_WIDTH), random, spawnSafeZones, width);
+
     addObstacles(
         obstacles,
         'fence',
@@ -285,7 +287,6 @@ export function generateMap(seed: number, playerCount = 2, mode: string | null =
         width
     );
     addObstacles(obstacles, 'rock', Math.round(MAP_GENERATION_CONFIG.counts.rock * width / ARENA_WIDTH), random, spawnSafeZones, width);
-    addObstacles(obstacles, 'lake', Math.round(MAP_GENERATION_CONFIG.counts.lake * width / ARENA_WIDTH), random, spawnSafeZones, width);
     addObstacles(
         obstacles,
         'trap',
