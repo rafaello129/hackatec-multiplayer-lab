@@ -205,6 +205,8 @@ export function registerSocketHandlers(
             rooms.add(result.roomId);
             socket.join(socketRoom(result.roomId));
 
+            syncMatchRoom(result.roomId, Date.now());
+
             const statePayload: RoomStatePayload = {
                 roomId: result.roomId,
                 selfId: socket.id,
@@ -214,7 +216,6 @@ export function registerSocketHandlers(
             };
 
             socket.emit(SOCKET_EVENTS.ROOM_STATE, statePayload);
-            syncMatchRoom(result.roomId, Date.now());
             socket.emit(SOCKET_EVENTS.MATCH_STATE, matches.getState(result.roomId));
             for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
 
