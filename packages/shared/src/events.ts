@@ -18,6 +18,10 @@ export const SOCKET_EVENTS = {
     PLAYER_MOVED: 'player:moved',
     PLAYER_SHOOT: 'player:shoot',
     COMBAT_STATE: 'combat:state',
+    PLAYER_TRAPPED: 'player:trapped',
+    PLAYER_HEALED: 'player:healed',
+    PICKUP_STATE: 'pickup:state',
+    PICKUP_COLLECTED: 'pickup:collected',
     PROFILE_SET: 'profile:set',
     PROFILE_RESULT: 'profile:result',
 
