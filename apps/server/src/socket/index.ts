@@ -14,6 +14,7 @@ import {
     type MatchVotePayload,
     type HostStartMatchPayload,
     type ChatSendPayload,
+    type PlayerEmotePayload,
     type ChatChannel,
     CHAT_TEXTS,
     PROFILE_TEXTS
@@ -78,6 +79,7 @@ export function registerSocketHandlers(
     const lastStormStateSyncAt = new Map<string, number>();
     const lastZombieStateSyncAt = new Map<string, number>();
     const lastMovementPacketAt = new Map<string, number>();
+    const lastEmoteAt = new Map<string, number>();
     const MOVEMENT_PACKET_MIN_INTERVAL_MS = 20;
 
     const syncMatchRoom = (roomId: string, now: number): void => {
@@ -600,7 +602,21 @@ export function registerSocketHandlers(
             for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
         });
 
-        socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) => {
+        socket.on(SOCKET_EVENTS.PLAYER_EMOTE, (raw: unknown) => {
+            const roomId = roomManager.getRoomId(socket.id);
+            const player = roomManager.getPlayer(socket.id);
+            if (!roomId || !player || player.spectator || player.alive === false ||
+                !raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+            const emote = (raw as Partial<PlayerEmotePayload>).emote;
+            if (emote !== 'spin' && emote !== 'jump' && emote !== 'crouch' && emote !== 'shake') return;
+            const now = Date.now();
+            if (now - (lastEmoteAt.get(socket.id) ?? 0) < 700) return;
+            lastEmoteAt.set(socket.id, now);
+            const payload: PlayerEmotePayload = { playerId: socket.id, emote };
+            io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_EMOTE, payload);
+        });
+
+        socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) =>
             const now = Date.now();
             const previousPacketAt = lastMovementPacketAt.get(socket.id) ?? Number.NEGATIVE_INFINITY;
             if (now - previousPacketAt < MOVEMENT_PACKET_MIN_INTERVAL_MS) return;
@@ -662,6 +678,7 @@ export function registerSocketHandlers(
 
         socket.on('disconnect', (reason) => {
             movement.delete(socket.id);
+            lastEmoteAt.delete(socket.id);
             lastMovementPacketAt.delete(socket.id);
             identities.delete(socket.id);
             laserPermissions.delete(socket.id);
