@@ -335,7 +335,7 @@ export function registerSocketHandlers(
                 socket.emit(SOCKET_EVENTS.ROOM_ERROR, { code: 'AUTH_REQUIRED', message: 'La sesión ya no es válida.' });
                 return;
             }
-            const result = roomManager.join(roomId, socket.id, account.username);
+            const result = roomManager.join(roomId, socket.id, profile.username);
 
             if (!result.ok)
             {
@@ -350,7 +350,7 @@ export function registerSocketHandlers(
 
             if (!socket.connected) return;
             identities.set(socket.id, account.id);
-            const canUseLaser = normalizeUsername(account.username) === 'gueta';
+            const canUseLaser = normalizeUsername(profile.username) === 'gueta';
             laserPermissions.set(socket.id, canUseLaser);
             const initialWeaponState = combat.initializePlayer(result.roomId, result.player, canUseLaser, matches.getState(result.roomId)?.mode ?? null);
             result.player.appearance = profile.appearance;
