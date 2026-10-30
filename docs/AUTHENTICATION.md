@@ -43,6 +43,10 @@ El token de sesión se entrega mediante una cookie `HttpOnly`; el navegador no n
 
 Los errores de inicio de sesión no distinguen entre usuario inexistente y contraseña incorrecta. Los intentos fallidos se limitan por IP (8 intentos cada 15 minutos) y por combinación de IP + nombre normalizado de cuenta (5 intentos cada 15 minutos). Un inicio de sesión válido limpia los contadores de esa conexión. Los registros también se limitan por defecto a 8 solicitudes por IP cada hora. El valor se puede ajustar con `AUTH_REGISTRATION_LIMIT_PER_HOUR` (máximo 100); CI lo eleva temporalmente a 40 para crear 32 cuentas sintéticas en la prueba de carga. Estos contadores viven en memoria y se reinician cuando se reinicia el servidor; en un despliegue con varias instancias deben sustituirse por un almacén compartido.
 
+## Skins y propiedad de archivos
+
+Las skins se suben con sesión autenticada, con límite de 2 MiB y dimensiones máximas de 512×512. El servidor comprueba el formato declarado y la cabecera real de la imagen. Cada archivo queda registrado en SQLite junto al identificador de la cuenta que lo subió; una cuenta no puede asignar al perfil una skin de otra. Los perfiles antiguos que ya tenían una skin válida importan esa propiedad en la tabla al abrir la base de datos.
+
 ## Progresión vinculada a la cuenta
 
 La progresión se consulta en la base de datos por el identificador permanente de cuenta. El juego también envía un snapshot al entrar a la sala y después de adjudicar XP. Las recompensas se calculan al cerrar la ronda a partir de bajas, asistencias, zombies eliminados, colocación y fases de tormenta sobrevividas. La elegibilidad por actividad se mide con señales de juego recibidas por el servidor; el cliente no puede enviar una cantidad de XP.
