@@ -8,7 +8,7 @@ export class ProfilePanel {
     private savedSkin?: PlayerAppearance['skin'];
 
     constructor(onSave: (username: string, appearance: PlayerAppearance) => void) {
-        const root = document.createElement('section');
+        const root = document.createElement('div');
         root.className = 'profile-panel';
         root.setAttribute('aria-label', 'Personalización del perfil');
         this.element = root;
@@ -35,7 +35,7 @@ export class ProfilePanel {
         username.id = 'profile-username';
         username.name = 'username';
         username.type = 'text';
-        username.autocomplete = 'nickname';
+        username.setAttribute('autocomplete', 'nickname');
         username.placeholder = '3–16 caracteres';
         username.maxLength = 16;
         username.pattern = '[A-Za-z][A-Za-z0-9_]{2,15}';
