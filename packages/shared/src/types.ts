@@ -45,6 +45,7 @@ export type RoomStatePayload = {
     selfId: string;
     players: PlayerState[];
     map: GameMapState;
+    hostId?: string;
 };
 
 export type PlayerJoinedPayload = {
