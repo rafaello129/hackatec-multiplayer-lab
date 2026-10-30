@@ -263,14 +263,14 @@ describe('CombatManager weapon authority', () => {
         combat.applyEnvironmentalDamage('zombie-room', survivor, 1, 100);
         expect(survivor.lives).toBe(2);
         combat.step('zombie-room', [survivor], map, 50, 4_100, 'zombies');
-
+        survivor.isInvulnerable = false;
         survivor.hp = 1;
-        combat.applyEnvironmentalDamage('zombie-room', survivor, 1, 4_200);
+        combat.applyEnvironmentalDamage('zombie-room', survivor, 1, 5_200);
         expect(survivor.lives).toBe(1);
-        combat.step('zombie-room', [survivor], map, 50, 8_200, 'zombies');
-
+        combat.step('zombie-room', [survivor], map, 50, 9_200, 'zombies');
+        survivor.isInvulnerable = false;
         survivor.hp = 1;
-        combat.applyEnvironmentalDamage('zombie-room', survivor, 1, 8_300);
+        combat.applyEnvironmentalDamage('zombie-room', survivor, 1, 10_300);
         expect(survivor.lives).toBe(0);
         expect(survivor.spectator).toBe(true);
     });
