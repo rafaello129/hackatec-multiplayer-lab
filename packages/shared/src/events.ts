@@ -22,6 +22,7 @@ export const SOCKET_EVENTS = {
     PLAYER_HEALED: 'player:healed',
     PICKUP_STATE: 'pickup:state',
     PICKUP_COLLECTED: 'pickup:collected',
+    STORM_STATE: 'storm:state',
     PROFILE_SET: 'profile:set',
     PROFILE_RESULT: 'profile:result',
 
