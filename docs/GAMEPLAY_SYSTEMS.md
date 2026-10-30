@@ -14,9 +14,8 @@ La selección de ranuras es fija:
 | 4 | Pistola | 20 de daño, cooldown 500 ms, velocidad 640 px/s |
 | 5 | Sniper | 80 de daño, alcance 1600 px, cooldown 1600 ms; impacto hitscan |
 | 6 | Lanzacohetes | 55 de daño central, 15 en el borde, radio 110 px, cooldown 1400 ms, empuje |
-| 7 | Láser | 40 de daño por segundo, alcance 1800 px, energía de 4 s y recarga de 3 s |
 
-La ranura 7 se autoriza en el servidor para la cuenta reservada `Gueta`. Rocket para todos fuerza la ranura 6 y bloquea las demás. El cliente no puede elegir el arma enviando un campo arbitrario en el disparo.
+Rocket para todos fuerza la ranura 6 y bloquea las demás. El cliente no puede elegir el arma enviando un campo arbitrario en el disparo.
 
 ## Movimiento y obstáculos
 
@@ -43,7 +42,7 @@ Un pickup que no puede beneficiar a un jugador (por ejemplo, un botiquín con sa
 
 ## Zombies
 
-Los zombies aparecen en Clásico y Todos contra uno, no en Rocket para todos ni Battle Royale. El máximo configurado es de 12 vivos, con intervalo de aparición de 20 segundos.
+Los zombies aparecen exclusivamente en el modo Zombies. Clásico, Todos contra uno, Rocket para todos y Battle Royale no generan enemigos ni proyectiles de zombies. El máximo configurado es de 12 vivos, con intervalo de aparición de 20 segundos.
 
 **Gigante**
 - 400 de salud.
@@ -114,5 +113,6 @@ El historial es temporal y se pierde cuando la sala queda vacía o el servidor s
 | Todos contra uno | 4 min |
 | Rocket para todos | 5 min |
 | Battle Royale | 7.5 min |
+| Zombies | 5 min |
 
 Los valores se pueden ajustar en un solo sitio. Cualquier cambio de balance debe actualizar los tests y esta documentación.
