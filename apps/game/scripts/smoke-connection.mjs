@@ -278,6 +278,21 @@ async function main() {
     assert(betaState.players.length === 2, 'beta should receive a two-player snapshot');
     assert(betaState.hostId === alpha.id, 'the first player should be the room host');
     assert(votingState.phase === 'voting' && betaMatchState.phase === 'voting', 'two players should trigger a shared vote');
+
+    const renamedBeta = betaAccount.username + 'New';
+    const profileResultPromise = waitFor(beta, 'profile:result');
+    beta.emit('profile:set', {
+        username: renamedBeta,
+        appearance: { mode: 'color', colorHex: '#60A5FA' }
+    });
+    const profileResult = await profileResultPromise;
+    assert(profileResult.ok === true, 'authenticated profile update should succeed');
+    const refreshedSession = await connectClient('beta-profile-refresh', betaLoginCookie);
+    const refreshedProfileState = await joinRoom(refreshedSession, 'profile-room');
+    assert(refreshedProfileState.players[0]?.name === renamedBeta,
+        'a new socket must use the latest database username, not the stale handshake snapshot');
+    refreshedSession.disconnect();
+
     const voteStatePromise = waitForMatchVote(beta, beta.id);
     beta.emit('match:vote', { mode: 'classic' });
     const voteState = await voteStatePromise;
