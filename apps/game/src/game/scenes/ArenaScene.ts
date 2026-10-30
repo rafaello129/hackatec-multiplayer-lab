@@ -220,7 +220,8 @@ export class ArenaScene extends Scene
             this.matchStatusText?.setText(labels[state.phase] + ' · ' + voteCount + ' voto(s)');
         } else if (state.phase === 'results' && state.results.length > 0) {
             const lines = state.results.slice(0, 5).map((result, index) => `${index + 1}. ${result.name}: ${result.kills} bajas / ${result.deaths} muertes`);
-            this.matchStatusText?.setText(labels[state.phase] + '\\n' + lines.join('\\n'));
+            this.scoreboard?.setText('RESULTADOS\\n' + lines.join('\\n'));
+            this.matchStatusText?.setText(labels[state.phase]);
         }
         this.updateMatchClock();
     };
