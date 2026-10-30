@@ -23,6 +23,22 @@ function waitFor(socket, event, timeoutMs = 5000) {
     });
 }
 
+function waitForMatchPhase(socket, phase, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            socket.off('match:state', handler);
+            reject(new Error(`Timed out waiting for match phase ${phase}`));
+        }, timeoutMs);
+        const handler = (payload) => {
+            if (payload?.phase !== phase) return;
+            clearTimeout(timeout);
+            socket.off('match:state', handler);
+            resolve(payload);
+        };
+        socket.on('match:state', handler);
+    });
+}
+
 async function createAccount(label) {
     const username = label === 'Gueta' ? 'Gueta' : `${label}${suffix}`;
     const response = await fetch(`${url}/api/auth/register`, {
@@ -151,11 +167,26 @@ async function main() {
     assert(alphaState.players[0]?.name === alphaAccount.username, 'server did not use the authenticated username');
 
     const alphaSawJoin = waitFor(alpha, 'player:joined');
+    const alphaVoting = waitForMatchPhase(alpha, 'voting');
     const beta = await connectClient('beta', betaLoginCookie);
+    const betaVoting = waitForMatchPhase(beta, 'voting');
     const betaState = await joinRoom(beta, 'hackatec');
     const joined = await alphaSawJoin;
+    const votingState = await alphaVoting;
+    const betaMatchState = await betaVoting;
 
     assert(betaState.players.length === 2, 'beta should receive a two-player snapshot');
+    assert(betaState.hostId === alpha.id, 'the first player should be the room host');
+    assert(votingState.phase === 'voting' && betaMatchState.phase === 'voting', 'two players should trigger a shared vote');
+
+    const alphaCountdown = waitForMatchPhase(alpha, 'countdown');
+    alpha.emit('match:host-start', { mode: 'classic' });
+    const forcedStart = await alphaCountdown;
+    assert(forcedStart.mode === 'classic', 'host should be able to force Classic mode');
+
+    const alphaStopped = waitForMatchPhase(alpha, 'waiting');
+    alpha.emit('match:host-stop');
+    await alphaStopped;
     assert(
         betaState.players.some((player) => player.name === alphaAccount.username) &&
         betaState.players.some((player) => player.name === betaAccount.username),
@@ -168,16 +199,20 @@ async function main() {
     assert(gammaState.players.length === 1, 'other-room should be isolated');
     assert(gammaState.players[0]?.name === gammaAccount.username, 'other-room contains an unexpected player');
 
-    const alphaSawLeave = waitFor(alpha, 'player:left');
+    const betaHostChanged = waitFor(beta, 'room:host-changed');
+    const alphaId = alpha.id;
+    alpha.disconnect();
+    const newHost = await betaHostChanged;
+    assert(newHost.hostId === beta.id, 'host role should transfer to the longest-waiting player');
+    const betaSawLeave = waitFor(beta, 'player:left');
     const betaId = beta.id;
     beta.disconnect();
-    const left = await alphaSawLeave;
-    assert(left.playerId === betaId, 'alpha did not observe beta leaving');
+    const left = await betaSawLeave;
+    assert(left.playerId === betaId, 'remaining room member did not observe beta leaving');
 
     console.log('[smoke] authenticated same-room join/state/leave verified');
     console.log('[smoke] room isolation verified');
 
-    alpha.disconnect();
     gamma.disconnect();
 }
 
