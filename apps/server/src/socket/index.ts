@@ -17,6 +17,7 @@ import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
 import { CombatManager } from '../game/CombatManager.js';
 import { PickupManager } from '../pickups/PickupManager.js';
+import { StormManager } from '../storm/StormManager.js';
 import { AccountStore, normalizeUsername, SESSION_COOKIE, type Account } from '../auth/AccountStore.js';
 import { getAllowedOrigins } from '../config/env.js';
 import { RoomManager } from '../rooms/RoomManager.js';
@@ -38,10 +39,12 @@ export function registerSocketHandlers(
     const movement = new Map<string, MovementRuntime>();
     const combat = new CombatManager();
     const pickupManager = new PickupManager();
+    const stormManager = new StormManager();
     const matches = new MatchManager();
     const identities = new Map<string, string>();
     const laserPermissions = new Map<string, boolean>();
     let lastWeaponStateSyncAt = 0;
+    let lastStormStateSyncAt = 0;
 
     const syncMatchRoom = (roomId: string, now: number): void => {
         const players = roomManager.getPlayers(roomId);
@@ -92,7 +95,22 @@ export function registerSocketHandlers(
         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ROOM_MAP, reset.map);
         const pickupState = pickupManager.reset(roomId, reset.map);
         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PICKUP_STATE, { roomId, pickups: pickupState });
+        if (mode === 'battleRoyale') {
+            const stormState = stormManager.start(roomId, reset.map, Date.now());
+            io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.STORM_STATE, stormState);
+        } else {
+            stormManager.removeRoom(roomId);
+        }
         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players: reset.players, projectiles: [], beams: [], explosions: [], trapped: [], heals: [] });
+        for (const player of reset.players) {
+            const weaponState = combat.initializePlayer(
+                roomId,
+                player,
+                laserPermissions.get(player.id) === true,
+                mode
+            );
+            io.to(player.id).emit(SOCKET_EVENTS.WEAPON_STATE, weaponState);
+        }
         for (const [socketId] of movement) {
             if (roomManager.getRoomId(socketId) === roomId) movement.set(socketId, createMovementRuntime());
         }
@@ -166,6 +184,19 @@ export function registerSocketHandlers(
                 for (const collected of pickupStep.collected) io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PICKUP_COLLECTED, collected);
             }
             const snapshot = combat.step(roomId, players, map, 50, now, mode ?? 'classic');
+            if (mode === 'battleRoyale') {
+                const stormStep = stormManager.step(roomId, players, map, 50, now);
+                if (stormStep) {
+                    for (const item of stormStep.damage) {
+                        const player = players.find(candidate => candidate.id === item.playerId);
+                        if (player) combat.applyEnvironmentalDamage(roomId, player, item.amount, now);
+                    }
+                    if (now - lastStormStateSyncAt >= 100) {
+                        lastStormStateSyncAt = now;
+                        io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.STORM_STATE, stormStep.state);
+                    }
+                }
+            }
             io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, {
                 players,
                 projectiles: snapshot.projectiles,
@@ -280,6 +311,7 @@ export function registerSocketHandlers(
                 if (!roomManager.hasRoom(previousRoomId)) {
                     rooms.delete(previousRoomId);
                     pickupManager.removeRoom(previousRoomId);
+                    stormManager.removeRoom(previousRoomId);
                 }
             }
             if (!movement.has(socket.id) || previousRoomId !== result.roomId) movement.set(socket.id, createMovementRuntime());
@@ -300,6 +332,8 @@ export function registerSocketHandlers(
             socket.emit(SOCKET_EVENTS.MATCH_STATE, matches.getState(result.roomId));
             socket.emit(SOCKET_EVENTS.WEAPON_STATE, initialWeaponState);
             socket.emit(SOCKET_EVENTS.PICKUP_STATE, { roomId: result.roomId, pickups: pickupManager.getState(result.roomId) });
+            const stormState = stormManager.getState(result.roomId, Date.now());
+            if (stormState) socket.emit(SOCKET_EVENTS.STORM_STATE, stormState);
             for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
 
             if (previousRoomId !== result.roomId)
@@ -468,6 +502,7 @@ export function registerSocketHandlers(
                 if (!roomManager.hasRoom(left.roomId)) {
                     rooms.delete(left.roomId);
                     pickupManager.removeRoom(left.roomId);
+                    stormManager.removeRoom(left.roomId);
                 }
                 syncMatchRoom(left.roomId, Date.now());
                 for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
