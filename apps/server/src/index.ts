@@ -1,12 +1,11 @@
 import 'dotenv/config';
 
 import argon2 from 'argon2';
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import express, { type Request, type RequestHandler, type Response } from 'express';
 import { Server } from 'socket.io';
 import { getAllowedOrigins, getServerConfig } from './config/env.js';
-import { AccountStore, normalizeUsername, SESSION_COOKIE, SESSION_TTL_MS } from './auth/AccountStore.js';
+import { AccountStore, SESSION_COOKIE, SESSION_TTL_MS } from './auth/AccountStore.js';
 import { uploadSkin, skinsUploadHandler } from './http/skins.js';
 import { healthHandler } from './http/health.js';
 import { registerSocketHandlers } from './socket/index.js';
@@ -74,14 +73,14 @@ function accountResponse(account: { id: string; username: string; appearance: un
     return { id: account.id, username: account.username, appearance: account.appearance };
 }
 
-function validateCredentials(body: unknown): { username: string; password: string; ownerKey?: string } | undefined {
+function validateCredentials(body: unknown): { username: string; password: string } | undefined {
     if (!body || typeof body !== 'object' || Array.isArray(body)) return undefined;
     const value = body as Record<string, unknown>;
     if (typeof value.username !== 'string' || typeof value.password !== 'string') return undefined;
     const username = value.username.trim();
     if (!/^[A-Za-z][A-Za-z0-9_]{2,15}$/.test(username)) return undefined;
     if (value.password.length < 8 || value.password.length > 128) return undefined;
-    return { username, password: value.password, ownerKey: typeof value.ownerKey === 'string' ? value.ownerKey : undefined };
+    return { username, password: value.password };
 }
 
 app.use(express.json({ limit: '16kb' }));
@@ -110,23 +109,9 @@ app.post('/api/auth/register', requireTrustedOrigin, async (request: Request, re
         response.status(400).json({ error: 'Usuario o contraseña inválidos. El usuario debe tener 3-16 caracteres y la contraseña al menos 8.' });
         return;
     }
-    const isOwnerAccount = normalizeUsername(credentials.username) === 'gueta';
-    if (isOwnerAccount) {
-        const expectedKey = process.env.GUETA_ACCOUNT_KEY;
-        if (!expectedKey) {
-            response.status(503).json({ error: 'La creación de esa cuenta no está configurada.' });
-            return;
-        }
-        const expectedDigest = createHash('sha256').update(expectedKey).digest();
-        const suppliedDigest = createHash('sha256').update(credentials.ownerKey ?? '').digest();
-        if (!timingSafeEqual(expectedDigest, suppliedDigest)) {
-            response.status(403).json({ error: 'No se pudo crear la cuenta.' });
-            return;
-        }
-    }
     try {
         const passwordHash = await argon2.hash(credentials.password, { type: argon2.argon2id });
-        const account = accounts.createAccount(credentials.username, passwordHash, isOwnerAccount);
+        const account = accounts.createAccount(credentials.username, passwordHash);
         const token = accounts.createSession(account.id);
         setSessionCookie(response, token);
         response.status(201).json({ account: accountResponse(account) });
