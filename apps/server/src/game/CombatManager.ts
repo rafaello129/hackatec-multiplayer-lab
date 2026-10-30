@@ -292,7 +292,7 @@ export class CombatManager {
             if (player.alive === false) {
                 const respawnAt = state.respawn.get(player.id) ?? Number.POSITIVE_INFINITY;
                 if (now >= respawnAt) {
-                    const candidates = Array.from({ length: 32 }, (_, index) => getSpawnPosition(index));
+                    const candidates = Array.from({ length: 32 }, (_, index) => getSpawnPosition(index, map.width, map.height));
                     const spawn = candidates.find(point =>
                         !map.obstacles.some(obstacle => ['wall', 'rock', 'lake'].includes(obstacle.type) && overlaps(point.x, point.y, playerRadius, obstacle)) &&
                         !players.some(other => other.id !== player.id && other.alive !== false &&
