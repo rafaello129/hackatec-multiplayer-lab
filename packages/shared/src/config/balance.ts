@@ -90,8 +90,8 @@ export const PICKUP_BALANCE = {
 
 export const STORM_BALANCE = {
     phases: 5,
-    waitMs: 30_000,
-    closeMs: 45_000,
+    waitMs: 25_000,
+    closeMs: 40_000,
     damagePerSecond: [2, 4, 8, 12, 20],
     minimumRadius: 80
 } as const;
