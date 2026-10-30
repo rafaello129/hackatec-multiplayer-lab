@@ -11,7 +11,6 @@ const player = (id: string, x: number, y: number): PlayerState => ({
 
 function blockedAt(x: number, y: number, sourceMap: GameMapState): boolean {
     return sourceMap.obstacles.some(obstacle => {
-        if (obstacle.type === 'trap') return false;
         const dx = Math.max(Math.abs(x - obstacle.x) - obstacle.width / 2, 0);
         const dy = Math.max(Math.abs(y - obstacle.y) - obstacle.height / 2, 0);
         return dx * dx + dy * dy < 32 * 32;
@@ -54,6 +53,42 @@ describe('ZombieManager', () => {
             expect(players.every(item => Math.hypot(item.x - zombie.x, item.y - zombie.y) >= 75)).toBe(true);
             expect(blockedAt(zombie.x, zombie.y, map)).toBe(false);
         }
+    });
+
+    it('advances through ten rounds and exposes a scalable final boss', () => {
+        const manager = new ZombieManager();
+        const survivor = player('survivor', 500, 400);
+        survivor.lives = ZOMBIE_BALANCE.initialLives;
+        manager.reset('boss-run', map, [survivor], 0);
+        let now = 0;
+
+        for (let round = 1; round <= ZOMBIE_BALANCE.totalRounds; round += 1) {
+            const wave = manager.getState('boss-run');
+            expect(wave.round).toBe(round);
+            expect(wave.runPhase).toBe('wave');
+            manager.applyHits(wave.zombies.map(zombie => ({
+                zombieId: zombie.id,
+                attackerId: survivor.id,
+                damage: zombie.maxHp
+            })), [survivor]);
+            now += 50;
+            manager.step('boss-run', [survivor], map, 50, now);
+            expect(manager.getState('boss-run').runPhase).toBe('intermission');
+            now += ZOMBIE_BALANCE.intermissionMs;
+            manager.step('boss-run', [survivor], map, 50, now);
+        }
+
+        const bossState = manager.getState('boss-run');
+        const boss = bossState.zombies.find(zombie => zombie.type === 'boss');
+        expect(bossState.runPhase).toBe('boss');
+        expect(boss?.maxHp).toBe(ZOMBIE_BALANCE.bossHealth);
+
+        manager.applyHits('boss-run', [{
+            zombieId: boss!.id,
+            attackerId: survivor.id,
+            damage: boss!.maxHp
+        }], [survivor]);
+        expect(manager.getState('boss-run').runPhase).toBe('won');
     });
 
     it('requires an 800ms telegraph before a giant charges', () => {
