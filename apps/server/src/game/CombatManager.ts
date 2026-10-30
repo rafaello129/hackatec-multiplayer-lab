@@ -46,6 +46,7 @@ type Runtime = {
     projectileCounter: number;
     explosionCounter: number;
     heals: PlayerHealedPayload[];
+    mode: string | null;
 };
 
 export type CombatStepResult = {
@@ -94,7 +95,8 @@ export class CombatManager {
                 knockback: new Map(),
                 projectileCounter: 0,
                 explosionCounter: 0,
-                heals: []
+                heals: [],
+                mode: null
             };
             this.rooms.set(roomId, state);
         }
@@ -231,6 +233,7 @@ export class CombatManager {
         mode: string | null = 'classic'
     ): CombatStepResult {
         const state = this.runtime(roomId);
+        state.mode = mode;
         const dt = Math.min(Math.max(dtMs, 0), COMBAT_BALANCE.serverTickMs);
         const explosions: ExplosionState[] = [];
         const beams: LaserBeamState[] = [];
@@ -618,7 +621,21 @@ export class CombatManager {
                     state.heals.push({ playerId: attacker.id, x: attacker.x, y: attacker.y, amount: nextHealth - previousHealth });
                 }
             }
-            state.respawn.set(player.id, now + MATCH_BALANCE.classicRespawnMs);
+
+            if (state.mode === 'battleRoyale' || (state.mode === 'everyone-vs-one' && player.role === 'titan')) {
+                player.spectator = true;
+                state.respawn.delete(player.id);
+            } else if (state.mode === 'everyone-vs-one' && player.role === 'hunter') {
+                player.lives = Math.max(0, (player.lives ?? 1) - 1);
+                if (player.lives === 0) {
+                    player.spectator = true;
+                    state.respawn.delete(player.id);
+                } else {
+                    state.respawn.set(player.id, now + MATCH_BALANCE.classicRespawnMs);
+                }
+            } else {
+                state.respawn.set(player.id, now + MATCH_BALANCE.classicRespawnMs);
+            }
         }
         return true;
     }
