@@ -27,10 +27,10 @@ export class MatchManager {
     private readonly dirtyRooms = new Set<string>();
 
     constructor(
-        private readonly voteDurationMs = MATCH_BALANCE.votingDurationMs,
-        private readonly countdownDurationMs = MATCH_BALANCE.countdownDurationMs,
-        private readonly matchDurationMs = MATCH_BALANCE.classicDurationMs,
-        private readonly resultsDurationMs = MATCH_BALANCE.resultsDurationMs,
+        private readonly voteDurationMs: number = MATCH_BALANCE.votingDurationMs,
+        private readonly countdownDurationMs: number = MATCH_BALANCE.countdownDurationMs,
+        private readonly matchDurationMs: number = MATCH_BALANCE.classicDurationMs,
+        private readonly resultsDurationMs: number = MATCH_BALANCE.resultsDurationMs,
         private readonly availableModes: readonly GameMode[] = AVAILABLE_GAME_MODES
     ) {}
 
