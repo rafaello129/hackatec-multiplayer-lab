@@ -205,8 +205,8 @@ export type WeaponStatePayload = {
     selectedWeapon: WeaponType;
     availableSlots: WeaponSlot[];
     cooldownRemainingMs: number;
-    laserEnergyMs: number;
-    laserEnergyMaxMs: number;
+    laserEnergyMs?: number;
+    laserEnergyMaxMs?: number;
 };
 export type WeaponActionResultPayload = { ok: boolean; message: string };
 export type ProjectileState = {
@@ -243,7 +243,7 @@ export type SkinAsset = { id: string; url: string; width: number; height: number
 export type PlayerAppearance = { mode: 'color' | 'skin'; colorHex: string; skin?: SkinAsset };
 export type ProfileUpdatePayload = { username?: string; appearance?: PlayerAppearance };
 
-export type GameMode = 'classic' | 'everyone-vs-one' | 'rockets' | 'battleRoyale';
+export type GameMode = 'classic' | 'everyone-vs-one' | 'rockets' | 'battleRoyale' | 'zombies';
 export type MatchPhase = 'waiting' | 'voting' | 'countdown' | 'playing' | 'results';
 export type MatchStatePayload = {
     roomId: string;
