@@ -116,6 +116,7 @@ export type ProjectileState = {
     vx: number;
     vy: number;
     weapon: ProjectileWeaponType;
+    createdAt?: number;
 };
 export type LaserBeamState = { ownerId: string; x1: number; y1: number; x2: number; y2: number };
 export type ExplosionState = { id: string; x: number; y: number; radius: number; createdAt: number };
