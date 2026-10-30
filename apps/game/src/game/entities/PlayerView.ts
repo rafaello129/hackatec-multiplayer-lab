@@ -205,7 +205,7 @@ export class PlayerView
         }
     }
 
-    private get animatedParts(): GameObjects.GameObject[]
+    private get animatedParts(): Array<GameObjects.Polygon | GameObjects.Image>
     {
         return [this.body, this.skin];
     }
