@@ -7,6 +7,7 @@ export class ArenaFrame {
     private readonly playerCountText: GameObjects.Text;
     private readonly connectionText: GameObjects.Text;
     private readonly errorText: GameObjects.Text;
+    private readonly chrome: GameObjects.GameObject[] = [];
 
     constructor(scene: Scene, roomId: string) {
         // Keep the arena plate behind the map and all gameplay entities.
@@ -23,27 +24,28 @@ export class ArenaFrame {
             .lineStyle(1, 0x263c59, 0.85)
             .strokeRoundedRect(32, 128, 960, 600, 12);
 
-        scene.add.text(38, 25, ARENA_UI_TEXTS.brand, {
+        this.chrome.push(scene.add.text(38, 25, ARENA_UI_TEXTS.brand, {
             fontFamily: 'Arial Black',
             fontSize: 19,
             color: '#f8fafc',
             letterSpacing: 1.2
-        }).setDepth(10);
+        }).setDepth(10));
 
-        scene.add.text(39, 49, ARENA_UI_TEXTS.subtitle, {
+        this.chrome.push(scene.add.text(39, 49, ARENA_UI_TEXTS.subtitle, {
             fontFamily: 'Arial Black',
             fontSize: 9,
             color: '#60a5fa',
             letterSpacing: 2.2
-        }).setDepth(10);
+        }).setDepth(10));
 
         this.roomText = scene.add.text(39, 76, ARENA_UI_TEXTS.roomPrefix + '  ' + roomId, {
             fontFamily: 'Arial',
             fontSize: 13,
             color: '#b8c8dc'
         }).setDepth(10);
+        this.chrome.push(this.roomText);
 
-        scene.add.rectangle(512, 62, 1, 54, 0x3b526e, 0.6).setDepth(10);
+        this.chrome.push(scene.add.rectangle(512, 62, 1, 54, 0x3b526e, 0.6).setDepth(10));
 
         this.playerCountText = scene.add.text(512, 42, '0 / 32 ' + ARENA_UI_TEXTS.playerCountSuffix, {
             fontFamily: 'Arial Black',
@@ -51,14 +53,15 @@ export class ArenaFrame {
             color: '#f8fafc',
             align: 'center'
         }).setOrigin(0.5, 0).setDepth(10);
+        this.chrome.push(this.playerCountText);
 
-        scene.add.text(512, 67, ARENA_UI_TEXTS.sharedArena, {
+        this.chrome.push(scene.add.text(512, 67, ARENA_UI_TEXTS.sharedArena, {
             fontFamily: 'Arial',
             fontSize: 9,
             color: '#7185a1',
             align: 'center',
             letterSpacing: 1.1
-        }).setOrigin(0.5, 0).setDepth(10);
+        }).setOrigin(0.5, 0).setDepth(10));
 
         this.connectionText = scene.add.text(985, 31, '', {
             fontFamily: 'Arial Black',
@@ -66,14 +69,15 @@ export class ArenaFrame {
             color: '#facc15',
             align: 'right'
         }).setOrigin(1, 0).setDepth(10);
+        this.chrome.push(this.connectionText);
 
-        scene.add.text(985, 57, ARENA_UI_TEXTS.movementHelp, {
+        this.chrome.push(scene.add.text(985, 57, ARENA_UI_TEXTS.movementHelp, {
             fontFamily: 'Arial Black',
             fontSize: 9,
             color: '#8194ad',
             align: 'right',
             letterSpacing: 0.5
-        }).setOrigin(1, 0).setDepth(10);
+        }).setOrigin(1, 0).setDepth(10));
 
         this.errorText = scene.add.text(512, 134, '', {
             fontFamily: 'Arial',
@@ -84,6 +88,12 @@ export class ArenaFrame {
             align: 'center',
             wordWrap: { width: 720 }
         }).setOrigin(0.5, 0).setDepth(40).setVisible(false);
+    }
+
+    setMinimalHud(hidden: boolean): void {
+        const alpha = hidden ? 0 : 1;
+        this.background.setAlpha(alpha);
+        for (const item of this.chrome) item.setAlpha(alpha);
     }
 
     setRoom(roomId: string): void {
@@ -119,6 +129,7 @@ export class ArenaFrame {
 
     destroy(): void {
         this.background.destroy();
+        for (const item of this.chrome) item.destroy();
         this.roomText.destroy();
         this.playerCountText.destroy();
         this.connectionText.destroy();
