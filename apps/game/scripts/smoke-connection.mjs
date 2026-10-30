@@ -23,6 +23,22 @@ function waitFor(socket, event, timeoutMs = 5000) {
     });
 }
 
+function waitForMatchVote(socket, playerId, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            socket.off('match:state', handler);
+            reject(new Error('Timed out waiting for registered vote'));
+        }, timeoutMs);
+        const handler = (payload) => {
+            if (payload?.votes?.[playerId] !== 'classic') return;
+            clearTimeout(timeout);
+            socket.off('match:state', handler);
+            resolve(payload);
+        };
+        socket.on('match:state', handler);
+    });
+}
+
 function waitForMatchPhase(socket, phase, timeoutMs = 5000) {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
@@ -178,6 +194,10 @@ async function main() {
     assert(betaState.players.length === 2, 'beta should receive a two-player snapshot');
     assert(betaState.hostId === alpha.id, 'the first player should be the room host');
     assert(votingState.phase === 'voting' && betaMatchState.phase === 'voting', 'two players should trigger a shared vote');
+    const voteStatePromise = waitForMatchVote(beta, beta.id);
+    beta.emit('match:vote', { mode: 'classic' });
+    const voteState = await voteStatePromise;
+    assert(voteState.votes[beta.id] === 'classic', 'player vote should be synchronized to the room');
 
     const alphaCountdown = waitForMatchPhase(alpha, 'countdown');
     alpha.emit('match:host-start', { mode: 'classic' });
@@ -200,15 +220,14 @@ async function main() {
     assert(gammaState.players[0]?.name === gammaAccount.username, 'other-room contains an unexpected player');
 
     const betaHostChanged = waitFor(beta, 'room:host-changed');
+    const betaSawLeave = waitFor(beta, 'player:left');
     const alphaId = alpha.id;
     alpha.disconnect();
     const newHost = await betaHostChanged;
     assert(newHost.hostId === beta.id, 'host role should transfer to the longest-waiting player');
-    const betaSawLeave = waitFor(beta, 'player:left');
-    const betaId = beta.id;
-    beta.disconnect();
     const left = await betaSawLeave;
-    assert(left.playerId === betaId, 'remaining room member did not observe beta leaving');
+    assert(left.playerId === alphaId, 'beta did not observe the previous host leaving');
+    beta.disconnect();
 
     console.log('[smoke] authenticated same-room join/state/leave verified');
     console.log('[smoke] room isolation verified');
