@@ -45,7 +45,7 @@ describe('ZombieManager', () => {
 
     it('stuns a giant for two seconds when its charge hits a wall', () => {
         const manager = new ZombieManager();
-        const target = player('target', 700, 400);
+        const target = player('target', 1_000, 400);
         const state = manager.reset('room', map, [target], 0);
         const giant = manager.getTargets('room').find(zombie => zombie.type === 'giant')!;
         giant.x = 980;
