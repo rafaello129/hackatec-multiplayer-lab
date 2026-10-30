@@ -10,7 +10,8 @@ import {
     type CombatSnapshot,
     type WeaponType,
     type RoomErrorPayload,
-    type RoomStatePayload
+    type RoomStatePayload,
+    type MatchStatePayload
 } from '@hackatec/shared';
 import { Scene, type GameObjects, Input } from 'phaser';
 import type { Socket } from 'socket.io-client';
@@ -35,6 +36,7 @@ export class ArenaScene extends Scene
     private readonly playerRegistry = new PlayerRegistry();
     private readonly playerViews = new Map<string, PlayerView>();
     private selfId = '';
+    private roomHostId = '';
     private mapView?: MapView;
     private keys?: { w: Input.Keyboard.Key; a: Input.Keyboard.Key; s: Input.Keyboard.Key; d: Input.Keyboard.Key; shift: Input.Keyboard.Key };
     private previousInput = '';
@@ -47,6 +49,13 @@ export class ArenaScene extends Scene
     private fireHeld = false;
     private bullets?: GameObjects.Graphics;
     private combatText?: GameObjects.Text;
+    private matchState?: MatchStatePayload;
+    private matchStatusText?: GameObjects.Text;
+    private voteButton?: GameObjects.Text;
+    private hostMenuButton?: GameObjects.Text;
+    private hostStartButton?: GameObjects.Text;
+    private hostStopButton?: GameObjects.Text;
+    private matchCountdownText?: GameObjects.Text;
 
     private roomText!: GameObjects.Text;
     private playerCountText!: GameObjects.Text;
@@ -129,184 +138,110 @@ export class ArenaScene extends Scene
             this.socket.connect();
         }
 
-        // --- REFERENCIA FIJA A LA ESCENA ---
-        const mainScene = this;
+        this.createMatchInterface();
 
-        // --- 1. REGISTRO DE TEXTURA ZOMBI BOT ---
-        if (!mainScene.textures.exists('zombie_bot_skin')) {
-            const zG = mainScene.make.graphics({ x: 0, y: 0 }, false);
-            zG.fillStyle(0x10b981, 1);
-            zG.fillRect(0, 0, 32, 32);
-            zG.lineStyle(3, 0x065f46, 1);
-            zG.strokeRect(0, 0, 32, 32);
-            zG.generateTexture('zombie_bot_skin', 32, 32);
-            zG.destroy();
-        }
+        this.events.once('shutdown', () => {
+            this.matchStatusText?.destroy();
+            this.voteButton?.destroy();
+            this.hostMenuButton?.destroy();
+            this.hostStartButton?.destroy();
+            this.hostStopButton?.destroy();
+            this.matchCountdownText?.destroy();
+        });
+    }
 
-        // --- 2. TEMPORIZADOR GLOBAL (Justo abajo de Players: 1 en X: 512, Y: 78) ---
-        if (!mainScene.gameTimer) {
-            mainScene.timeRemaining = 300;
-            mainScene.timerText = mainScene.add.text(512, 78, 'Tiempo: 05:00', {
-                fontFamily: 'Arial Black',
-                fontSize: 18,
-                color: '#facc15'
-            }).setOrigin(0.5, 0.5).setDepth(300);
+    private createMatchInterface(): void {
+        this.matchStatusText = this.add.text(512, 142, 'Esperando jugadores…', {
+            fontFamily: 'Arial Black', fontSize: 17, color: '#f8fafc',
+            backgroundColor: '#0f172acc', padding: { x: 12, y: 7 }, align: 'center'
+        }).setOrigin(0.5).setDepth(320);
 
-            mainScene.gameTimer = mainScene.time.addEvent({
-                delay: 1000,
-                callback: () => {
-                    if (mainScene.timeRemaining > 0) {
-                        mainScene.timeRemaining--;
-                        const minutes = Math.floor(mainScene.timeRemaining / 60);
-                        const seconds = mainScene.timeRemaining % 60;
-                        const fm = minutes.toString().padStart(2, '0');
-                        const fs = seconds.toString().padStart(2, '0');
-                        mainScene.timerText.setText(`Tiempo: ${fm}:${fs}`);
-                    } else {
-                        mainScene.timerText.setText('Tiempo: 00:00');
-                    }
-                },
-                callbackScope: mainScene,
-                loop: true
-            });
-        }
+        this.matchCountdownText = this.add.text(512, 178, '', {
+            fontFamily: 'Arial Black', fontSize: 20, color: '#facc15',
+            backgroundColor: '#0f172acc', padding: { x: 10, y: 5 }, align: 'center'
+        }).setOrigin(0.5).setDepth(320);
 
-        // --- 3. BOTÓN MENÚ MODOS (En X: 700, Y: 47, espacio perfecto entre Players y Connected) ---
-        const menuButton = mainScene.add.text(700, 47, '⚙️ Menú Modos', {
-            fontSize: 16,
-            fontFamily: 'Arial Black',
-            backgroundColor: '#0f172a',
-            color: '#facc15',
-            padding: { x: 14, y: 8 }
-        }).setOrigin(0.5, 0.5).setInteractive().setDepth(300).setVisible(false);
+        this.voteButton = this.add.text(512, 220, 'Votar: Clásico', {
+            fontFamily: 'Arial Black', fontSize: 16, color: '#ffffff',
+            backgroundColor: '#0369a1', padding: { x: 14, y: 8 }
+        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+        this.voteButton.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_VOTE, { mode: 'classic' }));
 
-        const resetTimer = () => {
-            mainScene.timeRemaining = 300;
-            if (mainScene.timerText) {
-                mainScene.timerText.setText('Tiempo: 05:00');
-            }
-        };
-
-        // --- 4. CONSTRUCTOR DEL MENÚ DE JUEGO ---
-        const createGameMenu = () => {
-            const bg = mainScene.add.rectangle(512, 384, 1024, 768, 0x000000, 0.85).setDepth(400);
-
-            const title = mainScene.add.text(512, 180, 'SELECCIONA EL MODO DE JUEGO', {
-                fontFamily: 'Arial Black',
-                fontSize: 28,
-                color: '#ffffff'
-            }).setOrigin(0.5).setDepth(401);
-
-            const btnNormal = mainScene.add.text(512, 270, ' Modo Normal (Clásico) ', {
-                fontSize: 22,
-                backgroundColor: '#1e293b',
-                color: '#38bdf8',
-                padding: { x: 20, y: 10 }
-            }).setOrigin(0.5).setInteractive().setDepth(401);
-
-            const btnTeam = mainScene.add.text(512, 350, ' Modo Equipos (Team) ', {
-                fontSize: 22,
-                backgroundColor: '#1e293b',
-                color: '#4ade80',
-                padding: { x: 20, y: 10 }
-            }).setOrigin(0.5).setInteractive().setDepth(401);
-
-            const btnZombie = mainScene.add.text(512, 430, ' Modo Zombis (Bots) ', {
-                fontSize: 22,
-                backgroundColor: '#1e293b',
-                color: '#f87171',
-                padding: { x: 20, y: 10 }
-            }).setOrigin(0.5).setInteractive().setDepth(401);
-
-            let btnRed: Phaser.GameObjects.Text;
-            let btnBlue: Phaser.GameObjects.Text;
-
-            const destroyMenu = () => {
-                bg.destroy();
-                title.destroy();
-                btnNormal.destroy();
-                btnTeam.destroy();
-                btnZombie.destroy();
-                if (btnRed) btnRed.destroy();
-                if (btnBlue) btnBlue.destroy();
-                menuButton.setVisible(true);
-            };
-
-            btnNormal.on('pointerdown', () => {
-                if (mainScene.currentMode !== 'normal') {
-                    resetTimer();
-                }
-                mainScene.currentMode = 'normal';
-                mainScene.playerTeam = 'none';
-                mainScene.zombieGroup?.clear(true, true);
-                destroyMenu();
-                console.log("Modo Normal activo");
-            });
-
-            btnTeam.on('pointerdown', () => {
-                const prevMode = mainScene.currentMode;
-                mainScene.currentMode = 'team';
-                
-                if (prevMode !== 'team') {
-                    resetTimer();
-                }
-
-                title.setText('ELIGE TU EQUIPO');
-                btnNormal.setVisible(false);
-                btnTeam.setVisible(false);
-                btnZombie.setVisible(false);
-
-                btnRed = mainScene.add.text(512, 310, ' 🔴 Equipo Rojo ', {
-                    fontSize: 22,
-                    backgroundColor: '#7f1d1d',
-                    color: '#fca5a5',
-                    padding: { x: 20, y: 10 }
-                }).setOrigin(0.5).setInteractive().setDepth(401);
-
-                btnBlue = mainScene.add.text(512, 400, ' 🔵 Equipo Azul ', {
-                    fontSize: 22,
-                    backgroundColor: '#1e3a8a',
-                    color: '#93c5fd',
-                    padding: { x: 20, y: 10 }
-                }).setOrigin(0.5).setInteractive().setDepth(401);
-
-                btnRed.on('pointerdown', () => {
-                    mainScene.playerTeam = 'red';
-                    mainScene.zombieGroup?.clear(true, true);
-                    destroyMenu();
-                    console.log("Modo Equipo activo - Bando: ROJO");
-                });
-
-                btnBlue.on('pointerdown', () => {
-                    mainScene.playerTeam = 'blue';
-                    mainScene.zombieGroup?.clear(true, true);
-                    destroyMenu();
-                    console.log("Modo Equipo activo - Bando: AZUL");
-                });
-            });
-
-           btnZombie.on('pointerdown', () => {
-                if (mainScene.currentMode !== 'zombie') {
-                    resetTimer();
-                }
-                mainScene.currentMode = 'zombie';
-                mainScene.playerTeam = 'none';
-                destroyMenu();
-
-                console.log("Modo Zombis activo");
-
-                // Llamada segura utilizando la referencia fija a la escena
-                mainScene.startZombieSpawner();
-            });
-        };
-
-        menuButton.on('pointerdown', () => {
-            menuButton.setVisible(false);
-            createGameMenu();
+        this.hostMenuButton = this.add.text(870, 112, '⚙ Anfitrión', {
+            fontFamily: 'Arial Black', fontSize: 14, color: '#facc15',
+            backgroundColor: '#1e293b', padding: { x: 10, y: 7 }
+        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+        this.hostMenuButton.on('pointerdown', () => {
+            const visible = !this.hostStartButton?.visible;
+            this.hostStartButton?.setVisible(visible);
+            this.hostStopButton?.setVisible(visible);
         });
 
-        // Desplegar menú al inicio
-        createGameMenu();
+        this.hostStartButton = this.add.text(870, 158, 'Forzar nueva partida', {
+            fontFamily: 'Arial', fontSize: 13, color: '#ffffff',
+            backgroundColor: '#166534', padding: { x: 9, y: 6 }
+        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+        this.hostStartButton.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_HOST_START, { mode: 'classic' }));
+
+        this.hostStopButton = this.add.text(870, 198, 'Detener partida', {
+            fontFamily: 'Arial', fontSize: 13, color: '#ffffff',
+            backgroundColor: '#991b1b', padding: { x: 9, y: 6 }
+        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+        this.hostStopButton.on('pointerdown', () => {
+            this.socket.emit(SOCKET_EVENTS.MATCH_HOST_STOP);
+            this.hostStartButton?.setVisible(false);
+            this.hostStopButton?.setVisible(false);
+        });
+    }
+
+    private readonly handleMatchState = (state: MatchStatePayload): void => {
+        this.matchState = state;
+        this.roomHostId = state.hostId ?? '';
+        const labels: Record<MatchStatePayload['phase'], string> = {
+            waiting: 'Esperando para iniciar',
+            voting: 'Votación de modo',
+            countdown: 'La partida está por comenzar',
+            playing: 'Partida en curso · Clásico',
+            results: 'Resultados de la partida'
+        };
+        const voteCount = Object.keys(state.votes).length;
+        const host = this.roomHostId === this.selfId;
+        this.matchStatusText?.setText(state.message ? labels[state.phase] + '\\n' + state.message : labels[state.phase]);
+        this.voteButton?.setVisible(state.phase === 'voting');
+        this.voteButton?.setText(state.votes[this.selfId] ? 'Cambiar voto: Clásico' : 'Votar: Clásico');
+        this.hostMenuButton?.setVisible(host);
+        if (!host) {
+            this.hostStartButton?.setVisible(false);
+            this.hostStopButton?.setVisible(false);
+        }
+        if (state.phase === 'voting') {
+            this.matchStatusText?.setText(labels[state.phase] + ' · ' + voteCount + ' voto(s)');
+        }
+        this.updateMatchClock();
+    };
+
+    private readonly handleMatchActionResult = (result: { ok: boolean; message: string }): void => {
+        if (!result.ok) this.errorText.setText(result.message).setVisible(true);
+        else this.errorText.setVisible(false);
+    };
+
+    private updateMatchClock(): void {
+        const state = this.matchState;
+        if (!state || !this.matchCountdownText) return;
+        const target = state.phase === 'voting' ? state.voteEndsAt :
+            state.phase === 'countdown' ? state.startsAt :
+            state.phase === 'playing' || state.phase === 'results' ? state.endsAt : null;
+        if (target === null) {
+            this.matchCountdownText.setText('');
+            return;
+        }
+        const seconds = Math.max(0, Math.ceil((target - Date.now()) / 1000));
+        const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const remainder = (seconds % 60).toString().padStart(2, '0');
+        const prefix = state.phase === 'voting' ? 'Votación: ' :
+            state.phase === 'countdown' ? 'Inicio: ' :
+            state.phase === 'results' ? 'Resultados: ' : 'Tiempo: ';
+        this.matchCountdownText.setText(prefix + minutes + ':' + remainder);
     }
 
     private spawnZombieBot(): void {
@@ -464,6 +399,8 @@ private createInterface()
         this.socket.on(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.on(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.on(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
+        this.socket.on(SOCKET_EVENTS.MATCH_STATE, this.handleMatchState);
+        this.socket.on(SOCKET_EVENTS.MATCH_ACTION_RESULT, this.handleMatchActionResult);
     }
 
     private detachSocketListeners()
@@ -477,6 +414,8 @@ private createInterface()
         this.socket.off(SOCKET_EVENTS.PLAYER_MOVED, this.handlePlayerMoved);
         this.socket.off(SOCKET_EVENTS.COMBAT_STATE, this.handleCombat);
         this.socket.off(SOCKET_EVENTS.PROFILE_RESULT, this.handleProfileResult);
+        this.socket.off(SOCKET_EVENTS.MATCH_STATE, this.handleMatchState);
+        this.socket.off(SOCKET_EVENTS.MATCH_ACTION_RESULT, this.handleMatchActionResult);
     }
 
     private joinRoom()
@@ -502,6 +441,8 @@ private createInterface()
         this.setConnectionStatus('disconnected');
         this.playerRegistry.replaceAll([]);
         this.selfId = '';
+        this.matchState = undefined;
+        this.roomHostId = '';
         this.previousInput = '';
         this.mapView?.clear();
         this.bullets?.clear();
@@ -518,6 +459,7 @@ private createInterface()
         this.playerRegistry.replaceAll(payload.players);
         this.mapView?.render(payload.map);
         this.syncPlayerViews();
+        if (payload.hostId) this.roomHostId = payload.hostId;
 
         const myPlayerState = this.playerRegistry.get(this.selfId);
         if (myPlayerState) {
@@ -572,7 +514,8 @@ private createInterface()
     };
 
     update(time: number) {
-        if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors) return;
+        this.updateMatchClock();
+        if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors || this.matchState?.phase !== 'playing') return;
         const pad = this.input.gamepad?.getPad(0);
         const x = pad?.leftStick.x ?? 0;
         const y = pad?.leftStick.y ?? 0;
