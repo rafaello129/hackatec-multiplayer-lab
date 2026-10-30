@@ -15,8 +15,8 @@ describe('PickupManager', () => {
         const a = first.reset('room', map);
         const b = second.reset('room', map);
         expect(a).toEqual(b);
-        expect(a.length).toBe(6);
-        expect(a.filter(pickup => pickup.type === 'medkit')).toHaveLength(2);
+        expect(a.length).toBe(7);
+        expect(a.filter(pickup => pickup.type === 'medkit')).toHaveLength(3);
         expect(a.filter(pickup => pickup.type === 'shield')).toHaveLength(4);
         for (const pickup of a) {
             expect(map.obstacles.some(obstacle => {
