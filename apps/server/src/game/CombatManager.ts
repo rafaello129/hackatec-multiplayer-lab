@@ -587,6 +587,10 @@ export class CombatManager {
         }
     }
 
+    applyEnvironmentalDamage(roomId: string, player: PlayerState, amount: number, now: number): boolean {
+        return this.damage(this.runtime(roomId), player, amount, now);
+    }
+
     private damage(
         state: Runtime,
         player: PlayerState,
