@@ -7,7 +7,10 @@ import {
     type PlayerJoinedPayload,
     type PlayerLeftPayload,
     type RoomErrorPayload,
-    type RoomStatePayload
+    type RoomStatePayload,
+    type GameMode,
+    type MatchVotePayload,
+    type HostStartMatchPayload
 } from '@hackatec/shared';
 import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
@@ -15,6 +18,7 @@ import { CombatManager } from '../game/CombatManager.js';
 import { AccountStore, normalizeUsername, SESSION_COOKIE, type Account } from '../auth/AccountStore.js';
 import { getAllowedOrigins } from '../config/env.js';
 import { RoomManager } from '../rooms/RoomManager.js';
+import { MatchManager } from '../rooms/MatchManager.js';
 import { parseJoinPayload } from './validateJoinPayload.js';
 
 function socketRoom(roomId: string): string
@@ -31,6 +35,7 @@ export function registerSocketHandlers(
 {
     const movement = new Map<string, MovementRuntime>();
     const combat = new CombatManager();
+    const matches = new MatchManager();
     const identities = new Map<string, string>();
 
     io.use((socket, next) => {
@@ -66,6 +71,7 @@ export function registerSocketHandlers(
             if (!player || !roomId) { movement.delete(socketId); continue; }
             const map = roomManager.getMap(roomId);
             if (!map) continue;
+            if (!matches.isPlaying(roomId)) continue;
             const wasDashing = player.isDashing;
             const moved = advanceMovement(player, state, map, 50, now);
             if (moved || wasDashing !== player.isDashing) {
@@ -77,8 +83,24 @@ export function registerSocketHandlers(
             const map = roomManager.getMap(roomId);
             if (!map) { rooms.delete(roomId); continue; }
             const players = roomManager.getPlayers(roomId);
-            const projectiles = combat.step(roomId, players, map, 50, now);
-            io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players, projectiles });
+            matches.syncRoom(roomId, players, roomManager.getHostId(roomId), now);
+            for (const transition of matches.advance(now, id => roomManager.getPlayers(id))) {
+                const roundPlayers = roomManager.getPlayers(transition.roomId);
+                for (const player of roundPlayers) {
+                    player.hp = 100; player.maxHp = 100; player.alive = true;
+                    player.kills = 0; player.deaths = 0; player.isDashing = false;
+                    player.immobilizedUntil = 0;
+                }
+                combat.resetRoom(transition.roomId);
+                movement.forEach((runtime, socketId) => {
+                    if (roomManager.getRoomId(socketId) === transition.roomId) movement.set(socketId, createMovementRuntime());
+                });
+            }
+            if (matches.isPlaying(roomId)) {
+                const projectiles = combat.step(roomId, players, map, 50, now);
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players, projectiles });
+            }
+            for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
         }
     }, 50);
     tick.unref?.();
@@ -157,6 +179,9 @@ export function registerSocketHandlers(
                 io.to(socketRoom(result.previous.roomId))
                     .emit(SOCKET_EVENTS.PLAYER_LEFT, leftPayload);
 
+                matches.syncRoom(result.previous.roomId, roomManager.getPlayers(result.previous.roomId), roomManager.getHostId(result.previous.roomId), Date.now());
+                for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
+                if (result.previous.hostId) io.to(socketRoom(result.previous.roomId)).emit(SOCKET_EVENTS.ROOM_HOST_CHANGED, { hostId: result.previous.hostId });
                 console.log(
                     `[room] ${socket.id} left ${result.previous.roomId}`
                 );
@@ -174,10 +199,14 @@ export function registerSocketHandlers(
                 roomId: result.roomId,
                 selfId: socket.id,
                 players: result.players,
-                map: result.map
+                map: result.map,
+                hostId: result.hostId
             };
 
             socket.emit(SOCKET_EVENTS.ROOM_STATE, statePayload);
+            matches.syncRoom(result.roomId, result.players, result.hostId, Date.now());
+            socket.emit(SOCKET_EVENTS.MATCH_STATE, matches.getState(result.roomId));
+            for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
 
             if (previousRoomId !== result.roomId)
             {
@@ -239,8 +268,37 @@ export function registerSocketHandlers(
             }
         });
 
+        socket.on(SOCKET_EVENTS.MATCH_VOTE, (raw: unknown) => {
+            const roomId = roomManager.getRoomId(socket.id);
+            if (!roomId || !raw || typeof raw !== 'object') return;
+            const mode = (raw as Partial<MatchVotePayload>).mode;
+            if (typeof mode !== 'string') return;
+            const result = matches.vote(roomId, socket.id, mode as GameMode, Date.now());
+            socket.emit(SOCKET_EVENTS.MATCH_ACTION_RESULT, result);
+            for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
+        });
+
+        socket.on(SOCKET_EVENTS.MATCH_HOST_START, (raw: unknown) => {
+            const roomId = roomManager.getRoomId(socket.id);
+            if (!roomId || !raw || typeof raw !== 'object') return;
+            const mode = (raw as Partial<HostStartMatchPayload>).mode;
+            if (typeof mode !== 'string') return;
+            const result = matches.forceStart(roomId, socket.id, mode as GameMode, Date.now());
+            socket.emit(SOCKET_EVENTS.MATCH_ACTION_RESULT, result);
+            for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
+        });
+
+        socket.on(SOCKET_EVENTS.MATCH_HOST_STOP, () => {
+            const roomId = roomManager.getRoomId(socket.id);
+            if (!roomId) return;
+            const result = matches.stop(roomId, socket.id);
+            socket.emit(SOCKET_EVENTS.MATCH_ACTION_RESULT, result);
+            for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
+        });
+
         socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) => {
-            if (!roomManager.getRoomId(socket.id)) return;
+            const activeRoom = roomManager.getRoomId(socket.id);
+            if (!activeRoom || !matches.isPlaying(activeRoom)) return;
             if (!raw || typeof raw !== 'object') return;
             const input = (raw as Partial<PlayerInputPayload>).input;
             if (!input || typeof input !== 'object') return;
@@ -253,7 +311,7 @@ export function registerSocketHandlers(
         socket.on(SOCKET_EVENTS.PLAYER_SHOOT, (payload: unknown) => {
             const roomId = roomManager.getRoomId(socket.id);
             const player = roomManager.getPlayer(socket.id);
-            if (roomId && player) combat.shoot(roomId, player, payload, Date.now());
+            if (roomId && player && matches.isPlaying(roomId)) combat.shoot(roomId, player, payload, Date.now());
         });
 
         socket.on('disconnect', (reason) => {
@@ -265,6 +323,9 @@ export function registerSocketHandlers(
             {
                 combat.leave(left.roomId, socket.id, !roomManager.hasRoom(left.roomId));
                 if (!roomManager.hasRoom(left.roomId)) rooms.delete(left.roomId);
+                matches.syncRoom(left.roomId, roomManager.getPlayers(left.roomId), roomManager.getHostId(left.roomId), Date.now());
+                for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
+                if (left.hostId) io.to(socketRoom(left.roomId)).emit(SOCKET_EVENTS.ROOM_HOST_CHANGED, { hostId: left.hostId });
                 const leftPayload: PlayerLeftPayload = {
                     playerId: left.player.id
                 };
