@@ -93,8 +93,15 @@ export const ZOMBIE_BALANCE = {
         puddleDurationMs: 4_000,
         cooldownMs: 3_000,
         preferredRange: 300,
-        fleeRange: 130
+        fleeRange: 130,
+        moveSpeed: 90,
+        projectileSpeed: 280,
+        projectileLifetimeMs: 1_200,
+        projectileRadius: 8,
+        puddleRadius: 48
     },
+    spawnIntervalMs: 20_000,
+    maximumAlive: 12,
     modes: ['classic', 'everyone-vs-one'] as const
 } as const;
 
