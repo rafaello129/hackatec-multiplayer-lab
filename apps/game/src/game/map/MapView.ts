@@ -34,7 +34,7 @@ export class MapView
         this.ground = scene.add.tileSprite(
             ARENA.x + ARENA.width / 2,
             ARENA.y + ARENA.height / 2,
-            mapWidth - ARENA.x * 2,
+            this.mapWidth - ARENA.x * 2,
             ARENA.height,
             GROUND_TEXTURE
         ).setDepth(-2);
@@ -109,7 +109,7 @@ export class MapView
         this.graphics.strokeRoundedRect(
             ARENA.x,
             ARENA.y,
-            ARENA.width,
+            mapWidth - ARENA.x * 2,
             ARENA.height,
             10
         );
