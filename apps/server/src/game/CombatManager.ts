@@ -81,7 +81,7 @@ function blocked(x: number, y: number, map: GameMapState): boolean {
         y < COMBAT_BALANCE.playableTop + radius ||
         y > COMBAT_BALANCE.playableBottom - radius) return true;
     return map.obstacles.some(obstacle =>
-        obstacle.type === 'wall' && overlaps(x, y, radius, obstacle)
+        ['wall', 'rock', 'lake'].includes(obstacle.type) && overlaps(x, y, radius, obstacle)
     );
 }
 
@@ -280,7 +280,7 @@ export class CombatManager {
                 if (now >= respawnAt) {
                     const candidates = Array.from({ length: 32 }, (_, index) => getSpawnPosition(index));
                     const spawn = candidates.find(point =>
-                        !map.obstacles.some(obstacle => obstacle.type === 'wall' && overlaps(point.x, point.y, playerRadius, obstacle)) &&
+                        !map.obstacles.some(obstacle => ['wall', 'rock', 'lake'].includes(obstacle.type) && overlaps(point.x, point.y, playerRadius, obstacle)) &&
                         !players.some(other => other.id !== player.id && other.alive !== false &&
                             !other.spectator && Math.hypot(other.x - point.x, other.y - point.y) < playerRadius * 2)
                     ) ?? getSpawnPosition(players.findIndex(item => item.id === player.id));
@@ -302,7 +302,7 @@ export class CombatManager {
             const touching = new Set<string>();
             const previousTraps = state.traps.get(player.id) ?? new Set<string>();
             for (const obstacle of map.obstacles) {
-                if (obstacle.type === 'wall' || !overlaps(player.x, player.y, playerRadius, obstacle)) continue;
+                if (['wall', 'rock', 'lake'].includes(obstacle.type) || !overlaps(player.x, player.y, playerRadius, obstacle)) continue;
                 if (obstacle.type === 'trap') {
                     touching.add(obstacle.id);
                     if (!player.isDashing && !previousTraps.has(obstacle.id) &&
@@ -490,7 +490,7 @@ export class CombatManager {
             const x = attacker.x + dx * distance;
             const y = attacker.y + dy * distance;
             if (x < 0 || x > map.width || y < COMBAT_BALANCE.playableTop || y > COMBAT_BALANCE.playableBottom ||
-                map.obstacles.some(obstacle => obstacle.type === 'wall' && overlaps(x, y, 1, obstacle))) {
+                map.obstacles.some(obstacle => ['wall', 'rock'].includes(obstacle.type) && overlaps(x, y, 1, obstacle))) {
                 return { x, y };
             }
             const target = players.find(player =>
@@ -558,7 +558,7 @@ export class CombatManager {
                 if (projectile.x < 0 || projectile.x > map.width ||
                     projectile.y < COMBAT_BALANCE.playableTop ||
                     projectile.y > COMBAT_BALANCE.playableBottom ||
-                    map.obstacles.some(obstacle => obstacle.type === 'wall' &&
+                    map.obstacles.some(obstacle => ['wall', 'rock'].includes(obstacle.type) &&
                         overlaps(projectile.x, projectile.y, COMBAT_BALANCE.projectileRadius, obstacle))) {
                     hit = true;
                     break;
