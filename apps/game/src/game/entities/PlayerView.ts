@@ -11,6 +11,7 @@ export class PlayerView
     private readonly skin: GameObjects.Image;
     private currentSkin = '';
     private destroyed = false;
+    private bodyBaseScale = 1;
     private readonly nameText: GameObjects.Text;
     private readonly trapText: GameObjects.Text;
     private readonly trapBar: GameObjects.Graphics;
@@ -87,7 +88,8 @@ export class PlayerView
                 ? Number.parseInt(player.appearance.colorHex.slice(1), 16)
                 : 0x3b82f6;
         this.body.setFillStyle(player.alive === false ? 0x64748b : color);
-        this.body.setScale(player.role === 'titan' ? 1.45 : 1);
+        this.bodyBaseScale = player.role === 'titan' ? 1.45 : 1;
+        this.body.setScale(this.bodyBaseScale);
         this.body.setAlpha(player.isInvulnerable ? 0.5 : player.alive === false ? 0.35 : 1);
         this.skin.setAlpha(player.isInvulnerable ? 0.5 : player.alive === false ? 0.35 : 1);
         this.syncSkin(player);
@@ -215,8 +217,9 @@ export class PlayerView
         for (const part of this.animatedParts) {
             part.x = 0;
             part.y = 0;
-            part.scaleX = 1;
-            part.scaleY = 1;
+            const baseScale = part === this.body ? this.bodyBaseScale : 1;
+            part.scaleX = baseScale;
+            part.scaleY = baseScale;
             part.angle = 0;
         }
     }
@@ -233,9 +236,7 @@ export class PlayerView
             angle: 360,
             duration: 700,
             ease: 'Power2',
-            onComplete: () => {
-                this.body.angle = 0;
-            }
+            onComplete: () => this.resetAnimatedParts()
         });
     }
 
@@ -253,13 +254,7 @@ export class PlayerView
             yoyo: true,
             repeat: 1,
             ease: 'Quad.easeOut',
-            onComplete: () => {
-                this.body.x = 0;
-                this.body.y = 0;
-                this.body.angle = 0;
-                this.body.scaleX = 1;
-                this.body.scaleY = 1;
-            }
+            onComplete: () => this.resetAnimatedParts()
         });
     }
 
@@ -278,13 +273,7 @@ export class PlayerView
             duration: 140,
             yoyo: true,
             ease: 'Back.easeOut',
-            onComplete: () => {
-                this.body.x = 0;
-                this.body.y = 0;
-                this.body.angle = 0;
-                this.body.scaleX = 1;
-                this.body.scaleY = 1;
-            }
+            onComplete: () => this.resetAnimatedParts()
         });
     }
 
@@ -303,13 +292,7 @@ export class PlayerView
             yoyo: true,
             repeat: 9,
             ease: 'Sine.easeInOut',
-            onComplete: () => {
-                this.body.x = 0;
-                this.body.y = 0;
-                this.body.angle = 0;
-                this.body.scaleX = 1;
-                this.body.scaleY = 1;
-            }
+            onComplete: () => this.resetAnimatedParts()
         });
     }
 
