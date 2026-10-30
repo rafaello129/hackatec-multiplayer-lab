@@ -1,112 +1,96 @@
 # HackaTec Multiplayer Lab
 
-Base educativa para construir colaborativamente un videojuego web 2D multijugador usando **TypeScript, Phaser, Socket.IO, Git, prompts y agentes de programación**.
+Juego web multijugador 2D desarrollado con TypeScript, Phaser 4, Node.js, Express, Socket.IO, SQLite y npm workspaces.
 
-## Estado
+> **Estado de esta rama:** integración avanzada del juego completo. El desarrollo vive en `work/full-game-completion`; no se ha fusionado en `main`. La CI valida código, pruebas y smoke de Socket.IO. La aceptación visual en navegadores y la prueba física en LAN siguen pendientes.
 
-**Fase 2 — Classroom Ready**
+## Qué incluye
 
-La base ya incluye:
+- Registro, inicio y cierre de sesión con contraseñas Argon2id y sesiones persistentes en SQLite.
+- Salas autenticadas, sincronización autoritativa, host, votación de modos y espectadores.
+- Movimiento con colisiones, dash, trampas, pickups, vida y escudos.
+- Siete ranuras de armas; daño, proyectiles, explosiones, curación y kills calculados por el servidor.
+- Cuatro modos: Clásico, Todos contra uno, Rocket para todos y Battle Royale.
+- Tormenta progresiva para Battle Royale.
+- Zombies gigante y escupidor con IA autoritativa.
+- XP, niveles, asistencias, historial de progresión y chat con canal de espectadores.
+- HUD con hotbar, vida, escudo, roles, feed de eliminaciones, resultados, chat y burbujas de mensaje.
 
-- monorepo con npm workspaces;
-- cliente Phaser;
-- servidor Node + Express + Socket.IO;
-- contratos compartidos;
-- salas en memoria;
-- jugadores estáticos sincronizados;
-- entrada y salida en tiempo real;
-- aislamiento entre salas;
-- reconexión;
-- funcionamiento por LAN;
-- tests, build y smoke test multicliente;
-- CI para pushes y Pull Requests;
-- guía de arquitectura;
-- reglas para agentes;
-- prompts de clase;
-- flujo de contribución;
-- plantillas de Issue y Pull Request;
-- guía operativa del profesor.
-
-> La ausencia de movimiento, disparos, daño y score es intencional. Esas features son el contenido práctico de la clase.
+Consulta [la auditoría y las decisiones técnicas](docs/FULL_GAME_AUDIT.md), [la referencia de juego](docs/GAMEPLAY_SYSTEMS.md), [el ciclo de partidas](docs/MATCH_LIFECYCLE.md) y [autenticación](docs/AUTHENTICATION.md).
 
 ## Requisitos
 
-- Node.js 22 o superior
-- npm
-- Git
+- Node.js 22 o superior.
+- npm 10 o superior.
+- Git.
 
-## Instalación
+## Instalación y desarrollo local
 
 ```bash
 git clone https://github.com/rafaello129/hackatec-multiplayer-lab.git
 cd hackatec-multiplayer-lab
+git switch work/full-game-completion
 npm ci
-```
-
-## Desarrollo local completo
-
-```bash
 npm run dev
 ```
 
-Levanta:
+El monorepo levanta:
 
-- servidor en `http://localhost:3001`;
-- cliente Vite en `http://localhost:5173`.
+- Servidor: `http://localhost:3001`.
+- Cliente Phaser/Vite: `http://localhost:5173`.
 
-Prueba tres jugadores:
+Abre una URL con el mismo identificador de sala en varias pestañas o dispositivos:
 
 ```text
 http://localhost:5173/?room=hackatec
-http://localhost:5173/?room=hackatec
-http://localhost:5173/?room=hackatec
 ```
 
-Abre la misma URL en varias pestañas. Cada jugador debe crear una cuenta distinta o iniciar sesión. El nombre visible proviene de la cuenta, no del parámetro `name`. Todos deben ver los mismos jugadores. Al cerrar una pestaña, ese jugador desaparece de las demás sin refrescar.
+Cada jugador debe registrarse o iniciar sesión con una cuenta distinta. El servidor obtiene el nombre visible de la cuenta autenticada; no confía en nombres enviados por el cliente.
 
-## PC del profesor — servidor central
+Para iniciar servidor y cliente por separado:
 
 ```bash
 npm run dev:server
-```
-
-El servidor escucha en:
-
-```text
-0.0.0.0:3001
-```
-
-Health check:
-
-```text
-http://localhost:3001/health
-```
-
-## PC del alumno
-
-Copia:
-
-```text
-apps/game/.env.example
-```
-
-como:
-
-```text
-apps/game/.env.local
-```
-
-y configura:
-
-```env
-VITE_SERVER_URL=http://IP_DEL_PROFESOR:3001
-```
-
-Después:
-
-```bash
 npm run dev:game
 ```
+
+El servidor crea `apps/server/storage/accounts.sqlite` automáticamente. Para cambiar su ubicación, configura `DB_PATH`.
+
+## Controles
+
+| Acción | Control |
+|---|---|
+| Moverse | WASD o flechas |
+| Dash | Shift |
+| Apuntar | Mouse |
+| Disparar | Mantener clic izquierdo |
+| Seleccionar arma | Teclas 1–7 |
+| Abrir / enviar chat | Enter |
+| Cerrar chat | Escape |
+| Cambiar objetivo como espectador | A / D |
+
+En el chat, los jugadores activos escriben en el canal general. Los espectadores escriben en el canal de espectadores.
+
+## Modos de juego
+
+- **Clásico:** ronda de 5 minutos o límite de 30 bajas; respawn de 5 segundos. Incluye zombies.
+- **Todos contra uno:** un Titan con vida escalada contra cazadores con dos vidas; respawn de 5 segundos para cazadores que conservan vidas. Incluye zombies.
+- **Rocket para todos:** todos usan exclusivamente el lanzacohetes; ronda de 5 minutos.
+- **Battle Royale:** eliminación definitiva, tormenta de cinco fases y victoria del último superviviente. Duración máxima configurada de 7.5 minutos.
+
+La votación se abre al haber dos jugadores. El anfitrión también puede elegir e iniciar un modo, o detener la partida. Consulta [MATCH_LIFECYCLE.md](docs/MATCH_LIFECYCLE.md) para reglas exactas.
+
+## Seguridad y autoridad
+
+El cliente envía intenciones. El servidor valida la sesión y decide movimiento, selección de armas, cadencias, daño, muertes, respawn, curación, pickups, tormenta, IA, votos, chat y XP.
+
+- Las contraseñas se almacenan con Argon2id.
+- Los tokens de sesión son aleatorios; SQLite conserva su hash.
+- Socket.IO valida la sesión en la conexión y en cada paquete.
+- El láser depende de la cuenta propietaria reservada como `Gueta`; esa reserva corresponde al primer registro exitoso del username y no verifica identidad personal.
+- Chat, votos, cambio de arma y login tienen límites de frecuencia.
+
+No publiques `accounts.sqlite` ni subas secretos o tokens al repositorio.
 
 ## Scripts
 
@@ -117,89 +101,37 @@ npm run dev:game
 npm run build
 npm test
 npm run check
+npm run smoke -w @hackatec/game
 ```
+
+`npm run check` ejecuta pruebas y builds. El smoke de CI inicia el servidor, comprueba autenticación y salas, y valida el límite de 32 jugadores al completar su extensión de carga.
 
 ## Arquitectura
 
 ```text
 apps/
-├── game/          Phaser + Socket.IO Client
-└── server/        Express + Socket.IO
-
+  game/       Phaser 4 + Vite + Socket.IO Client
+  server/     Express + Socket.IO + SQLite
 packages/
-└── shared/        eventos y tipos compartidos
+  shared/     Contratos, eventos, textos y balance
 ```
 
-El modelo de autoridad es:
+Regla de autoridad:
 
 ```text
-CLIENTE
-solicita acciones
-   ↓
-SERVIDOR
-valida y mantiene estado compartido
-   ↓
-CLIENTES
-renderizan el estado aceptado
+CLIENTE: envía una intención
+        |
+        v
+SERVIDOR: valida, simula y modifica el estado
+        |
+        v
+CLIENTES: renderizan el estado aprobado
 ```
 
-## Flujo de trabajo de clase
+Los valores de armas, habilidades, tormenta, zombies, pickups, XP y chat están centralizados en `packages/shared/src/config/balance.ts`.
 
-```text
-ISSUE
-  ↓
-ANÁLISIS
-  ↓
-PROMPT
-  ↓
-AGENTE
-  ↓
-BRANCH
-  ↓
-IMPLEMENTACIÓN
-  ↓
-npm run check
-  ↓
-PULL REQUEST
-  ↓
-CI + REVIEW
-  ↓
-MERGE
-```
+## Estado de aceptación
 
-No trabajar directamente sobre `main`.
+La CI remota ejecuta tests, TypeScript, build y smoke de Socket.IO. Eso no sustituye la verificación real de navegador: la sensación del dash, legibilidad del HUD, interacción visual de cada modo, comportamiento en LAN y carga sostenida deberán validarse en una sesión manual. No marcar la aceptación visual como completada antes de esas pruebas.
 
-## Documentación
-
-- [Autenticación y sesiones](docs/AUTHENTICATION.md)
-- [Arquitectura](docs/ARCHITECTURE.md)
-- [Operación de clase](docs/CLASSROOM.md)
-- [Networking LAN](docs/NETWORKING.md)
-- [Prompts para agentes](docs/PROMPTS.md)
-- [Cómo contribuir](CONTRIBUTING.md)
-- [Reglas para agentes](AGENTS.md)
-
-## CI
-
-Cada Pull Request hacia `main` ejecuta:
-
-1. `npm ci`;
-2. tests y build;
-3. servidor;
-4. `/health`;
-5. smoke test con múltiples clientes Socket.IO.
-
-Un PR con CI fallando no está listo para merge.
-
-## Features reservadas para los alumnos
-
-```text
-movimiento sincronizado  ❌
-disparos                  ❌
-vida / daño               ❌
-respawn / kills           ❌
-mapa / obstáculos         ❌
-HUD / scoreboard          ❌
-```
-
-Se desarrollarán en ramas separadas mediante Issues, prompts, agentes y Pull Requests.
+No hacer merge a `main` sin autorización expresa.
