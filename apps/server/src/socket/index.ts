@@ -38,6 +38,7 @@ export function registerSocketHandlers(
     const matches = new MatchManager();
     const identities = new Map<string, string>();
     const laserPermissions = new Map<string, boolean>();
+    let lastWeaponStateSyncAt = 0;
 
     const syncMatchRoom = (roomId: string, now: number): void => {
         const players = roomManager.getPlayers(roomId);
@@ -52,8 +53,9 @@ export function registerSocketHandlers(
         combat.resetRoom(roomId);
         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ROOM_MAP, reset.map);
         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players: reset.players, projectiles: [], beams: [], explosions: [] });
+        const mode = matches.getState(roomId)?.mode ?? null;
         for (const player of reset.players) {
-            const weaponState = combat.initializePlayer(roomId, player, laserPermissions.get(player.id) === true);
+            const weaponState = combat.initializePlayer(roomId, player, laserPermissions.get(player.id) === true, mode);
             io.to(player.id).emit(SOCKET_EVENTS.WEAPON_STATE, weaponState);
         }
         for (const [socketId] of movement) {
@@ -121,15 +123,19 @@ export function registerSocketHandlers(
             if (!map) { rooms.delete(roomId); continue; }
             if (!matches.isPlaying(roomId)) continue;
             const players = roomManager.getPlayers(roomId);
-            const snapshot = combat.step(roomId, players, map, 50, now, matches.getState(roomId)?.mode ?? 'classic');
+            const mode = matches.getState(roomId)?.mode ?? null;
+            const snapshot = combat.step(roomId, players, map, 50, now, mode ?? 'classic');
             io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, {
                 players,
                 projectiles: snapshot.projectiles,
                 beams: snapshot.beams,
                 explosions: snapshot.explosions
             });
-            for (const player of players) {
-                io.to(player.id).emit(SOCKET_EVENTS.WEAPON_STATE, combat.getWeaponState(roomId, player.id, now));
+            if (now - lastWeaponStateSyncAt >= 100) {
+                lastWeaponStateSyncAt = now;
+                for (const player of players) {
+                    io.to(player.id).emit(SOCKET_EVENTS.WEAPON_STATE, combat.getWeaponState(roomId, player.id, now, mode));
+                }
             }
         }
 
@@ -201,8 +207,9 @@ export function registerSocketHandlers(
 
             if (!socket.connected) return;
             identities.set(socket.id, account.id);
-            laserPermissions.set(socket.id, account.isOwner);
-            const initialWeaponState = combat.initializePlayer(result.roomId, result.player, account.isOwner);
+            const canUseLaser = normalizeUsername(account.username) === 'gueta';
+            laserPermissions.set(socket.id, canUseLaser);
+            const initialWeaponState = combat.initializePlayer(result.roomId, result.player, canUseLaser, matches.getState(result.roomId)?.mode ?? null);
             result.player.appearance = profile.appearance;
             if (result.previous)
             {
@@ -343,7 +350,7 @@ export function registerSocketHandlers(
                     explosions: []
                 });
                 for (const player of players) {
-                    const weaponState = combat.initializePlayer(roomId, player, laserPermissions.get(player.id) === true);
+                    const weaponState = combat.initializePlayer(roomId, player, laserPermissions.get(player.id) === true, matches.getState(roomId)?.mode ?? null);
                     io.to(player.id).emit(SOCKET_EVENTS.WEAPON_STATE, weaponState);
                 }
             }
@@ -373,7 +380,7 @@ export function registerSocketHandlers(
             if (typeof slot !== 'number') return;
             const result = combat.selectWeapon(roomId, player, slot, matches.getState(roomId)?.mode ?? null, Date.now());
             socket.emit(SOCKET_EVENTS.WEAPON_RESULT, result);
-            socket.emit(SOCKET_EVENTS.WEAPON_STATE, combat.getWeaponState(roomId, socket.id, Date.now()));
+            socket.emit(SOCKET_EVENTS.WEAPON_STATE, combat.getWeaponState(roomId, socket.id, Date.now(), matches.getState(roomId)?.mode ?? null));
         });
 
         socket.on(SOCKET_EVENTS.WEAPON_FIRE, (payload: unknown) => {
