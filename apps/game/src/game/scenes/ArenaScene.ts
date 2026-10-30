@@ -57,6 +57,8 @@ export class ArenaScene extends Scene
     private lastInputSent = 0;
     private profilePanel?: ProfilePanel;
     private frame?: ArenaFrame;
+    private minimalHudButton?: GameObjects.Text;
+    private minimalHud = false;
     private scoreboard?: GameObjects.Text;
     private killFeedHud?: GameObjects.Text;
     private readonly killFeedIds = new Set<string>();
@@ -105,6 +107,11 @@ export class ArenaScene extends Scene
         this.socket = getSocket();
 
         this.frame = new ArenaFrame(this, this.identity.roomId);
+        this.minimalHudButton = this.add.text(985, 87, 'Ocultar extras', {
+            fontFamily: 'Arial Black', fontSize: 10, color: '#e2e8f0',
+            backgroundColor: '#0f172acc', padding: { x: 9, y: 6 }
+        }).setOrigin(1, 0.5).setDepth(500).setInteractive({ useHandCursor: true });
+        this.minimalHudButton.on('pointerdown', () => this.toggleMinimalHud());
         this.mapView = new MapView(this);
         this.pickupView = new PickupView(this);
         this.stormView = new StormView(this);
@@ -169,6 +176,8 @@ export class ArenaScene extends Scene
             this.zombieView?.destroy();
             this.profilePanel?.destroy();
             this.frame?.destroy();
+            this.minimalHudButton?.destroy();
+            document.body.classList.remove('hud-minimal');
             this.input.keyboard?.off('keydown-ONE', this.selectSlot1);
             this.input.keyboard?.off('keydown-TWO', this.selectSlot2);
             this.input.keyboard?.off('keydown-THREE', this.selectSlot3);
@@ -319,6 +328,33 @@ export class ArenaScene extends Scene
         }
         this.updateMatchClock();
     };
+
+    private toggleMinimalHud(): void {
+        this.minimalHud = !this.minimalHud;
+        document.body.classList.toggle('hud-minimal', this.minimalHud);
+        this.minimalHudButton?.setText(this.minimalHud ? 'Mostrar extras' : 'Ocultar extras');
+        this.applyMinimalHud();
+    }
+
+    private applyMinimalHud(): void {
+        const alpha = this.minimalHud ? 0 : 1;
+        this.frame?.setMinimalHud(this.minimalHud);
+        const secondary: Array<GameObjects.GameObject & { setAlpha(alpha: number): unknown }> = [
+            this.combatText, this.progressionHud, this.scoreboard, this.killFeedHud,
+            this.chatPanel, this.chatInputHud, this.matchStatusText, this.matchCountdownText,
+            this.spectatorStatusText, ...this.voteButtons.values(),
+            this.hostMenuButton, this.hostModeButton, this.hostStartButton, this.hostStopButton
+        ].filter((item): item is GameObjects.GameObject & { setAlpha(alpha: number): unknown } => Boolean(item));
+        for (const item of secondary) {
+            item.setAlpha(alpha);
+            if (this.minimalHud) item.disableInteractive();
+            else if (item === this.hostMenuButton || item === this.hostModeButton ||
+                item === this.hostStartButton || item === this.hostStopButton ||
+                [...this.voteButtons.values()].includes(item as GameObjects.Text)) {
+                item.setInteractive({ useHandCursor: true });
+            }
+        }
+    }
 
     private getModeLabel(mode: GameMode): string {
         switch (mode) {
@@ -718,6 +754,7 @@ export class ArenaScene extends Scene
     };
 
     update(time: number) {
+        this.applyMinimalHud();
         this.stormView?.update();
         if (!this.socket?.connected || !this.selfId || !this.keys || !this.cursors) return;
         if (this.chatInputActive) return;
