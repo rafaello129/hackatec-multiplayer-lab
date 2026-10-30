@@ -221,6 +221,14 @@ export type ProjectileState = {
 };
 export type LaserBeamState = { ownerId: string; x1: number; y1: number; x2: number; y2: number };
 export type ExplosionState = { id: string; x: number; y: number; radius: number; createdAt: number };
+export type KillFeedEntry = {
+    id: string;
+    killerId: string;
+    killerName: string;
+    victimId: string;
+    victimName: string;
+    createdAt: number;
+};
 export type CombatSnapshot = {
     players: PlayerState[];
     projectiles: ProjectileState[];
@@ -228,6 +236,7 @@ export type CombatSnapshot = {
     explosions?: ExplosionState[];
     trapped?: PlayerTrappedPayload[];
     heals?: PlayerHealedPayload[];
+    killFeed?: KillFeedEntry[];
 };
 
 export type SkinAsset = { id: string; url: string; width: number; height: number };
