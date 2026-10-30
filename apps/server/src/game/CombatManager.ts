@@ -592,8 +592,6 @@ export class CombatManager {
             remainingDamage -= absorbed;
         }
         player.hp = Math.max(0, (player.hp ?? MATCH_BALANCE.initialHealth) - remainingDamage);
-        player.isInvulnerable = true;
-        state.invulnerable.set(player.id, now + COMBAT_BALANCE.damageInvulnerabilityMs);
 
         if (player.hp === 0) {
             player.isDashing = false;
