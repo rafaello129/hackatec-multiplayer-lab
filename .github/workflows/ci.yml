@@ -29,6 +29,14 @@ jobs:
       - name: Apply compatible dependency security fixes
         run: npm audit fix --package-lock-only
 
+      - name: Preserve patched lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: patched-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Reinstall patched dependencies
         run: npm ci
 
