@@ -527,15 +527,31 @@ export function registerSocketHandlers(
             const result = matches.stop(roomId, socket.id);
             if (result.ok) {
                 combat.resetRoom(roomId);
+                pickupManager.removeRoom(roomId);
+                stormManager.removeRoom(roomId);
+                zombieManager.removeRoom(roomId);
+                activityTracker.removeRoom(roomId);
+
                 const players = roomManager.getPlayers(roomId);
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, {
                     players,
                     projectiles: [],
                     beams: [],
-                    explosions: []
+                    explosions: [],
+                    trapped: [],
+                    heals: [],
+                    zombieHits: [],
+                    killFeed: []
+                });
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PICKUP_STATE, { roomId, pickups: [] });
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ZOMBIE_STATE, {
+                    roomId,
+                    zombies: [],
+                    projectiles: [],
+                    puddles: []
                 });
                 for (const player of players) {
-                    const weaponState = combat.initializePlayer(roomId, player, laserPermissions.get(player.id) === true, matches.getState(roomId)?.mode ?? null);
+                    const weaponState = combat.initializePlayer(roomId, player, laserPermissions.get(player.id) === true, null);
                     io.to(player.id).emit(SOCKET_EVENTS.WEAPON_STATE, weaponState);
                 }
             }
