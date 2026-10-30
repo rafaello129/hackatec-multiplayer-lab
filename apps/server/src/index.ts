@@ -23,7 +23,11 @@ const loginAccountAttempts = new AttemptLimiter();
 const registrationAttempts = new AttemptLimiter();
 const MAX_LOGIN_ATTEMPTS_PER_IP = 8;
 const MAX_LOGIN_ATTEMPTS_PER_ACCOUNT = 5;
-const MAX_REGISTRATIONS_PER_IP = 8;
+const configuredRegistrationLimit = Number(process.env.AUTH_REGISTRATION_LIMIT_PER_HOUR);
+const MAX_REGISTRATIONS_PER_IP = Number.isSafeInteger(configuredRegistrationLimit) &&
+    configuredRegistrationLimit > 0 && configuredRegistrationLimit <= 100
+    ? configuredRegistrationLimit
+    : 8;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const REGISTRATION_WINDOW_MS = 60 * 60 * 1000;
 
