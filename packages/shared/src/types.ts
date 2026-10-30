@@ -21,6 +21,7 @@ export interface PlayerState {
     isInvulnerable?: boolean;
     isDashing?: boolean;
     alive?: boolean;
+    spectator?: boolean;
     kills?: number;
     deaths?: number;
     immobilizedUntil?: number;
