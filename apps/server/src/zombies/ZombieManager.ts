@@ -21,11 +21,17 @@ type Runtime = {
     puddles: Map<string, AcidPuddleState>;
     nextSpawnAt: number;
     counter: number;
+    round: number;
+    runPhase: 'wave' | 'intermission' | 'boss' | 'won' | 'lost';
+    intermissionEndsAt: number | null;
+    nextBossSummonAt: number;
+
 };
 
 export type ZombieStepResult = {
     state: ZombieStatePayload;
     damage: Array<{ playerId: string; amount: number }>;
+    revivedPlayerIds: string[];
 };
 
 function randomFor(seed: number): () => number {
@@ -78,14 +84,16 @@ export class ZombieManager {
             zombies: new Map(),
             projectiles: new Map(),
             puddles: new Map(),
-            nextSpawnAt: now + ZOMBIE_BALANCE.spawnIntervalMs,
-            counter: 0
+            nextSpawnAt: Number.POSITIVE_INFINITY,
+            counter: 0,
+            round: 1,
+            runPhase: 'wave',
+            intermissionEndsAt: null,
+            nextBossSummonAt: Number.POSITIVE_INFINITY,
+            playerCount: players.length
         };
         this.rooms.set(roomId, runtime);
-
-        const positions = this.spawnPositions(map, players, ZOMBIE_BALANCE.initialSpawnCount, runtime);
-        if (positions[0]) this.addZombie(runtime, roomId, 'giant', positions[0], now);
-        if (positions[1]) this.addZombie(runtime, roomId, 'spitter', positions[1], now);
+        this.spawnWave(runtime, roomId, map, players, now);
         return this.getState(roomId);
     }
 
@@ -96,12 +104,16 @@ export class ZombieManager {
 
     getState(roomId: string): ZombieStatePayload {
         const runtime = this.rooms.get(roomId);
-        if (!runtime) return { roomId, zombies: [], projectiles: [], puddles: [] };
+        if (!runtime) return { roomId, zombies: [], projectiles: [], puddles: [], round: 0, totalRounds: ZOMBIE_BALANCE.totalRounds, runPhase: 'wave', intermissionEndsAt: null };
         return {
             roomId,
             zombies: [...runtime.zombies.values()].map(zombie => ({ ...zombie })),
             projectiles: [...runtime.projectiles.values()].map(projectile => ({ ...projectile })),
-            puddles: [...runtime.puddles.values()].map(puddle => ({ ...puddle }))
+            puddles: [...runtime.puddles.values()].map(puddle => ({ ...puddle })),
+            round: runtime.round,
+            totalRounds: ZOMBIE_BALANCE.totalRounds,
+            runPhase: runtime.runPhase,
+            intermissionEndsAt: runtime.intermissionEndsAt
         };
     }
 
@@ -117,6 +129,7 @@ export class ZombieManager {
             changed = true;
             if (zombie.hp <= 0) {
                 zombie.alive = false;
+                if (zombie.type === 'boss') runtime.runPhase = 'won';
                 const attacker = playerById.get(hit.attackerId);
                 if (attacker) attacker.zombieKills = (attacker.zombieKills ?? 0) + 1;
             }
@@ -130,27 +143,33 @@ export class ZombieManager {
         const dt = Math.max(0, Math.min(dtMs, COMBAT_BALANCE.serverTickMs)) / 1_000;
         const damage: Array<{ playerId: string; amount: number }> = [];
         const activePlayers = players.filter(player => player.alive !== false && !player.spectator);
-
-        this.advanceSpawns(runtime, roomId, map, activePlayers, now);
-        this.advanceAcid(runtime, activePlayers, map, dt, now, damage);
+        const revivedPlayerIds = this.advanceWaves(runtime, roomId, map, players, activePlayers, now);
+        const currentPlayers = players.filter(player => player.alive !== false && !player.spectator);
+        this.advanceAcid(runtime, currentPlayers, map, dt, now, damage);
 
         for (const zombie of runtime.zombies.values()) {
-            if (!zombie.alive || activePlayers.length === 0) continue;
-            const target = nearestPlayer(zombie.x, zombie.y, activePlayers);
+            if (!zombie.alive || currentPlayers.length === 0) continue;
+            const target = nearestPlayer(zombie.x, zombie.y, currentPlayers);
             if (!target) continue;
             zombie.targetId = target.id;
-            if (zombie.type !== 'giant' || (zombie.phase !== 'telegraph' && zombie.phase !== 'charge')) {
+            if (zombie.type === 'spitter' || (zombie.phase !== 'telegraph' && zombie.phase !== 'charge')) {
                 zombie.angle = Math.atan2(target.y - zombie.y, target.x - zombie.x);
             }
 
-            if (zombie.type === 'giant') {
-                this.stepGiant(zombie, target, map, dt, now, damage);
-            } else {
+            if (zombie.type === 'spitter') {
                 this.stepSpitter(zombie, target, runtime, roomId, dt, now, map);
+            } else {
+                this.stepGiant(zombie, target, map, dt, now, damage);
             }
         }
 
-        return { state: this.getState(roomId), damage };
+        if (runtime.runPhase === 'boss' && now >= runtime.nextBossSummonAt && currentPlayers.length > 0) {
+            const positions = this.spawnPositions(map, currentPlayers, 2, runtime);
+            for (const position of positions) this.addZombie(runtime, roomId, 'spitter', position, now);
+            runtime.nextBossSummonAt = now + 12_000;
+        }
+
+        return { state: this.getState(roomId), damage, revivedPlayerIds };
     }
 
     removeRoom(roomId: string): void {
@@ -164,17 +183,19 @@ export class ZombieManager {
         position: { x: number; y: number },
         now: number
     ): void {
-        const giant = type === 'giant';
-        const balance = giant ? ZOMBIE_BALANCE.giant : ZOMBIE_BALANCE.spitter;
+        const giant = type !== 'spitter';
+        const health = type === 'boss'
+            ? ZOMBIE_BALANCE.bossHealth + Math.max(0, runtime.playerCount - 1) * ZOMBIE_BALANCE.bossHealthPerPlayer
+            : giant ? ZOMBIE_BALANCE.giant.health : ZOMBIE_BALANCE.spitter.health;
         const id = roomId + ':zombie:' + (++runtime.counter);
         runtime.zombies.set(id, {
             id,
             type,
             x: position.x,
             y: position.y,
-            hp: balance.health,
-            maxHp: balance.health,
-            radius: giant ? 29 : 22,
+            hp: health,
+            maxHp: health,
+            radius: type === 'boss' ? 54 : giant ? 29 : 22,
             alive: true,
             phase: 'approach',
             phaseEndsAt: now,
@@ -183,24 +204,68 @@ export class ZombieManager {
         });
     }
 
-    private advanceSpawns(
+    private spawnWave(runtime: Runtime, roomId: string, map: GameMapState, players: PlayerState[], now: number): void {
+        const count = Math.min(ZOMBIE_BALANCE.maximumAlive, 3 + runtime.round * 2 + Math.floor(players.length / 2));
+        const positions = this.spawnPositions(map, players, count, runtime);
+        for (let index = 0; index < positions.length; index += 1) {
+            const type = index % 3 === 0 ? 'giant' : 'spitter';
+            this.addZombie(runtime, roomId, type, positions[index]!, now);
+        }
+        runtime.runPhase = 'wave';
+        runtime.intermissionEndsAt = null;
+    }
+
+    private advanceWaves(
         runtime: Runtime,
         roomId: string,
         map: GameMapState,
         players: PlayerState[],
+        activePlayers: PlayerState[],
         now: number
-    ): void {
-        if (now < runtime.nextSpawnAt) return;
-        const aliveCount = [...runtime.zombies.values()].filter(zombie => zombie.alive).length;
-        if (aliveCount < ZOMBIE_BALANCE.maximumAlive) {
-            const positions = this.spawnPositions(map, players, 1, runtime);
-            if (positions[0]) {
-                const alive = [...runtime.zombies.values()].filter(zombie => zombie.alive);
-                const type = alive.length % 2 === 0 ? 'giant' : 'spitter';
-                this.addZombie(runtime, roomId, type, positions[0], now);
+    ): string[] {
+        const revivedPlayerIds: string[] = [];
+        if (runtime.runPhase === 'won' || runtime.runPhase === 'lost') return revivedPlayerIds;
+
+        const remainingPlayers = players.filter(player => !player.spectator && (player.lives ?? 0) > 0);
+        if (activePlayers.length === 0 && remainingPlayers.length === 0) {
+            runtime.runPhase = 'lost';
+            return revivedPlayerIds;
+        }
+        if (runtime.runPhase === 'wave' && ![...runtime.zombies.values()].some(zombie => zombie.alive)) {
+            if (activePlayers.length === 0) return revivedPlayerIds;
+            runtime.runPhase = 'intermission';
+            runtime.intermissionEndsAt = now + ZOMBIE_BALANCE.intermissionMs;
+            runtime.projectiles.clear();
+            runtime.puddles.clear();
+        }
+        if (runtime.runPhase !== 'intermission' || runtime.intermissionEndsAt === null || now < runtime.intermissionEndsAt) {
+            return revivedPlayerIds;
+        }
+        if (activePlayers.length === 0) return revivedPlayerIds;
+
+        for (const player of players) {
+            if (player.spectator && (player.lives ?? 0) <= 0) {
+                player.spectator = false;
+                player.alive = true;
+                player.lives = 1;
+                player.hp = player.maxHp ?? 100;
+                player.shield = 0;
+                revivedPlayerIds.push(player.id);
             }
         }
-        runtime.nextSpawnAt = now + ZOMBIE_BALANCE.spawnIntervalMs;
+
+        if (runtime.round >= ZOMBIE_BALANCE.totalRounds) {
+            runtime.runPhase = 'boss';
+            runtime.intermissionEndsAt = null;
+            runtime.nextBossSummonAt = now + 12_000;
+            const position = this.spawnPositions(map, players.filter(player => player.alive !== false && !player.spectator), 1, runtime)[0];
+            if (position) this.addZombie(runtime, roomId, 'boss', position, now);
+            else runtime.runPhase = 'lost';
+        } else {
+            runtime.round += 1;
+            this.spawnWave(runtime, roomId, map, players, now);
+        }
+        return revivedPlayerIds;
     }
 
     private spawnPositions(
@@ -253,7 +318,9 @@ export class ZombieManager {
         now: number,
         damage: Array<{ playerId: string; amount: number }>
     ): void {
-        const balance = ZOMBIE_BALANCE.giant;
+        const balance = zombie.type === 'boss'
+            ? { ...ZOMBIE_BALANCE.giant, chargeDamage: 55, cooldownMs: 4_500, moveSpeed: 88, chargeSpeed: 460, chargeRangePx: 280 }
+            : ZOMBIE_BALANCE.giant;
         if (zombie.phase === 'stunned') {
             if (now < zombie.phaseEndsAt) return;
             zombie.phase = 'approach';
