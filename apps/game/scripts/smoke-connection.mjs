@@ -449,6 +449,21 @@ async function main() {
     modeAlpha.emit('match:host-stop');
     await teamStopped;
 
+    const stormStatePromise = waitFor(modeAlpha, 'storm:state');
+    const royaleCountdownPromise = waitForMatchPhase(modeAlpha, 'countdown');
+    modeAlpha.emit('match:host-start', { mode: 'battleRoyale' });
+    const royaleCountdown = await royaleCountdownPromise;
+    const stormState = await stormStatePromise;
+    assert(royaleCountdown.mode === 'battleRoyale' &&
+        stormState.phase === 1 && stormState.phaseCount === 5 && stormState.damagePerSecond === 2,
+        'Battle Royale must initialize the first authoritative storm phase');
+    const royaleStopped = waitForMatchPhase(modeAlpha, 'waiting');
+    modeAlpha.emit('match:host-stop');
+    await royaleStopped;
+    modeAlpha.disconnect();
+    modeBeta.disconnect();
+    console.log('[smoke] Rocket, team and Battle Royale mode setup verified');
+
     // Load acceptance: fill the room with 32 distinct authenticated accounts.
     const loadClients = [];
     let finalLoadSnapshot;
