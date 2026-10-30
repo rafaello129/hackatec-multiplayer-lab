@@ -210,16 +210,23 @@ export class PlayerView
         return [this.body, this.skin];
     }
 
+    private resetAnimatedParts(): void
+    {
+        for (const part of this.animatedParts) {
+            part.x = 0;
+            part.y = 0;
+            part.scaleX = 1;
+            part.scaleY = 1;
+            part.angle = 0;
+        }
+    }
+
     playSpin()
     {
         this.container.scene.tweens.killTweensOf(this.body);
         this.container.scene.tweens.killTweensOf(this.skin);
 
-        this.body.x = 0;
-        this.body.y = 0;
-        this.body.scaleX = 1;
-        this.body.scaleY = 1;
-        this.body.angle = 0;
+        this.resetAnimatedParts();
 
         this.container.scene.tweens.add({
             targets: this.animatedParts,
@@ -237,11 +244,7 @@ export class PlayerView
         this.container.scene.tweens.killTweensOf(this.body);
         this.container.scene.tweens.killTweensOf(this.skin);
 
-        this.body.x = 0;
-        this.body.y = 0;
-        this.body.angle = 0;
-        this.body.scaleX = 1;
-        this.body.scaleY = 1;
+        this.resetAnimatedParts();
 
         this.container.scene.tweens.add({
             targets: this.animatedParts,
@@ -265,11 +268,7 @@ export class PlayerView
         this.container.scene.tweens.killTweensOf(this.body);
         this.container.scene.tweens.killTweensOf(this.skin);
 
-        this.body.x = 0;
-        this.body.y = 0;
-        this.body.angle = 0;
-        this.body.scaleX = 1;
-        this.body.scaleY = 1;
+        this.resetAnimatedParts();
 
         this.container.scene.tweens.add({
             targets: this.animatedParts,
@@ -294,11 +293,7 @@ export class PlayerView
         this.container.scene.tweens.killTweensOf(this.body);
         this.container.scene.tweens.killTweensOf(this.skin);
 
-        this.body.x = 0;
-        this.body.y = 0;
-        this.body.angle = 0;
-        this.body.scaleX = 1;
-        this.body.scaleY = 1;
+        this.resetAnimatedParts();
 
         this.container.scene.tweens.add({
             targets: this.animatedParts,
