@@ -80,12 +80,16 @@ export class PlayerView
     {
         this.container.setPosition(player.x, player.y);
         this.container.setRotation(player.aimAngle ?? player.angle ?? 0);
-        const color = player.appearance?.mode === 'color'
-            ? Number.parseInt(player.appearance.colorHex.slice(1), 16)
-            : 0x3b82f6;
+        const color = player.role === 'titan' ? 0xdc2626
+            : player.role === 'hunter' ? 0x2563eb
+            : player.appearance?.mode === 'color'
+                ? Number.parseInt(player.appearance.colorHex.slice(1), 16)
+                : 0x3b82f6;
         this.body.setFillStyle(player.alive === false ? 0x64748b : color);
+        this.body.setScale(player.role === 'titan' ? 1.45 : 1);
         this.body.setAlpha(player.isInvulnerable ? 0.5 : player.alive === false ? 0.35 : 1);
-        this.nameText.setText(player.name);
+        const prefix = player.role === 'titan' ? 'TITAN · ' : player.role === 'hunter' ? 'CAZADOR · ' : '';
+        this.nameText.setText(prefix + player.name);
 
         const remainingMs = Math.max(0, (player.immobilizedUntil ?? 0) - Date.now());
         const trapped = remainingMs > 0;
