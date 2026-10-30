@@ -18,6 +18,7 @@ export interface PlayerState {
     angle?: number;
     hp?: number;
     maxHp?: number;
+    shield?: number;
     isInvulnerable?: boolean;
     isDashing?: boolean;
     alive?: boolean;
@@ -25,6 +26,7 @@ export interface PlayerState {
     kills?: number;
     deaths?: number;
     immobilizedUntil?: number;
+    selectedWeapon?: WeaponType;
     appearance?: PlayerAppearance;
 }
 
@@ -82,8 +84,30 @@ export type GameMapState = { seed: number; width: number; height: number; obstac
 export type PlayerInputPayload = { input: PlayerInput };
 export type PlayerMovedPayload = { player: PlayerState };
 
-export type WeaponType = 'pistol' | 'machineGun' | 'shotgun';
-export type ShootPayload = { angle: number; weapon: WeaponType };
+export type WeaponType =
+    | 'knife'
+    | 'machineGun'
+    | 'shotgun'
+    | 'pistol'
+    | 'sniper'
+    | 'rocketLauncher'
+    | 'laser';
+
+export type ProjectileWeaponType = 'machineGun' | 'shotgun' | 'pistol' | 'rocketLauncher';
+export type WeaponSlot = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type WeaponSelectPayload = { slot: number };
+export type WeaponFirePayload = { angle: number; firing: boolean };
+/** @deprecated Use WeaponFirePayload; any legacy weapon field is ignored by the server. */
+export type ShootPayload = WeaponFirePayload & { weapon?: WeaponType };
+export type WeaponStatePayload = {
+    selectedSlot: WeaponSlot;
+    selectedWeapon: WeaponType;
+    availableSlots: WeaponSlot[];
+    cooldownRemainingMs: number;
+    laserEnergyMs: number;
+    laserEnergyMaxMs: number;
+};
+export type WeaponActionResultPayload = { ok: boolean; message: string };
 export type ProjectileState = {
     id: string;
     ownerId: string;
@@ -91,15 +115,20 @@ export type ProjectileState = {
     y: number;
     vx: number;
     vy: number;
-    weapon: WeaponType;
+    weapon: ProjectileWeaponType;
 };
-export type CombatSnapshot = { players: PlayerState[]; projectiles: ProjectileState[] };
+export type LaserBeamState = { ownerId: string; x1: number; y1: number; x2: number; y2: number };
+export type CombatSnapshot = {
+    players: PlayerState[];
+    projectiles: ProjectileState[];
+    beams?: LaserBeamState[];
+};
 
 export type SkinAsset = { id: string; url: string; width: number; height: number };
 export type PlayerAppearance = { mode: 'color' | 'skin'; colorHex: string; skin?: SkinAsset };
 export type ProfileUpdatePayload = { username?: string; appearance?: PlayerAppearance };
 
-export type GameMode = 'classic' | 'team' | 'zombies' | 'everyone-vs-one' | 'rockets';
+export type GameMode = 'classic' | 'team' | 'zombies' | 'everyone-vs-one' | 'rockets' | 'battleRoyale';
 export type MatchPhase = 'waiting' | 'voting' | 'countdown' | 'playing' | 'results';
 export type MatchStatePayload = {
     roomId: string;
