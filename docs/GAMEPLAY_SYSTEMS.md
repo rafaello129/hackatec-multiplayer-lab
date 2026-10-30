@@ -12,8 +12,9 @@ La selección de ranuras es fija:
 | 2 | Metralleta | 8 de daño, cooldown 100 ms, velocidad de proyectil 770 px/s |
 | 3 | Escopeta | 3 perdigones, 15 de daño por perdigón, cooldown 800 ms, velocidad 590 px/s |
 | 4 | Pistola | 20 de daño, cooldown 500 ms, velocidad 640 px/s |
-| 5 | Sniper | 80 de daño, alcance 1600 px, cooldown 1600 ms; impacto hitscan |
+| 5 | Sniper | 95 de daño, alcance 1600 px, cooldown 3000 ms; impacto hitscan con trazador visual |
 | 6 | Lanzacohetes | 55 de daño central, 15 en el borde, radio 110 px, cooldown 1400 ms, empuje |
+| 7 | Láser | 80 de daño por segundo, alcance 1800 px, energía para 4 s, sin tiempo de recarga |
 
 Rocket para todos fuerza la ranura 6 y bloquea las demás. El cliente no puede elegir el arma enviando un campo arbitrario en el disparo.
 
@@ -34,7 +35,8 @@ La física de movimiento y las colisiones se ejecutan en el servidor, con un tic
 - Escudo máximo: 50.
 - Botiquín: restaura hasta 40 puntos de salud.
 - Pickup de escudo: restaura hasta 25 puntos.
-- Los pickups reaparecen tras 60 segundos en modos normales y 120 segundos en Battle Royale.
+- Los escudos reaparecen tras 60 segundos en modos normales y 120 segundos en Battle Royale.
+- Los botiquines reaparecen tras 75 segundos en modos normales y 120 segundos en Battle Royale.
 - Una baja cura al atacante hasta 15 puntos, sin superar su salud máxima.
 - La protección al reaparecer dura 1 segundo.
 
