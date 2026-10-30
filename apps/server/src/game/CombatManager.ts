@@ -271,7 +271,7 @@ export class CombatManager {
         const playerRadius = COMBAT_BALANCE.playerRadius;
         const projectileRadius = COMBAT_BALANCE.projectileRadius;
 
-        this.applyKnockback(state, players, map, dt, now);
+        this.applyKnockback(state, byId, map, dt, now);
 
         for (const player of players) {
             if (player.spectator) continue;
@@ -611,6 +611,7 @@ export class CombatManager {
         zombieHits: ZombieHitPayload[]
     ): void {
         const balance = WEAPON_BALANCE.rocketLauncher;
+        const attacker = players.find(player => player.id === projectile.ownerId);
         explosions.push({
             id: roomId + ':explosion:' + (++state.explosionCounter),
             x: projectile.x,
@@ -627,7 +628,7 @@ export class CombatManager {
             let damage = balance.centerDamage -
                 (balance.centerDamage - balance.edgeDamage) * falloff;
             if (target.id === projectile.ownerId) damage *= balance.selfDamageMultiplier;
-            this.damage(state, target, damage, now, players.find(player => player.id === projectile.ownerId));
+            this.damage(state, target, damage, now, attacker);
 
             const directionX = target.x - projectile.x;
             const directionY = target.y - projectile.y;
@@ -649,9 +650,8 @@ export class CombatManager {
         }
     }
 
-    private applyKnockback(state: Runtime, players: PlayerState[], map: GameMapState, dtMs: number, now: number): void {
+    private applyKnockback(state: Runtime, byId: Map<string, PlayerState>, map: GameMapState, dtMs: number, now: number): void {
         const dt = Math.max(0, dtMs) / 1_000;
-        const byId = new Map(players.map(player => [player.id, player]));
         for (const [playerId, force] of state.knockback) {
             const player = byId.get(playerId);
             if (!player || player.alive === false || player.spectator || now >= force.endsAt) {
