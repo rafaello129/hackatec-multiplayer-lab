@@ -51,9 +51,9 @@ export function registerSocketHandlers(
     const matches = new MatchManager();
     const identities = new Map<string, string>();
     const laserPermissions = new Map<string, boolean>();
-    let lastWeaponStateSyncAt = 0;
-    let lastStormStateSyncAt = 0;
-    let lastZombieStateSyncAt = 0;
+    const lastWeaponStateSyncAt = new Map<string, number>();
+    const lastStormStateSyncAt = new Map<string, number>();
+    const lastZombieStateSyncAt = new Map<string, number>();
 
     const syncMatchRoom = (roomId: string, now: number): void => {
         const players = roomManager.getPlayers(roomId);
@@ -244,8 +244,8 @@ export function registerSocketHandlers(
                         const player = players.find(candidate => candidate.id === item.playerId);
                         if (player) combat.applyEnvironmentalDamage(roomId, player, item.amount, now);
                     }
-                    if (now - lastZombieStateSyncAt >= 100 || zombieSnapshotChanged) {
-                        lastZombieStateSyncAt = now;
+                    if (now - (lastZombieStateSyncAt.get(roomId) ?? 0) >= 100 || zombieSnapshotChanged) {
+                        lastZombieStateSyncAt.set(roomId, now);
                         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ZOMBIE_STATE, zombieStep.state);
                     }
                 }
@@ -257,8 +257,8 @@ export function registerSocketHandlers(
                         const player = players.find(candidate => candidate.id === item.playerId);
                         if (player) combat.applyEnvironmentalDamage(roomId, player, item.amount, now);
                     }
-                    if (now - lastStormStateSyncAt >= 100) {
-                        lastStormStateSyncAt = now;
+                    if (now - (lastStormStateSyncAt.get(roomId) ?? 0) >= 100) {
+                        lastStormStateSyncAt.set(roomId, now);
                         io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.STORM_STATE, stormStep.state);
                     }
                 }
@@ -273,8 +273,8 @@ export function registerSocketHandlers(
             });
             for (const trapped of snapshot.trapped) io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_TRAPPED, trapped);
             for (const healed of snapshot.heals) io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_HEALED, healed);
-            if (now - lastWeaponStateSyncAt >= 100) {
-                lastWeaponStateSyncAt = now;
+            if (now - (lastWeaponStateSyncAt.get(roomId) ?? 0) >= 100) {
+                lastWeaponStateSyncAt.set(roomId, now);
                 for (const player of players) {
                     io.to(player.id).emit(SOCKET_EVENTS.WEAPON_STATE, combat.getWeaponState(roomId, player.id, now, mode));
                 }
@@ -379,6 +379,9 @@ export function registerSocketHandlers(
                     pickupManager.removeRoom(previousRoomId);
                     stormManager.removeRoom(previousRoomId);
                     zombieManager.removeRoom(previousRoomId);
+                    lastWeaponStateSyncAt.delete(previousRoomId);
+                    lastStormStateSyncAt.delete(previousRoomId);
+                    lastZombieStateSyncAt.delete(previousRoomId);
                     chatManager.removeRoom(previousRoomId);
                     activityTracker.removeRoom(previousRoomId);
                 }
@@ -609,6 +612,9 @@ export function registerSocketHandlers(
                     pickupManager.removeRoom(left.roomId);
                     stormManager.removeRoom(left.roomId);
                     zombieManager.removeRoom(left.roomId);
+                    lastWeaponStateSyncAt.delete(left.roomId);
+                    lastStormStateSyncAt.delete(left.roomId);
+                    lastZombieStateSyncAt.delete(left.roomId);
                     chatManager.removeRoom(left.roomId);
                     activityTracker.removeRoom(left.roomId);
                 }
