@@ -149,6 +149,8 @@ export type CombatSnapshot = {
     projectiles: ProjectileState[];
     beams?: LaserBeamState[];
     explosions?: ExplosionState[];
+    trapped?: PlayerTrappedPayload[];
+    heals?: PlayerHealedPayload[];
 };
 
 export type SkinAsset = { id: string; url: string; width: number; height: number };
