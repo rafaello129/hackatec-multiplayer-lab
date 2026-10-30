@@ -90,9 +90,9 @@ export function registerSocketHandlers(
     };
 
     const resetRoomForMatch = (roomId: string): void => {
-        const reset = roomManager.resetForMatch(roomId);
-        if (!reset) return;
         const mode = matches.getState(roomId)?.mode ?? null;
+        const reset = roomManager.resetForMatch(roomId, mode);
+        if (!reset) return;
 
         if (mode === 'everyone-vs-one') {
             const titanIndex = Math.floor(Math.random() * reset.players.length);
@@ -115,6 +115,13 @@ export function registerSocketHandlers(
             for (const player of reset.players) {
                 player.role = 'survivor';
                 player.lives = 1;
+                player.maxHp = MATCH_BALANCE.initialHealth;
+                player.hp = MATCH_BALANCE.initialHealth;
+            }
+        } else if (mode === 'zombies') {
+            for (const player of reset.players) {
+                player.role = 'survivor';
+                player.lives = 3;
                 player.maxHp = MATCH_BALANCE.initialHealth;
                 player.hp = MATCH_BALANCE.initialHealth;
             }
@@ -214,7 +221,7 @@ export function registerSocketHandlers(
         }
 
         for (const roomId of rooms) activityTracker.tick(roomId, now);
-        for (const transition of matches.advance(now, id => roomManager.getPlayers(id))) {
+        for (const transition of matches.advance(now, id => roomManager.getPlayers(id), id => zombieManager.getState(id))) {
             if (transition.resetPlayers) resetRoomForMatch(transition.roomId);
             if (transition.previousPhase === 'countdown' && transition.phase === 'playing') {
                 const match = matches.getState(transition.roomId);
