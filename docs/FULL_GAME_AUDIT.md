@@ -1,6 +1,9 @@
-# Auditoría integral y plan de finalización
+# Auditoría inicial (snapshot histórico de Fase 0)
 
-Fecha de auditoría: 2026-10-29
+Fecha de auditoría: 2026-10-29. Este archivo registra el estado antes de la implementación de las fases 3–11; sus secciones de brechas y plan ya no describen el estado más reciente.
+
+**Estado vivo:** consulta [GAMEPLAY_SYSTEMS.md](GAMEPLAY_SYSTEMS.md), [MATCH_LIFECYCLE.md](MATCH_LIFECYCLE.md) y el README. La rama actual integra armas, dash, pickups, cuatro modos, tormenta, zombies, progresión y chat. CI y smoke de 32 jugadores se mantienen como validación en curso; las pruebas visuales en navegador y LAN siguen pendientes.
+
 Base: `work/phase-2-match-lifecycle-classic` / commit `b2f07ce187effc6599a79d0b3799c5855d3c5b9b`
 Rama de trabajo: `work/full-game-completion`
 Especificación: `prompt_extension_juego.pdf` (fases 0–11).
