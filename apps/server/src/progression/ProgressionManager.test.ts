@@ -52,7 +52,7 @@ describe('calculateMatchAwards', () => {
 describe('RoundActivityTracker', () => {
     it('does not count an idle player and requires meaningful input over time', () => {
         const tracker = new RoundActivityTracker();
-        tracker.start('room', [player('idle'), player('active')], 0, 300_000);
+        tracker.start('room', [player('idle'), player('active')], 0, 100_000);
 
         for (let now = 50; now <= 60_000; now += 50) tracker.tick('room', now);
         expect(tracker.getActiveMs('room', 'idle')).toBe(0);
