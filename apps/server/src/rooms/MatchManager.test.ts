@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { PlayerState } from '@hackatec/shared';
+import type { GameMode, PlayerState } from '@hackatec/shared';
 import { MatchManager } from './MatchManager.js';
 
 const player = (id: string, kills = 0, deaths = 0): PlayerState => ({
@@ -34,7 +34,7 @@ describe('MatchManager', () => {
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
 
         expect(manager.vote('room-a', 'outsider', 'account-x', 'classic', 1).ok).toBe(false);
-        expect(manager.vote('room-a', 'a', 'a', 'everyone-vs-one', 1).ok).toBe(false);
+        expect(manager.vote('room-a', 'a', 'a', 'not-a-mode' as GameMode, 1).ok).toBe(false);
         expect(manager.vote('room-a', 'a', 'a', 'classic', 1).ok).toBe(true);
         expect(manager.vote('room-a', 'a', 'a', 'classic', 300).ok).toBe(true);
         expect(manager.getState('room-a')?.votes).toEqual({ a: 'classic' });
@@ -60,7 +60,7 @@ describe('MatchManager', () => {
     });
 
     it('captures results and automatically opens the next vote', () => {
-        const manager = new MatchManager(100, 10, 50, 20);
+        const manager = new MatchManager(100, 10, 50, 20, ['classic']);
         manager.syncRoom('room-a', [player('a', 3, 1), player('b', 2, 0)], 'a', 0);
         manager.advance(100, () => []);
         manager.advance(110, () => []);
@@ -80,7 +80,7 @@ describe('MatchManager', () => {
 
 
     it('ends Classic early when a player reaches the configured kill limit', () => {
-        const manager = new MatchManager(100, 10, 1_000, 15);
+        const manager = new MatchManager(100, 10, 1_000, 15, ['classic']);
         manager.syncRoom('room-a', [player('a'), player('b')], 'a', 0);
         manager.advance(100, () => []);
         manager.advance(110, () => []);
@@ -141,7 +141,7 @@ describe('MatchManager', () => {
     });
 
     it('makes players who join during a match spectators until the next round', () => {
-        const manager = new MatchManager(100, 10, 100, 15);
+        const manager = new MatchManager(100, 10, 100, 15, ['classic']);
         const players = [player('a'), player('b')];
         manager.syncRoom('room-a', players, 'a', 0);
         manager.advance(100, () => []);
