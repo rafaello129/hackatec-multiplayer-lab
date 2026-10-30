@@ -96,3 +96,20 @@ export type CombatSnapshot = { players: PlayerState[]; projectiles: ProjectileSt
 export type SkinAsset = { id: string; url: string; width: number; height: number };
 export type PlayerAppearance = { mode: 'color' | 'skin'; colorHex: string; skin?: SkinAsset };
 export type ProfileUpdatePayload = { username?: string; appearance?: PlayerAppearance };
+
+export type GameMode = 'classic' | 'team' | 'zombies' | 'everyone-vs-one' | 'rockets';
+export type MatchPhase = 'waiting' | 'voting' | 'countdown' | 'playing' | 'results';
+export type MatchStatePayload = {
+    roomId: string;
+    phase: MatchPhase;
+    mode: GameMode | null;
+    hostId: string | null;
+    votes: Record<string, GameMode>;
+    voteEndsAt: number | null;
+    startsAt: number | null;
+    endsAt: number | null;
+    results: Array<{ playerId: string; name: string; kills: number; deaths: number }>;
+    message?: string;
+};
+export type MatchVotePayload = { mode: GameMode };
+export type HostStartMatchPayload = { mode: GameMode };
