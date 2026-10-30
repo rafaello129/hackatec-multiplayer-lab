@@ -7,7 +7,7 @@ export class ArenaFrame {
     private readonly playerCountText: GameObjects.Text;
     private readonly connectionText: GameObjects.Text;
     private readonly errorText: GameObjects.Text;
-    private readonly chrome: GameObjects.GameObject[] = [];
+    private readonly chrome: Array<GameObjects.Text | GameObjects.Rectangle> = [];
 
     constructor(scene: Scene, roomId: string) {
         // Keep the arena plate behind the map and all gameplay entities.
