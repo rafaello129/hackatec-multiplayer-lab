@@ -13,7 +13,8 @@ import {
     type MatchVotePayload,
     type HostStartMatchPayload,
     type ChatSendPayload,
-    type ChatChannel
+    type ChatChannel,
+    CHAT_TEXTS
 } from '@hackatec/shared';
 import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
@@ -462,7 +463,7 @@ export function registerSocketHandlers(
             if (!roomId || !player || !accountId || !raw || typeof raw !== 'object' || Array.isArray(raw)) return;
             const payload = raw as Partial<ChatSendPayload>;
             if (payload.channel !== 'all' && payload.channel !== 'spectators') {
-                socket.emit(SOCKET_EVENTS.CHAT_MESSAGE, { error: 'Canal de chat inválido.' });
+                socket.emit(SOCKET_EVENTS.CHAT_MESSAGE, { error: CHAT_TEXTS.errors.invalidChannel });
                 return;
             }
             const channel: ChatChannel = payload.channel;
