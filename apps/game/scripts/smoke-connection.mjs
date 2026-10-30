@@ -434,6 +434,21 @@ async function main() {
     modeAlpha.emit('match:host-stop');
     await rocketStopped;
 
+    const teamCombatPromise = waitFor(modeAlpha, 'combat:state');
+    const teamCountdownPromise = waitForMatchPhase(modeAlpha, 'countdown');
+    modeAlpha.emit('match:host-start', { mode: 'everyone-vs-one' });
+    const teamCountdown = await teamCountdownPromise;
+    const teamCombat = await teamCombatPromise;
+    const titans = teamCombat.players.filter(player => player.role === 'titan');
+    const hunters = teamCombat.players.filter(player => player.role === 'hunter');
+    assert(teamCountdown.mode === 'everyone-vs-one' && titans.length === 1 && hunters.length === 1,
+        'Todos contra uno must assign one Titan and one hunter');
+    assert(titans[0].maxHp === 600 && hunters[0].lives === 2,
+        'Titan health and hunter lives must be set by the server');
+    const teamStopped = waitForMatchPhase(modeAlpha, 'waiting');
+    modeAlpha.emit('match:host-stop');
+    await teamStopped;
+
     // Load acceptance: fill the room with 32 distinct authenticated accounts.
     const loadClients = [];
     let finalLoadSnapshot;
