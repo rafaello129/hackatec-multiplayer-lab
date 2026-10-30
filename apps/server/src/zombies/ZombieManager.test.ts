@@ -48,7 +48,7 @@ describe('ZombieManager', () => {
         const target = player('target', 700, 400);
         const state = manager.reset('room', map, [target], 0);
         const giant = manager.getTargets('room').find(zombie => zombie.type === 'giant')!;
-        giant.x = 900;
+        giant.x = 980;
         giant.y = 400;
         giant.phase = 'charge';
         giant.angle = 0;
