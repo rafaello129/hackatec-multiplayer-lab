@@ -41,7 +41,7 @@ El primer registro exitoso del nombre `Gueta` (sin distinguir mayúsculas/minús
 
 El token de sesión se entrega mediante una cookie `HttpOnly`; el navegador no necesita leerlo desde JavaScript. La sesión dura siete días. El servidor vuelve a validar la sesión al establecer la conexión Socket.IO, y una conexión sin cuenta no puede entrar a una sala.
 
-Los errores de inicio de sesión no distinguen entre usuario inexistente y contraseña incorrecta. Los intentos fallidos se limitan temporalmente por dirección IP.
+Los errores de inicio de sesión no distinguen entre usuario inexistente y contraseña incorrecta. Los intentos fallidos se limitan por IP (8 intentos cada 15 minutos) y por combinación de IP + nombre normalizado de cuenta (5 intentos cada 15 minutos). Un inicio de sesión válido limpia los contadores de esa conexión. Los registros también se limitan a 8 solicitudes por IP cada hora. Estos contadores viven en memoria y se reinician cuando se reinicia el servidor; en un despliegue con varias instancias deben sustituirse por un almacén compartido.
 
 ## Progresión vinculada a la cuenta
 
