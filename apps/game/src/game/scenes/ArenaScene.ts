@@ -591,20 +591,21 @@ private createInterface()
         const x = pad?.leftStick.x ?? 0;
         const y = pad?.leftStick.y ?? 0;
         const dashHeld = this.keys.shift.isDown || !!pad?.buttons[5]?.pressed;
+        const player = this.playerRegistry.get(this.selfId);
+        const pointer = this.input.activePointer;
+        const point = player ? this.cameras.main.getWorldPoint(pointer.x, pointer.y) : { x: 0, y: 0 };
+        const angle = player ? Math.atan2(point.y - player.y, point.x - player.x) : 0;
         const input: PlayerInput = {
             up: this.keys.w.isDown || this.cursors.up.isDown || y < -0.2 || !!pad?.up,
             down: this.keys.s.isDown || this.cursors.down.isDown || y > 0.2 || !!pad?.down,
             left: this.keys.a.isDown || this.cursors.left.isDown || x < -0.2 || !!pad?.left,
             right: this.keys.d.isDown || this.cursors.right.isDown || x > 0.2 || !!pad?.right,
-            dash: dashHeld
+            dash: dashHeld,
+            aimAngle: angle
         };
 
-        const player = this.playerRegistry.get(this.selfId);
-        const pointer = this.input.activePointer;
         const holding = Boolean(player && player.alive !== false && !player.spectator && pointer.isDown);
         if (player) {
-            const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-            const angle = Math.atan2(point.y - player.y, point.x - player.x);
             if (holding !== this.fireHeld || time - this.lastFireSentAt >= 50) {
                 this.socket.emit(SOCKET_EVENTS.WEAPON_FIRE, { angle, firing: holding });
                 this.lastFireSentAt = time;
