@@ -247,6 +247,9 @@ export class RoomManager
             player.spectator = false;
             player.kills = 0;
             player.deaths = 0;
+            player.assists = 0;
+            player.zombieKills = 0;
+            player.survivedStormPhases = 0;
             player.isDashing = false;
             player.isInvulnerable = false;
             player.spawnInvulnerableUntil = 0;
