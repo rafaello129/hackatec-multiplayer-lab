@@ -50,7 +50,7 @@ function renderAuth(message = ''): void {
                 <label for="auth-username">Nombre de usuario</label>
                 <input id="auth-username" name="username" type="text" autocomplete="username"
                     minlength="3" maxlength="16" pattern="[A-Za-z][A-Za-z0-9_]{2,15}"
-                    placeholder="Ej. Gueta" required />
+                    placeholder="Escribe tu usuario" required />
                 <p class="auth-hint">3–16 caracteres. Empieza con una letra; usa letras, números o _.</p>
                 <label for="auth-password">Contraseña</label>
                 <div class="auth-password-field">
