@@ -14,6 +14,7 @@ export class PlayerView
     private readonly trapText: GameObjects.Text;
     private readonly trapBar: GameObjects.Graphics;
     private readonly selfText?: GameObjects.Text;
+    private chatBubble?: GameObjects.Text;
 
     constructor(
         scene: Scene,
@@ -101,6 +102,33 @@ export class PlayerView
             this.trapBar.fillStyle(0x450a0a, 0.9).fillRect(-32, -49, 64, 5);
             this.trapBar.fillStyle(0xf87171, 1).fillRect(-32, -49, 64 * progress, 5);
         }
+    }
+
+    showChat(message: string): void
+    {
+        if (!this.chatBubble) {
+            this.chatBubble = this.scene.add.text(0, -88, '', {
+                fontFamily: 'Arial',
+                fontSize: 12,
+                color: '#f8fafc',
+                backgroundColor: '#0f172aee',
+                padding: { x: 8, y: 5 },
+                align: 'center',
+                wordWrap: { width: 180 },
+                stroke: '#020617',
+                strokeThickness: 2
+            }).setOrigin(0.5, 1);
+            this.container.add(this.chatBubble);
+        }
+        this.scene.tweens.killTweensOf(this.chatBubble);
+        this.chatBubble.setText([...message].slice(0, 120).join('')).setAlpha(1).setVisible(true);
+        this.scene.tweens.add({
+            targets: this.chatBubble,
+            alpha: 0,
+            delay: 3_000,
+            duration: 250,
+            onComplete: () => this.chatBubble?.setVisible(false)
+        });
     }
 
     showHeal(amount: number)
