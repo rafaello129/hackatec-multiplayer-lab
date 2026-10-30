@@ -32,6 +32,24 @@ describe('RoomManager', () =>
         expect(manager.getHostId('host-room')).toBe('socket-b');
     });
 
+    it('regenerates the map and resets all player round state', () => {
+        const manager = new RoomManager();
+        const joined = manager.join('round-room', 'socket-a', 'Ana');
+        manager.join('round-room', 'socket-b', 'Luis');
+        const players = manager.getPlayers('round-room');
+        players[0]!.kills = 4;
+        players[0]!.deaths = 2;
+        players[0]!.hp = 10;
+        players[1]!.spectator = true;
+        const oldSeed = manager.getMap('round-room')?.seed;
+        const reset = manager.resetForMatch('round-room');
+        expect(reset).toBeDefined();
+        expect(reset?.map.seed).not.toBe(oldSeed);
+        expect(reset?.players.every(player => player.kills === 0 && player.deaths === 0 && player.hp === 100 && player.spectator === false)).toBe(true);
+        expect(manager.resetForMatch('missing-room')).toBeUndefined();
+        expect(joined.ok).toBe(true);
+    });
+
     it('removes a player and deletes an empty room', () =>
     {
         const manager = new RoomManager();
