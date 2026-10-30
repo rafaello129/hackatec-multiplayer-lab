@@ -14,7 +14,7 @@ Estado de referencia: rama `work/full-game-completion`. Esta lista separa implem
 - [x] **Fase 7 — zombies:** gigante y escupidor con IA, proyectiles y charcos de ácido calculados en servidor.
 - [x] **Fase 8 — progresión:** XP, niveles, persistencia, elegibilidad por actividad, bajas, asistencias, zombies, victorias y supervivencia de tormenta.
 - [x] **Fase 9 — HUD/chat:** barras de salud/escudo, armas, clasificación, feed de eliminaciones, resultados, XP, chat general y canal de espectadores.
-- [x] **Fase 10 — rediseño UI:** sistema visual oscuro y responsivo para autenticación, mostrar/ocultar contraseña, panel de perfil desplegable, skins dibujadas por Phaser y marco de arena extraído a componente. La validación visual integral de todas las pantallas todavía requiere navegador.
+- [ ] **Fase 10 — rediseño UI global (parcial):** ya hay sistema visual oscuro/responsivo para autenticación, mostrar/ocultar contraseña, panel de perfil desplegable, skins dibujadas por Phaser y marco de arena extraído a componente. Falta aplicar una jerarquía visual equivalente a todos los paneles HUD, votación y resultados, y validar cada pantalla en navegador.
 - [x] **Fase 11 — cierre técnico:** pruebas unitarias, TypeScript, build, health check y smoke Socket.IO automatizado.
 
 ## Validación automatizada
