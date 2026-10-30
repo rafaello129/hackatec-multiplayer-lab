@@ -100,8 +100,9 @@ export function registerSocketHandlers(
             const map = roomManager.getMap(roomId);
             if (!map) continue;
             const wasDashing = player.isDashing;
+            const wasInvulnerable = player.isInvulnerable;
             const moved = advanceMovement(player, state, map, 50, now);
-            if (moved || wasDashing !== player.isDashing) {
+            if (moved || wasDashing !== player.isDashing || wasInvulnerable !== player.isInvulnerable) {
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
             }
         }
@@ -367,8 +368,14 @@ export function registerSocketHandlers(
             if (!input || typeof input !== 'object') return;
             const keys: (keyof PlayerInput)[] = ['up', 'down', 'left', 'right', 'dash'];
             if (!keys.every(key => typeof input[key] === 'boolean')) return;
+            if (input.aimAngle !== undefined && (typeof input.aimAngle !== 'number' ||
+                !Number.isFinite(input.aimAngle) || Math.abs(input.aimAngle) > Math.PI)) return;
             const state = movement.get(socket.id);
-            if (state) acceptMovementInput(state, input, Date.now(), roomManager.getPlayer(socket.id));
+            const previousDashReadyAt = activePlayer?.dashReadyAt;
+            if (state) acceptMovementInput(state, input, Date.now(), activePlayer);
+            if (activePlayer && activePlayer.dashReadyAt !== previousDashReadyAt) {
+                io.to(socketRoom(activeRoom)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player: activePlayer });
+            }
         });
 
         socket.on(SOCKET_EVENTS.WEAPON_SELECT, (raw: unknown) => {
