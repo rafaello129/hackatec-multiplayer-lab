@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameMapState, PlayerState } from '@hackatec/shared';
 import { ZOMBIE_BALANCE } from '@hackatec/shared';
-import { ZombieManager } from './ZombieManager.js';
+import { isZombieMode, ZombieManager } from './ZombieManager.js';
 import { getSpawnPosition } from '../game/spawn.js';
 
 const map: GameMapState = { seed: 99, width: 1_024, height: 768, obstacles: [] };
@@ -19,6 +19,12 @@ function blockedAt(x: number, y: number, sourceMap: GameMapState): boolean {
 }
 
 describe('ZombieManager', () => {
+    it('enables zombie AI only in the dedicated Zombies mode', () => {
+        expect(isZombieMode('zombies')).toBe(true);
+        for (const mode of ['classic', 'everyone-vs-one', 'rockets', 'battleRoyale', null]) {
+            expect(isZombieMode(mode)).toBe(false);
+        }
+    });
     it('spawns a deterministic giant and spitter outside walls and away from players', () => {
         const a = new ZombieManager();
         const b = new ZombieManager();
