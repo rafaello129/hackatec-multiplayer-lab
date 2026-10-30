@@ -253,6 +253,28 @@ describe('CombatManager weapon authority', () => {
         expect(laser.zombieHits[0]?.damage).toBe(10);
     });
 
+    it('decrements zombie lives and eliminates a player after the third death', () => {
+        const survivor = player('survivor', 250);
+        survivor.lives = 3;
+        combat.initializePlayer('zombie-room', survivor, false, 'zombies');
+        combat.step('zombie-room', [survivor], map, 50, 0, 'zombies');
+
+        survivor.hp = 1;
+        combat.applyEnvironmentalDamage('zombie-room', survivor, 1, 100);
+        expect(survivor.lives).toBe(2);
+        combat.step('zombie-room', [survivor], map, 50, 4_100, 'zombies');
+
+        survivor.hp = 1;
+        combat.applyEnvironmentalDamage('zombie-room', survivor, 1, 4_200);
+        expect(survivor.lives).toBe(1);
+        combat.step('zombie-room', [survivor], map, 50, 8_200, 'zombies');
+
+        survivor.hp = 1;
+        combat.applyEnvironmentalDamage('zombie-room', survivor, 1, 8_300);
+        expect(survivor.lives).toBe(0);
+        expect(survivor.spectator).toBe(true);
+    });
+
     it('gives the Titan a damaging dash shockwave with a cooldown', () => {
         const titan = player('titan', 250);
         titan.role = 'titan';
