@@ -56,6 +56,25 @@ export type RoomStatePayload = {
     hostId?: string;
 };
 
+export type PickupType = 'medkit' | 'shield';
+export type PickupState = {
+    id: string;
+    type: PickupType;
+    x: number;
+    y: number;
+    active: boolean;
+    respawnAt: number | null;
+};
+export type PickupStatePayload = { roomId: string; pickups: PickupState[] };
+export type PickupCollectedPayload = {
+    pickupId: string;
+    type: PickupType;
+    playerId: string;
+    restored: number;
+};
+export type PlayerTrappedPayload = { playerId: string; trappedUntil: number };
+export type PlayerHealedPayload = { playerId: string; x: number; y: number; amount: number };
+
 export type PlayerJoinedPayload = {
     player: PlayerState;
 };
