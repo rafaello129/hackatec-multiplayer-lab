@@ -273,23 +273,23 @@ export function generateMap(seed: number, playerCount = 2, mode: string | null =
     const normalizedSeed = (seed >>> 0) || 1;
     const random = seededRandom(normalizedSeed);
     const obstacles: MapObstacle[] = [];
-    const width = Math.min(2_560, 1_024 + Math.max(0, playerCount - 2) * 48 + (mode === 'battleRoyale' ? 512 : 0));
+    const width = Math.min(2_560, ARENA_WIDTH + Math.max(0, playerCount - 2) * 48 + (mode === 'battleRoyale' ? 512 : 0));
     const spawnSafeZones = getSpawnSafeZones(width);
 
     addObstacles(
         obstacles,
         'fence',
-        MAP_GENERATION_CONFIG.counts.fence,
+        Math.round(MAP_GENERATION_CONFIG.counts.fence * width / ARENA_WIDTH),
         random,
         spawnSafeZones,
         width
     );
-    addObstacles(obstacles, 'rock', MAP_GENERATION_CONFIG.counts.rock, random, spawnSafeZones, width);
-    addObstacles(obstacles, 'lake', MAP_GENERATION_CONFIG.counts.lake, random, spawnSafeZones, width);
+    addObstacles(obstacles, 'rock', Math.round(MAP_GENERATION_CONFIG.counts.rock * width / ARENA_WIDTH), random, spawnSafeZones, width);
+    addObstacles(obstacles, 'lake', Math.round(MAP_GENERATION_CONFIG.counts.lake * width / ARENA_WIDTH), random, spawnSafeZones, width);
     addObstacles(
         obstacles,
         'trap',
-        MAP_GENERATION_CONFIG.counts.trap,
+        Math.round(MAP_GENERATION_CONFIG.counts.trap * width / ARENA_WIDTH),
         random,
         spawnSafeZones,
         width
@@ -297,7 +297,7 @@ export function generateMap(seed: number, playerCount = 2, mode: string | null =
     addObstacles(
         obstacles,
         'cactus',
-        MAP_GENERATION_CONFIG.counts.cactus,
+        Math.round(MAP_GENERATION_CONFIG.counts.cactus * width / ARENA_WIDTH),
         random,
         spawnSafeZones,
         width
