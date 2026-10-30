@@ -37,3 +37,15 @@ export const MATCH_TEXTS = {
         spectator: 'ESPECTADOR · Esperando la siguiente partida'
     }
 } as const;
+
+
+export const WEAPON_TEXTS = {
+    selected: 'Arma seleccionada.',
+    errors: {
+        invalidSlot: 'Esa ranura de arma no existe.',
+        unavailable: 'No tienes permiso para usar esa arma.',
+        modeLocked: 'Esa arma está bloqueada en este modo.',
+        rateLimit: 'Espera un momento antes de cambiar de arma.',
+        invalidIntent: 'La orden de disparo no es válida.'
+    }
+} as const;
