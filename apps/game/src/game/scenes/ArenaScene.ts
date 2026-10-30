@@ -111,14 +111,14 @@ export class ArenaScene extends Scene
         this.minimalHudButton = this.add.text(985, 87, 'Ocultar extras', {
             fontFamily: 'Arial Black', fontSize: 10, color: '#e2e8f0',
             backgroundColor: '#0f172acc', padding: { x: 9, y: 6 }
-        }).setOrigin(1, 0.5).setDepth(500).setInteractive({ useHandCursor: true });
+        }).setOrigin(1, 0.5).setDepth(500).setScrollFactor(0).setInteractive({ useHandCursor: true });
         this.minimalHudButton.on('pointerdown', () => this.toggleMinimalHud());
         this.mapView = new MapView(this);
         this.pickupView = new PickupView(this);
         this.stormView = new StormView(this);
         this.zombieView = new ZombieView(this);
         this.bullets = this.add.graphics().setDepth(3);
-        this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(8);
+        this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(8).setScrollFactor(0);
         this.progressionHud = this.add.text(280, 76, 'Nivel 1 · XP 0/100', {
             fontFamily: 'Arial Black', fontSize: 12, color: '#c4b5fd',
             stroke: '#020617', strokeThickness: 3
@@ -126,7 +126,7 @@ export class ArenaScene extends Scene
         this.weaponHud = this.add.text(512, 690, '', {
             fontFamily: 'Arial Black', fontSize: 11, color: '#e2e8f0',
             backgroundColor: '#0f172acc', padding: { x: 10, y: 6 }, align: 'center'
-        }).setOrigin(0.5).setDepth(8);
+        }).setOrigin(0.5).setDepth(8).setScrollFactor(0);
         this.input.keyboard?.on('keydown-ONE', this.selectSlot1);
         this.input.keyboard?.on('keydown-TWO', this.selectSlot2);
         this.input.keyboard?.on('keydown-THREE', this.selectSlot3);
@@ -218,12 +218,12 @@ export class ArenaScene extends Scene
         this.matchStatusText = this.add.text(512, 142, 'Esperando jugadores…', {
             fontFamily: 'Arial Black', fontSize: 17, color: '#f8fafc',
             backgroundColor: '#0f172acc', padding: { x: 12, y: 7 }, align: 'center'
-        }).setOrigin(0.5).setDepth(320);
+        }).setOrigin(0.5).setDepth(320).setScrollFactor(0);
 
         this.spectatorStatusText = this.add.text(512, 650, '', {
             fontFamily: 'Arial Black', fontSize: 13, color: '#e0f2fe',
             backgroundColor: '#0c4a6ecc', padding: { x: 10, y: 6 }, align: 'center'
-        }).setOrigin(0.5).setDepth(330).setVisible(false);
+        }).setOrigin(0.5).setDepth(330).setScrollFactor(0).setVisible(false);
 
         this.matchCountdownText = this.add.text(512, 178, '', {
             fontFamily: 'Arial Black', fontSize: 20, color: '#facc15',
@@ -244,7 +244,7 @@ export class ArenaScene extends Scene
                 fontFamily: 'Arial Black', fontSize: 13, color: '#ffffff',
                 backgroundColor: '#0369a1', padding: { x: 9, y: 8 },
                 align: 'center', fixedWidth: 145
-            }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+            }).setOrigin(0.5).setDepth(321).setScrollFactor(0).setInteractive().setVisible(false);
             button.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_VOTE, { mode }));
             this.voteButtons.set(mode, button);
         });
@@ -252,7 +252,7 @@ export class ArenaScene extends Scene
         this.hostMenuButton = this.add.text(870, 112, MATCH_TEXTS.controls.hostMenu, {
             fontFamily: 'Arial Black', fontSize: 14, color: '#facc15',
             backgroundColor: '#1e293b', padding: { x: 10, y: 7 }
-        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+        }).setOrigin(0.5).setDepth(321).setScrollFactor(0).setInteractive().setVisible(false);
         this.hostMenuButton.on('pointerdown', () => {
             const visible = !this.hostStartButton?.visible;
             this.hostModeButton?.setVisible(visible);
@@ -263,7 +263,7 @@ export class ArenaScene extends Scene
         this.hostModeButton = this.add.text(870, 150, 'Modo: Clásico', {
             fontFamily: 'Arial', fontSize: 12, color: '#ffffff',
             backgroundColor: '#334155', padding: { x: 9, y: 6 }
-        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+        }).setOrigin(0.5).setDepth(321).setScrollFactor(0).setInteractive().setVisible(false);
         this.hostModeButton.on('pointerdown', () => {
             const currentIndex = this.gameModeOrder.indexOf(this.selectedHostMode);
             this.selectedHostMode = this.gameModeOrder[(currentIndex + 1) % this.gameModeOrder.length] ?? 'classic';
@@ -273,13 +273,13 @@ export class ArenaScene extends Scene
         this.hostStartButton = this.add.text(870, 188, 'Iniciar modo elegido', {
             fontFamily: 'Arial', fontSize: 13, color: '#ffffff',
             backgroundColor: '#166534', padding: { x: 9, y: 6 }
-        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+        }).setOrigin(0.5).setDepth(321).setScrollFactor(0).setInteractive().setVisible(false);
         this.hostStartButton.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_HOST_START, { mode: this.selectedHostMode }));
 
         this.hostStopButton = this.add.text(870, 226, MATCH_TEXTS.controls.hostStop, {
             fontFamily: 'Arial', fontSize: 13, color: '#ffffff',
             backgroundColor: '#991b1b', padding: { x: 9, y: 6 }
-        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+        }).setOrigin(0.5).setDepth(321).setScrollFactor(0).setInteractive().setVisible(false);
         this.hostStopButton.on('pointerdown', () => {
             this.socket.emit(SOCKET_EVENTS.MATCH_HOST_STOP);
             this.hostModeButton?.setVisible(false);
@@ -543,7 +543,13 @@ export class ArenaScene extends Scene
         if (payload.hostId) this.roomHostId = payload.hostId;
 
         const myPlayerState = this.playerRegistry.get(this.selfId);
-        if (myPlayerState) this.upsertPlayerView(myPlayerState);
+        if (myPlayerState) {
+            this.upsertPlayerView(myPlayerState);
+            const ownView = this.playerViews.get(this.selfId);
+            if (!myPlayerState.spectator && myPlayerState.alive !== false && ownView) {
+                this.cameras.main.startFollow(ownView.container, true, 0.08, 0.08);
+            }
+        }
     };
 
     private readonly handleRoomError = (payload: RoomErrorPayload) =>
@@ -744,6 +750,10 @@ export class ArenaScene extends Scene
         this.killFeedHud?.setText(this.killFeedLines.join('\n'));
         const self = state.players.find(player => player.id === this.selfId);
         if (self?.spectator) this.syncSpectatorCamera(state.players);
+        else if (self && self.alive !== false) {
+            const ownView = this.playerViews.get(this.selfId);
+            if (ownView) this.cameras.main.startFollow(ownView.container, true, 0.08, 0.08);
+        }
         this.scoreboard?.setText('CLASIFICACIÓN\n' + [...state.players].sort((a,b)=>(b.kills??0)-(a.kills??0)).slice(0,8).map((p,i)=>`${i+1}. ${p.name}: ${p.kills??0} / ${p.deaths??0}`).join('\n'));
         this.healthBar?.clear();
         if (self) {
