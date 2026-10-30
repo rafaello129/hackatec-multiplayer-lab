@@ -230,14 +230,19 @@ export class CombatManager {
     getWeaponState(roomId: string, playerId: string, now: number, mode: string | null = null): WeaponStatePayload {
         const state = this.runtime(roomId);
         const weapon = this.weaponRuntime(state, playerId);
-        const selectedWeapon = weaponForSlot(weapon.selectedSlot) ?? 'pistol';
+        const canUseLaser = state.laserOwners.has(playerId);
+        const selectedWeapon = canUseLaser
+            ? weaponForSlot(weapon.selectedSlot) ?? 'pistol'
+            : weapon.selectedSlot === 7 ? 'pistol' : weaponForSlot(weapon.selectedSlot) ?? 'pistol';
         return {
-            selectedSlot: weapon.selectedSlot,
+            selectedSlot: canUseLaser ? weapon.selectedSlot : Math.min(weapon.selectedSlot, 6) as WeaponSlot,
             selectedWeapon,
-            availableSlots: availableWeaponSlots(state.laserOwners.has(playerId), mode),
+            availableSlots: availableWeaponSlots(canUseLaser, mode),
             cooldownRemainingMs: Math.max(0, weapon.cooldownUntil - now),
-            laserEnergyMs: Math.floor(weapon.laserEnergyMs),
-            laserEnergyMaxMs: WEAPON_BALANCE.laser.energyMs
+            ...(canUseLaser ? {
+                laserEnergyMs: Math.floor(weapon.laserEnergyMs),
+                laserEnergyMaxMs: WEAPON_BALANCE.laser.energyMs
+            } : {})
         };
     }
 
