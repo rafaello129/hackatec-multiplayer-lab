@@ -15,7 +15,7 @@ export type PickupStepResult = {
     collected: PickupCollectedPayload[];
 };
 
-const PICKUP_RADIUS = 15;
+const PICKUP_RADIUS = PICKUP_BALANCE.radiusPx;
 const PLAYER_RADIUS = COMBAT_BALANCE.playerRadius;
 
 function seededRandom(seed: number): () => number {
@@ -39,9 +39,13 @@ function intersectsObstacle(x: number, y: number, radius: number, map: GameMapSt
 
 function createPickupPositions(map: GameMapState, count: number): Array<{ x: number; y: number }> {
     const candidates: Array<{ x: number; y: number }> = [];
-    for (let y = COMBAT_BALANCE.playableTop + 48; y <= COMBAT_BALANCE.playableBottom - 48; y += 74) {
-        for (let x = 70; x <= map.width - 70; x += 82) {
-            if (intersectsObstacle(x, y, PICKUP_RADIUS + 8, map)) continue;
+    for (let y = COMBAT_BALANCE.playableTop + PICKUP_BALANCE.spawnMarginY;
+        y <= COMBAT_BALANCE.playableBottom - PICKUP_BALANCE.spawnMarginY;
+        y += PICKUP_BALANCE.spawnGridY) {
+        for (let x = PICKUP_BALANCE.spawnMarginX;
+            x <= map.width - PICKUP_BALANCE.spawnMarginX;
+            x += PICKUP_BALANCE.spawnGridX) {
+            if (intersectsObstacle(x, y, PICKUP_RADIUS + PICKUP_BALANCE.obstaclePaddingPx, map)) continue;
             candidates.push({ x, y });
         }
     }
@@ -54,18 +58,18 @@ function createPickupPositions(map: GameMapState, count: number): Array<{ x: num
 
     const selected: Array<{ x: number; y: number }> = [];
     for (const candidate of candidates) {
-        if (selected.some(point => Math.hypot(point.x - candidate.x, point.y - candidate.y) < 150)) continue;
+        if (selected.some(point => Math.hypot(point.x - candidate.x, point.y - candidate.y) < PICKUP_BALANCE.minimumSpacingPx)) continue;
         selected.push(candidate);
         if (selected.length >= count) break;
     }
 
     // Deterministic fallback for unusually dense maps; the fallback is still obstacle-checked.
     if (selected.length < count) {
-        for (let index = 0; index < 32 && selected.length < count; index += 1) {
+        for (let index = 0; index < PICKUP_BALANCE.fallbackSpawnCount && selected.length < count; index += 1) {
             const spawn = getSpawnPosition(index);
             const point = { x: spawn.x, y: spawn.y };
-            if (intersectsObstacle(point.x, point.y, PICKUP_RADIUS + 8, map)) continue;
-            if (selected.some(existing => Math.hypot(existing.x - point.x, existing.y - point.y) < 70)) continue;
+            if (intersectsObstacle(point.x, point.y, PICKUP_RADIUS + PICKUP_BALANCE.obstaclePaddingPx, map)) continue;
+            if (selected.some(existing => Math.hypot(existing.x - point.x, existing.y - point.y) < PICKUP_BALANCE.fallbackMinimumSpacingPx)) continue;
             selected.push(point);
         }
     }
