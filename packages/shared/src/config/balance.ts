@@ -7,7 +7,13 @@ export const MATCH_BALANCE = {
     initialHealth: 100,
     resultsDurationMs: 15_000,
     classicRespawnMs: 5_000,
-    voteRateLimitMs: 250
+    voteRateLimitMs: 250,
+    everyoneVsOneDurationMs: 240_000,
+    titanBaseHealth: 500,
+    titanHealthPerHunter: 100,
+    hunterLives: 2,
+    battleRoyaleDurationMs: 450_000,
+    rocketsDurationMs: 300_000
 } as const;
 
 export const WEAPON_SLOT_ORDER = [
