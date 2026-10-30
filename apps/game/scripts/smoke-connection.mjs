@@ -151,6 +151,25 @@ async function verifyAccountLoginRateLimit(username) {
     assert(blocked.status === 429, 'the sixth invalid attempt for one account should be rate limited');
 }
 
+async function uploadTestSkin(cookie) {
+    const bytes = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5s8AAAAASUVORK5CYII=',
+        'base64'
+    );
+    const form = new FormData();
+    form.append('skin', new Blob([bytes], { type: 'image/png' }), 'smoke.png');
+    const response = await fetch(`${url}/api/skins`, {
+        method: 'POST',
+        headers: { Cookie: cookie },
+        body: form
+    });
+    const body = await response.json();
+    assert(response.status === 201, `skin upload failed: ${body.error}`);
+    assert(body.id && body.url === '/skins/' + body.id, 'skin upload returned invalid metadata');
+    return body;
+}
+
+
 
 async function verifyAuthApi(account) {
     const sessionResponse = await fetch(`${url}/api/auth/session`, {
@@ -288,17 +307,38 @@ async function main() {
     assert(votingState.phase === 'voting' && betaMatchState.phase === 'voting', 'two players should trigger a shared vote');
 
     const renamedBeta = betaAccount.username + 'New';
+    const uploadedSkin = await uploadTestSkin(betaLoginCookie);
     const profileResultPromise = waitFor(beta, 'profile:result');
     beta.emit('profile:set', {
         username: renamedBeta,
-        appearance: { mode: 'color', colorHex: '#60A5FA' }
+        appearance: {
+            mode: 'skin',
+            colorHex: '#60A5FA',
+            skin: uploadedSkin
+        }
     });
     const profileResult = await profileResultPromise;
-    assert(profileResult.ok === true, 'authenticated profile update should succeed');
+    assert(profileResult.ok === true, 'the uploader should be able to assign their own saved skin');
+
+    const stolenSkinResultPromise = waitFor(alpha, 'profile:result');
+    alpha.emit('profile:set', {
+        appearance: {
+            mode: 'skin',
+            colorHex: '#60A5FA',
+            skin: uploadedSkin
+        }
+    });
+    const stolenSkinResult = await stolenSkinResultPromise;
+    assert(stolenSkinResult.ok === false,
+        'a different account must not be able to assign another account’s skin');
+
     const refreshedSession = await connectClient('beta-profile-refresh', betaLoginCookie);
     const refreshedProfileState = await joinRoom(refreshedSession, 'profile-room');
     assert(refreshedProfileState.players[0]?.name === renamedBeta,
         'a new socket must use the latest database username, not the stale handshake snapshot');
+    assert(refreshedProfileState.players[0]?.appearance?.mode === 'skin' &&
+        refreshedProfileState.players[0]?.appearance?.skin?.url === uploadedSkin.url,
+        'the saved skin should remain attached to the account profile');
     refreshedSession.disconnect();
 
     const voteStatePromise = waitForMatchVote(beta, beta.id);
