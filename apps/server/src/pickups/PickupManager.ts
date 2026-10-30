@@ -81,7 +81,7 @@ export class PickupManager {
     private readonly rooms = new Map<string, RoomPickupState>();
 
     reset(roomId: string, map: GameMapState): PickupState[] {
-        const types = ['medkit', 'shield', 'medkit', 'shield', 'medkit', 'shield', 'medkit', 'shield'] as const;
+        const types = ['medkit', 'shield', 'shield', 'medkit', 'shield', 'shield'] as const;
         const positions = createPickupPositions(map, types.length);
         const pickups = types.slice(0, positions.length).map((type, index): PickupState => ({
             id: roomId + ':pickup:' + index,
@@ -105,10 +105,6 @@ export class PickupManager {
 
         let changed = false;
         const collected: PickupCollectedPayload[] = [];
-        const respawnMs = mode === 'battleRoyale'
-            ? PICKUP_BALANCE.battleRoyaleRespawnMs
-            : PICKUP_BALANCE.respawnMs;
-
         for (const pickup of room.pickups) {
             if (!pickup.active && pickup.respawnAt !== null && now >= pickup.respawnAt) {
                 pickup.active = true;
@@ -145,6 +141,13 @@ export class PickupManager {
 
             if (restored <= 0) continue;
             pickup.active = false;
+            const respawnMs = pickup.type === 'medkit'
+                ? mode === 'battleRoyale'
+                    ? PICKUP_BALANCE.battleRoyaleMedkitRespawnMs
+                    : PICKUP_BALANCE.medkitRespawnMs
+                : mode === 'battleRoyale'
+                    ? PICKUP_BALANCE.battleRoyaleRespawnMs
+                    : PICKUP_BALANCE.respawnMs;
             pickup.respawnAt = now + respawnMs;
             changed = true;
             collected.push({
