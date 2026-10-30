@@ -3,6 +3,7 @@ import {
     MATCH_BALANCE,
     type ConnectionReadyPayload,
     type PlayerInput,
+    type PlayerState,
     type PlayerInputPayload,
     type ProfileUpdatePayload,
     type PlayerJoinedPayload,
@@ -38,8 +39,7 @@ function socketRoom(roomId: string): string
 
 function publicPlayerState(player: PlayerState): PlayerState {
     if (player.selectedWeapon !== 'laser') return player;
-    const { selectedWeapon: _hiddenWeapon, ...visibleState } = player;
-    return visibleState;
+    return { ...player, selectedWeapon: 'pistol' };
 }
 
 function isSkinAssetRecord(value: unknown): value is {
