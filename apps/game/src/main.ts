@@ -1,5 +1,4 @@
 import './style.css';
-import { startGame } from './game/main';
 import { getSocket, serverUrl } from './network/socket';
 
 type AuthResponse = {
@@ -10,12 +9,19 @@ type AuthResponse = {
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
 let gameStarted = false;
-let gameInstance: ReturnType<typeof startGame> | undefined;
-function launchGame(): void {
+let gameInstance: ReturnType<typeof import('./game/main').startGame> | undefined;
+async function launchGame(): Promise<void> {
     if (gameStarted) return;
     gameStarted = true;
+    try {
+        const { startGame } = await import('./game/main');
+        gameInstance = startGame();
+    } catch {
+        gameStarted = false;
+        renderAuth('No se pudo cargar el juego. Inténtalo de nuevo.');
+        return;
+    }
     document.querySelector('#auth-screen')?.remove();
-    gameInstance = startGame();
     const logout = document.createElement('button');
     logout.id = 'session-logout';
     logout.className = 'session-logout';
