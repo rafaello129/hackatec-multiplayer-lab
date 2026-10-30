@@ -13,9 +13,6 @@ on:
 jobs:
   test-build-smoke:
     runs-on: ubuntu-latest
-    env:
-      GUETA_ACCOUNT_KEY: smoke-test-owner-key
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
