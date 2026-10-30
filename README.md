@@ -9,10 +9,10 @@ Juego web multijugador 2D desarrollado con TypeScript, Phaser 4, Node.js, Expres
 - Registro, inicio y cierre de sesión con contraseñas Argon2id y sesiones persistentes en SQLite.
 - Salas autenticadas, sincronización autoritativa, host, votación de modos y espectadores.
 - Movimiento con colisiones, dash, trampas, pickups, vida y escudos.
-- Siete ranuras de armas; daño, proyectiles, explosiones, curación y kills calculados por el servidor.
-- Cuatro modos: Clásico, Todos contra uno, Rocket para todos y Battle Royale.
-- Tormenta progresiva para Battle Royale.
-- Zombies gigante y escupidor con IA autoritativa.
+- Armas con daño, proyectiles, explosiones, curación y bajas calculadas por el servidor.
+- Cinco modos: Clásico, Todos contra uno, Rocket para todos, Battle Royale y Zombies.
+- Tormenta progresiva exclusiva de Battle Royale.
+- Zombies gigante y escupidor con IA autoritativa, exclusivos del modo Zombies.
 - XP, niveles, asistencias, historial de progresión y chat con canal de espectadores.
 - HUD con hotbar, vida, escudo, roles, feed de eliminaciones, resultados, chat y burbujas de mensaje.
 
@@ -64,7 +64,7 @@ El servidor crea `apps/server/storage/accounts.sqlite` automáticamente. Para ca
 | Dash | Shift |
 | Apuntar | Mouse |
 | Disparar | Mantener clic izquierdo |
-| Seleccionar arma | Teclas 1–7 |
+| Seleccionar arma | Teclas 1–6 |
 | Abrir / enviar chat | Enter |
 | Cerrar chat | Escape |
 | Cambiar objetivo como espectador | A / D |
@@ -73,10 +73,11 @@ En el chat, los jugadores activos escriben en el canal general. Los espectadores
 
 ## Modos de juego
 
-- **Clásico:** ronda de 5 minutos o límite de 30 bajas; respawn de 5 segundos. Incluye zombies.
-- **Todos contra uno:** un Titan con vida escalada contra cazadores con dos vidas; respawn de 5 segundos para cazadores que conservan vidas. Incluye zombies.
-- **Rocket para todos:** todos usan exclusivamente el lanzacohetes; ronda de 5 minutos.
-- **Battle Royale:** eliminación definitiva, tormenta de cinco fases y victoria del último superviviente. Duración máxima configurada de 7.5 minutos.
+- **Clásico:** ronda de 5 minutos o límite de 30 bajas; respawn de 5 segundos. Sin zombies.
+- **Todos contra uno:** un Titan con vida escalada contra cazadores con dos vidas; respawn de 5 segundos para cazadores que conservan vidas. Sin zombies.
+- **Rocket para todos:** todos usan exclusivamente el lanzacohetes; ronda de 5 minutos. Sin zombies.
+- **Battle Royale:** eliminación definitiva, tormenta de cinco fases y victoria del último superviviente. Duración máxima configurada de 7.5 minutos. Sin zombies.
+- **Zombies:** supervivencia contra hordas de gigantes y escupidores; es el único modo que genera zombies.
 
 La votación se abre al haber dos jugadores. El anfitrión también puede elegir e iniciar un modo, o detener la partida. Consulta [MATCH_LIFECYCLE.md](docs/MATCH_LIFECYCLE.md) para reglas exactas.
 
@@ -87,7 +88,6 @@ El cliente envía intenciones. El servidor valida la sesión y decide movimiento
 - Las contraseñas se almacenan con Argon2id.
 - Los tokens de sesión son aleatorios; SQLite conserva su hash.
 - Socket.IO valida la sesión en la conexión y en cada paquete.
-- El láser depende de la cuenta propietaria reservada como `Gueta`; esa reserva corresponde al primer registro exitoso del username y no verifica identidad personal.
 - Chat, votos, cambio de arma y login tienen límites de frecuencia.
 
 No publiques `accounts.sqlite` ni subas secretos o tokens al repositorio.
