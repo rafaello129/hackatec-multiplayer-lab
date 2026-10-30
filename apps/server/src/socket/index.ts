@@ -38,17 +38,18 @@ export function registerSocketHandlers(
     const matches = new MatchManager();
     const identities = new Map<string, string>();
 
+    const syncMatchRoom = (roomId: string, now: number): void => {
+        const players = roomManager.getPlayers(roomId);
+        const accountIds = new Map(players.map(player => [player.id, identities.get(player.id) ?? player.id]));
+        matches.syncRoom(roomId, players, roomManager.getHostId(roomId), now, accountIds);
+    };
+
     const resetRoomForMatch = (roomId: string): void => {
-        for (const player of roomManager.getPlayers(roomId)) {
-            player.hp = 100;
-            player.maxHp = 100;
-            player.alive = true;
-            player.kills = 0;
-            player.deaths = 0;
-            player.isDashing = false;
-            player.immobilizedUntil = 0;
-        }
+        const reset = roomManager.resetForMatch(roomId);
+        if (!reset) return;
         combat.resetRoom(roomId);
+        io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.ROOM_MAP, reset.map);
+        io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players: reset.players, projectiles: [] });
         for (const [socketId] of movement) {
             if (roomManager.getRoomId(socketId) === roomId) movement.set(socketId, createMovementRuntime());
         }
@@ -85,6 +86,7 @@ export function registerSocketHandlers(
             const player = roomManager.getPlayer(socketId);
             const roomId = roomManager.getRoomId(socketId);
             if (!player || !roomId) { movement.delete(socketId); continue; }
+            if (player.spectator) continue;
             const map = roomManager.getMap(roomId);
             if (!map) continue;
             if (!matches.isPlaying(roomId)) continue;
@@ -99,7 +101,7 @@ export function registerSocketHandlers(
             const map = roomManager.getMap(roomId);
             if (!map) { rooms.delete(roomId); continue; }
             const players = roomManager.getPlayers(roomId);
-            matches.syncRoom(roomId, players, roomManager.getHostId(roomId), now);
+            syncMatchRoom(roomId, now);
             for (const transition of matches.advance(now, id => roomManager.getPlayers(id))) {
                 if (transition.resetPlayers) resetRoomForMatch(transition.roomId);
             }
@@ -186,7 +188,7 @@ export function registerSocketHandlers(
                 io.to(socketRoom(result.previous.roomId))
                     .emit(SOCKET_EVENTS.PLAYER_LEFT, leftPayload);
 
-                matches.syncRoom(result.previous.roomId, roomManager.getPlayers(result.previous.roomId), roomManager.getHostId(result.previous.roomId), Date.now());
+                syncMatchRoom(result.previous.roomId, Date.now());
                 for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
                 if (result.previous.hostId) io.to(socketRoom(result.previous.roomId)).emit(SOCKET_EVENTS.ROOM_HOST_CHANGED, { hostId: result.previous.hostId });
                 console.log(
@@ -211,7 +213,7 @@ export function registerSocketHandlers(
             };
 
             socket.emit(SOCKET_EVENTS.ROOM_STATE, statePayload);
-            matches.syncRoom(result.roomId, result.players, result.hostId, Date.now());
+            syncMatchRoom(result.roomId, Date.now());
             socket.emit(SOCKET_EVENTS.MATCH_STATE, matches.getState(result.roomId));
             for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
 
@@ -280,7 +282,9 @@ export function registerSocketHandlers(
             if (!roomId || !raw || typeof raw !== 'object') return;
             const mode = (raw as Partial<MatchVotePayload>).mode;
             if (typeof mode !== 'string') return;
-            const result = matches.vote(roomId, socket.id, mode as GameMode, Date.now());
+            const accountId = identities.get(socket.id);
+            if (!accountId) return;
+            const result = matches.vote(roomId, socket.id, accountId, mode as GameMode, Date.now());
             socket.emit(SOCKET_EVENTS.MATCH_ACTION_RESULT, result);
             for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
         });
@@ -306,7 +310,8 @@ export function registerSocketHandlers(
 
         socket.on(SOCKET_EVENTS.PLAYER_INPUT, (raw: unknown) => {
             const activeRoom = roomManager.getRoomId(socket.id);
-            if (!activeRoom || !matches.isPlaying(activeRoom)) return;
+            const activePlayer = roomManager.getPlayer(socket.id);
+            if (!activeRoom || !matches.isPlaying(activeRoom) || activePlayer?.spectator) return;
             if (!raw || typeof raw !== 'object') return;
             const input = (raw as Partial<PlayerInputPayload>).input;
             if (!input || typeof input !== 'object') return;
@@ -319,7 +324,7 @@ export function registerSocketHandlers(
         socket.on(SOCKET_EVENTS.PLAYER_SHOOT, (payload: unknown) => {
             const roomId = roomManager.getRoomId(socket.id);
             const player = roomManager.getPlayer(socket.id);
-            if (roomId && player && matches.isPlaying(roomId)) combat.shoot(roomId, player, payload, Date.now());
+            if (roomId && player && !player.spectator && matches.isPlaying(roomId)) combat.shoot(roomId, player, payload, Date.now());
         });
 
         socket.on('disconnect', (reason) => {
@@ -331,7 +336,7 @@ export function registerSocketHandlers(
             {
                 combat.leave(left.roomId, socket.id, !roomManager.hasRoom(left.roomId));
                 if (!roomManager.hasRoom(left.roomId)) rooms.delete(left.roomId);
-                matches.syncRoom(left.roomId, roomManager.getPlayers(left.roomId), roomManager.getHostId(left.roomId), Date.now());
+                syncMatchRoom(left.roomId, Date.now());
                 for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
                 if (left.hostId) io.to(socketRoom(left.roomId)).emit(SOCKET_EVENTS.ROOM_HOST_CHANGED, { hostId: left.hostId });
                 const leftPayload: PlayerLeftPayload = {
