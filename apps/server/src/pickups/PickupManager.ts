@@ -81,7 +81,7 @@ export class PickupManager {
     private readonly rooms = new Map<string, RoomPickupState>();
 
     reset(roomId: string, map: GameMapState): PickupState[] {
-        const types = ['medkit', 'shield', 'shield', 'medkit', 'shield', 'shield'] as const;
+        const types = ['medkit', 'shield', 'shield', 'medkit', 'shield', 'shield', 'medkit'] as const;
         const positions = createPickupPositions(map, types.length);
         const pickups = types.slice(0, positions.length).map((type, index): PickupState => ({
             id: roomId + ':pickup:' + index,
