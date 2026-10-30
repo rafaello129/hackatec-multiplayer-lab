@@ -347,8 +347,9 @@ export class ArenaScene extends Scene
             this.chatPanel, this.chatInputHud, this.matchStatusText, this.matchCountdownText,
             this.spectatorStatusText, ...this.voteButtons.values(),
             this.hostMenuButton, this.hostModeButton, this.hostStartButton, this.hostStopButton
-        ].filter((item): item is GameObjects.Text => Boolean(item));
+        ];
         for (const item of secondary) {
+            if (!item) continue;
             item.setAlpha(alpha);
             if (this.minimalHud) item.disableInteractive();
             else if (item === this.hostMenuButton || item === this.hostModeButton ||
