@@ -293,15 +293,20 @@ export class MatchManager {
             return { finished: false, winnerId: null, message: '' };
         }
 
+        const participants = players.filter(player => !player.spectator);
         const killLimitReached = mode === 'classic' &&
-            players.some(player => (player.kills ?? 0) >= MATCH_BALANCE.classicKillLimit);
+            participants.some(player => (player.kills ?? 0) >= MATCH_BALANCE.classicKillLimit);
         if (!timeExpired && !killLimitReached) return { finished: false, winnerId: null, message: '' };
-        const winner = [...players].sort((a, b) =>
+        const winner = [...participants].sort((a, b) =>
             (b.kills ?? 0) - (a.kills ?? 0) ||
             (a.deaths ?? 0) - (b.deaths ?? 0) ||
             a.name.localeCompare(b.name)
         )[0];
-        return { finished: true, winnerId: winner?.id ?? null, message: MATCH_TEXTS.messages.gameFinished };
+        return {
+            finished: true,
+            winnerId: winner?.id ?? null,
+            message: winner ? MATCH_TEXTS.messages.gameFinished : 'No quedan participantes activos.'
+        };
     }
 
     private orderModeResults(mode: GameMode | null, players: PlayerState[], winnerId: string | null): PlayerState[] {
@@ -327,6 +332,7 @@ export class MatchManager {
             });
         }
         return sorted.sort((a, b) =>
+            Number(Boolean(a.spectator)) - Number(Boolean(b.spectator)) ||
             (b.kills ?? 0) - (a.kills ?? 0) ||
             (a.deaths ?? 0) - (b.deaths ?? 0) ||
             a.name.localeCompare(b.name)
