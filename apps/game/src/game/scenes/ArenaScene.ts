@@ -382,6 +382,7 @@ export class ArenaScene extends Scene
 
     private readonly handleRoomMap = (map: GameMapState): void => {
         this.mapView?.render(map);
+        this.cameras.main.setBounds(0, 0, map.width, map.height);
     };
 
     private readonly handleHostChanged = (payload: { hostId: string }): void => {
@@ -529,6 +530,7 @@ export class ArenaScene extends Scene
         if (own?.appearance) this.profilePanel?.setProfile(own.name, own.appearance);
         this.playerRegistry.replaceAll(payload.players);
         this.mapView?.render(payload.map);
+        this.cameras.main.setBounds(0, 0, payload.map.width, payload.map.height);
         this.syncPlayerViews();
         if (payload.hostId) this.roomHostId = payload.hostId;
 
