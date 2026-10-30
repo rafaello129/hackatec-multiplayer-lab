@@ -12,7 +12,8 @@ import {
     type RoomErrorPayload,
     type RoomStatePayload,
     type MatchStatePayload,
-    type GameMapState
+    type GameMapState,
+    MATCH_TEXTS
 } from '@hackatec/shared';
 import { Scene, type GameObjects, Input } from 'phaser';
 import type { Socket } from 'socket.io-client';
@@ -162,13 +163,13 @@ export class ArenaScene extends Scene
             backgroundColor: '#0f172acc', padding: { x: 10, y: 5 }, align: 'center'
         }).setOrigin(0.5).setDepth(320);
 
-        this.voteButton = this.add.text(512, 220, 'Votar: Clásico', {
+        this.voteButton = this.add.text(512, 220, MATCH_TEXTS.controls.voteClassic, {
             fontFamily: 'Arial Black', fontSize: 16, color: '#ffffff',
             backgroundColor: '#0369a1', padding: { x: 14, y: 8 }
         }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
         this.voteButton.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_VOTE, { mode: 'classic' }));
 
-        this.hostMenuButton = this.add.text(870, 112, '⚙ Anfitrión', {
+        this.hostMenuButton = this.add.text(870, 112, MATCH_TEXTS.controls.hostMenu, {
             fontFamily: 'Arial Black', fontSize: 14, color: '#facc15',
             backgroundColor: '#1e293b', padding: { x: 10, y: 7 }
         }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
@@ -178,13 +179,13 @@ export class ArenaScene extends Scene
             this.hostStopButton?.setVisible(visible);
         });
 
-        this.hostStartButton = this.add.text(870, 158, 'Forzar nueva partida', {
+        this.hostStartButton = this.add.text(870, 158, MATCH_TEXTS.controls.hostStart, {
             fontFamily: 'Arial', fontSize: 13, color: '#ffffff',
             backgroundColor: '#166534', padding: { x: 9, y: 6 }
         }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
         this.hostStartButton.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_HOST_START, { mode: 'classic' }));
 
-        this.hostStopButton = this.add.text(870, 198, 'Detener partida', {
+        this.hostStopButton = this.add.text(870, 198, MATCH_TEXTS.controls.hostStop, {
             fontFamily: 'Arial', fontSize: 13, color: '#ffffff',
             backgroundColor: '#991b1b', padding: { x: 9, y: 6 }
         }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
@@ -199,17 +200,17 @@ export class ArenaScene extends Scene
         this.matchState = state;
         this.roomHostId = state.hostId ?? '';
         const labels: Record<MatchStatePayload['phase'], string> = {
-            waiting: 'Esperando para iniciar',
-            voting: 'Votación de modo',
-            countdown: 'La partida está por comenzar',
-            playing: 'Partida en curso · Clásico',
-            results: 'Resultados de la partida'
+            waiting: MATCH_TEXTS.phases.waiting,
+            voting: MATCH_TEXTS.phases.voting,
+            countdown: MATCH_TEXTS.phases.countdown,
+            playing: MATCH_TEXTS.phases.playing,
+            results: MATCH_TEXTS.phases.results
         };
         const voteCount = Object.keys(state.votes).length;
         const host = this.roomHostId === this.selfId;
         this.matchStatusText?.setText(state.message ? labels[state.phase] + '\\n' + state.message : labels[state.phase]);
         this.voteButton?.setVisible(state.phase === 'voting');
-        this.voteButton?.setText(state.votes[this.selfId] ? 'Cambiar voto: Clásico' : 'Votar: Clásico');
+        this.voteButton?.setText(state.votes[this.selfId] ? MATCH_TEXTS.controls.changeVoteClassic : 'Votar: Clásico');
         this.hostMenuButton?.setVisible(host);
         if (!host) {
             this.hostStartButton?.setVisible(false);
@@ -526,7 +527,7 @@ private createInterface()
             this.healthBar?.fillStyle(0x334155).fillRect(36, 127, 220, 12);
             this.healthBar?.fillStyle((self.hp??100)>30 ? 0x22c55e : 0xef4444).fillRect(36,127,220*Math.max(0,Math.min(100,self.hp??100))/100,12);
         }
-        if (self) this.combatText?.setText(self.spectator ? 'ESPECTADOR · Esperando la siguiente partida' : `HP: ${self.hp ?? 100} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
+        if (self) this.combatText?.setText(self.spectator ? MATCH_TEXTS.controls.spectator : `HP: ${self.hp ?? 100} · Kills: ${self.kills ?? 0} · Deaths: ${self.deaths ?? 0} · ${this.weapon}${self.alive === false ? ' · RESPAWN...' : ''}`);
         this.bullets?.clear();
         this.bullets?.fillStyle(0xfacc15, 1);
         for (const projectile of state.projectiles) this.bullets?.fillCircle(projectile.x, projectile.y, 5);
