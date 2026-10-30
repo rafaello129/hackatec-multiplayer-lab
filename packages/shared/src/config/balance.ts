@@ -48,7 +48,10 @@ export const WEAPON_BALANCE = {
         energyMs: 4_000,
         rechargeMs: 3_000,
         range: 1_800
-    }
+    },
+    selectionCooldownMs: 120,
+    minimumFireIntentIntervalMs: 35,
+    fireIntentTimeoutMs: 220
 } as const;
 
 export const DASH_BALANCE = {
@@ -58,6 +61,11 @@ export const DASH_BALANCE = {
     cooldownMs: 2_500
 } as const;
 
+export const MOVEMENT_BALANCE = {
+    speedPxPerSecond: 185,
+    inputTimeoutMs: 250
+} as const;
+
 export const PICKUP_BALANCE = {
     maxHealth: 100,
     maxShield: 50,
@@ -65,7 +73,16 @@ export const PICKUP_BALANCE = {
     shieldAmount: 25,
     healOnKill: 15,
     respawnMs: 60_000,
-    battleRoyaleRespawnMs: 120_000
+    battleRoyaleRespawnMs: 120_000,
+    radiusPx: 15,
+    obstaclePaddingPx: 8,
+    spawnMarginX: 70,
+    spawnMarginY: 48,
+    spawnGridX: 82,
+    spawnGridY: 74,
+    minimumSpacingPx: 150,
+    fallbackMinimumSpacingPx: 70,
+    fallbackSpawnCount: 32
 } as const;
 
 export const STORM_BALANCE = {
@@ -84,7 +101,8 @@ export const ZOMBIE_BALANCE = {
         cooldownMs: 6_000,
         stunnedMs: 2_000,
         moveSpeed: 75,
-        chargeSpeed: 420
+        chargeSpeed: 420,
+        chargeRangePx: 220
     },
     spitter: {
         health: 90,
@@ -102,6 +120,19 @@ export const ZOMBIE_BALANCE = {
     },
     spawnIntervalMs: 20_000,
     maximumAlive: 12,
+    initialSpawnCount: 2,
+    spawnGridMarginPx: 45,
+    spawnGridMinX: 55,
+    spawnGridStepX: 60,
+    spawnGridStepY: 55,
+    spawnRadiusPx: 32,
+    highDensityThreshold: 16,
+    mediumDensityThreshold: 8,
+    highDensityPlayerDistancePx: 75,
+    mediumDensityPlayerDistancePx: 130,
+    defaultPlayerDistancePx: 190,
+    highDensityZombieSeparationPx: 90,
+    defaultZombieSeparationPx: 180,
     modes: ['classic', 'everyone-vs-one'] as const
 } as const;
 
@@ -134,5 +165,7 @@ export const COMBAT_BALANCE = {
     maxProjectileSubstepPx: 8,
     serverTickMs: 50,
     playableTop: 155,
-    playableBottom: 715
+    playableBottom: 715,
+    rayStepPx: 6,
+    knockbackStopSpeed: 12
 } as const;
