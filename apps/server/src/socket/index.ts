@@ -14,7 +14,8 @@ import {
     type HostStartMatchPayload,
     type ChatSendPayload,
     type ChatChannel,
-    CHAT_TEXTS
+    CHAT_TEXTS,
+    PROFILE_TEXTS
 } from '@hackatec/shared';
 import type { Server } from 'socket.io';
 import { createMovementRuntime, acceptMovementInput, advanceMovement, type MovementRuntime } from '../game/movement.js';
@@ -495,11 +496,11 @@ export function registerSocketHandlers(
             const currentAccount = accounts.getAccountById(userId);
             if (currentAccount?.isOwner && username !== undefined &&
                 (typeof username !== 'string' || normalizeUsername(username.trim()) !== 'gueta')) {
-                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'El nombre Gueta está reservado para esta cuenta.' });
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: PROFILE_TEXTS.errors.reservedOwnerName });
                 return;
             }
             if (username !== undefined && (typeof username !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{2,15}$/.test(username.trim()))) {
-                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'Username inválido (3-16 caracteres)' });
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: PROFILE_TEXTS.errors.invalidUsername });
                 return;
             }
             if (appearance !== undefined && (
@@ -511,7 +512,7 @@ export function registerSocketHandlers(
                     !accounts.ownsSkin(userId, skinCandidate)
                 ))
             )) {
-                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'Apariencia inválida' });
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: PROFILE_TEXTS.errors.invalidAppearance });
                 return;
             }
             try {
@@ -523,11 +524,11 @@ export function registerSocketHandlers(
                 player.name = account.username;
                 player.appearance = account.appearance;
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
-                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: true, message: 'Perfil guardado' });
+                socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: true, message: PROFILE_TEXTS.saved });
             } catch (error) {
                 const message = error instanceof Error && error.message.includes('UNIQUE constraint failed: accounts.username_key')
-                    ? 'Ese nombre de usuario ya está en uso.'
-                    : 'No se pudo guardar el perfil.';
+                    ? PROFILE_TEXTS.errors.usernameTaken
+                    : PROFILE_TEXTS.errors.saveFailed;
                 socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message });
             }
         });
