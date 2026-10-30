@@ -32,7 +32,7 @@ export const WEAPON_BALANCE = {
     machineGun: { cooldownMs: 100, projectileSpeed: 770, damage: 8, spreadRadians: [0] },
     shotgun: { cooldownMs: 800, projectileSpeed: 590, damagePerPellet: 15, spreadRadians: [-0.15, 0, 0.15] },
     pistol: { cooldownMs: 500, projectileSpeed: 640, damage: 20, spreadRadians: [0] },
-    sniper: { cooldownMs: 1_600, damage: 80, range: 1_600 },
+    sniper: { cooldownMs: 1_600, damage: 95, range: 1_600 },
     rocketLauncher: {
         cooldownMs: 1_400,
         projectileSpeed: 360,
