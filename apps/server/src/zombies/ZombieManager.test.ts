@@ -115,6 +115,7 @@ describe('ZombieManager', () => {
     });
 
 
+    it('requires an 800ms telegraph before a giant charges', () => {
         const manager = new ZombieManager();
         const target = player('target', 480, 400);
         const state = manager.reset('room', map, [target], 0);
