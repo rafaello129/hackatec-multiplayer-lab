@@ -247,7 +247,7 @@ async function main() {
     const betaVoting = waitForMatchPhase(beta, 'voting');
     const betaState = await joinRoom(beta, 'hackatec');
     const publicChatPromise = waitFor(beta, 'chat:message');
-    alpha.emit('chat:send', { channel: 'all', text: '  Hola\\u0000 desde smoke  ' });
+    alpha.emit('chat:send', { channel: 'all', text: '  Hola' + String.fromCharCode(0) + ' desde smoke  ' });
     const publicChat = await publicChatPromise;
     assert(publicChat.channel === 'all' && publicChat.text === 'Hola desde smoke',
         'public chat should be sanitized and broadcast to room members');
