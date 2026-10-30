@@ -36,6 +36,12 @@ function socketRoom(roomId: string): string
     return `room:${roomId}`;
 }
 
+function publicPlayerState(player: PlayerState): PlayerState {
+    if (player.selectedWeapon !== 'laser') return player;
+    const { selectedWeapon: _hiddenWeapon, ...visibleState } = player;
+    return visibleState;
+}
+
 function isSkinAssetRecord(value: unknown): value is {
     id: string;
     url: string;
@@ -138,7 +144,7 @@ export function registerSocketHandlers(
                 roomId, zombies: [], projectiles: [], puddles: []
             });
         }
-        io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players: reset.players, projectiles: [], beams: [], explosions: [], trapped: [], heals: [], zombieHits: [] });
+        io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players: reset.players.map(publicPlayerState), projectiles: [], beams: [], explosions: [], trapped: [], heals: [], zombieHits: [] });
         for (const player of reset.players) {
             const weaponState = combat.initializePlayer(
                 roomId,
@@ -193,7 +199,7 @@ export function registerSocketHandlers(
             const wasInvulnerable = player.isInvulnerable;
             const moved = advanceMovement(player, state, map, 50, now);
             if (moved || wasDashing !== player.isDashing || wasInvulnerable !== player.isInvulnerable) {
-                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
+                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player: publicPlayerState(player) });
             }
         }
 
@@ -283,7 +289,7 @@ export function registerSocketHandlers(
                 }
             }
             io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, {
-                players,
+                players: players.map(publicPlayerState),
                 projectiles: snapshot.projectiles,
                 beams: snapshot.beams,
                 explosions: snapshot.explosions,
@@ -425,7 +431,7 @@ export function registerSocketHandlers(
             const statePayload: RoomStatePayload = {
                 roomId: result.roomId,
                 selfId: socket.id,
-                players: result.players,
+                players: result.players.map(publicPlayerState),
                 map: result.map,
                 hostId: result.hostId
             };
@@ -445,7 +451,7 @@ export function registerSocketHandlers(
             if (previousRoomId !== result.roomId)
             {
                 const joinedPayload: PlayerJoinedPayload = {
-                    player: result.player
+                    player: publicPlayerState(result.player)
                 };
 
                 socket.to(socketRoom(result.roomId))
@@ -569,7 +575,7 @@ export function registerSocketHandlers(
 
                 const players = roomManager.getPlayers(roomId);
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, {
-                    players,
+                    players: players.map(publicPlayerState),
                     projectiles: [],
                     beams: [],
                     explosions: [],
@@ -616,7 +622,7 @@ export function registerSocketHandlers(
                 activityTracker.mark(activeRoom, socket.id, now);
             }
             if (activePlayer && activePlayer.dashReadyAt !== previousDashReadyAt) {
-                io.to(socketRoom(activeRoom)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player: activePlayer });
+                io.to(socketRoom(activeRoom)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player: publicPlayerState(activePlayer) });
             }
         });
 
