@@ -9,7 +9,8 @@ export class ArenaFrame {
     private readonly errorText: GameObjects.Text;
 
     constructor(scene: Scene, roomId: string) {
-        this.background = scene.add.graphics().setDepth(0);
+        // Keep the arena plate behind the map and all gameplay entities.
+        this.background = scene.add.graphics().setDepth(-1);
         this.background
             .fillStyle(0x0b172b, 0.97)
             .fillRoundedRect(20, 14, 984, 100, 14)
