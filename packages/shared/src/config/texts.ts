@@ -110,5 +110,17 @@ export const PROFILE_TEXTS = {
     save: 'Guardar cambios',
     saving: 'Guardando cambios…',
     saved: 'Perfil guardado.',
-    skinRequired: 'Primero selecciona y sube una skin.'
+    skinRequired: 'Primero selecciona y sube una skin.',
+    errors: {
+        reservedOwnerName: 'El nombre Gueta está reservado para esta cuenta.',
+        invalidUsername: 'Username inválido (3-16 caracteres)',
+        invalidAppearance: 'Apariencia inválida',
+        usernameTaken: 'Ese nombre de usuario ya está en uso.',
+        saveFailed: 'No se pudo guardar el perfil.',
+        uploadUnauthorized: 'Inicia sesión para subir una skin.',
+        noUploadFile: 'No se recibió ninguna imagen.',
+        unreadableImage: 'No se pudo leer la imagen.',
+        imageTooLarge: 'La imagen no puede superar 512x512 píxeles.',
+        uploadFailed: 'No se pudo guardar la skin.'
+    }
 } as const;
