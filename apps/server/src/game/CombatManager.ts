@@ -49,6 +49,8 @@ type Runtime = {
     explosionCounter: number;
     heals: PlayerHealedPayload[];
     mode: string | null;
+    playersById: Map<string, PlayerState>;
+    damageContributions: Map<string, Map<string, number>>;
 };
 
 export type CombatStepResult = {
@@ -99,7 +101,9 @@ export class CombatManager {
                 projectileCounter: 0,
                 explosionCounter: 0,
                 heals: [],
-                mode: null
+                mode: null,
+                playersById: new Map(),
+                damageContributions: new Map()
             };
             this.rooms.set(roomId, state);
         }
@@ -144,6 +148,8 @@ export class CombatManager {
         state.respawn.clear();
         state.weapons.clear();
         state.knockback.clear();
+        state.playersById.clear();
+        state.damageContributions.clear();
     }
 
     leave(roomId: string, playerId: string, roomEmpty: boolean): void {
@@ -161,6 +167,9 @@ export class CombatManager {
         state.weapons.delete(playerId);
         state.laserOwners.delete(playerId);
         state.knockback.delete(playerId);
+        state.playersById.delete(playerId);
+        state.damageContributions.delete(playerId);
+        for (const contributions of state.damageContributions.values()) contributions.delete(playerId);
         for (const [id, projectile] of state.projectiles) {
             if (projectile.ownerId === playerId) state.projectiles.delete(id);
         }
@@ -245,6 +254,7 @@ export class CombatManager {
         const zombieHits: ZombieHitPayload[] = [];
         state.heals = [];
         const byId = new Map(players.map(player => [player.id, player]));
+        state.playersById = byId;
         const playerRadius = COMBAT_BALANCE.playerRadius;
         const projectileRadius = COMBAT_BALANCE.projectileRadius;
 
@@ -668,14 +678,25 @@ export class CombatManager {
             remainingDamage -= absorbed;
         }
         player.hp = Math.max(0, (player.hp ?? MATCH_BALANCE.initialHealth) - remainingDamage);
+        if (attacker && attacker.id !== player.id && amount > 0) {
+            const contributions = state.damageContributions.get(player.id) ?? new Map<string, number>();
+            contributions.set(attacker.id, (contributions.get(attacker.id) ?? 0) + amount);
+            state.damageContributions.set(player.id, contributions);
+        }
 
         if (player.hp === 0) {
             player.isDashing = false;
             player.immobilizedUntil = 0;
             player.alive = false;
             player.deaths = (player.deaths ?? 0) + 1;
+            const contributions = state.damageContributions.get(player.id);
             if (attacker && attacker.id !== player.id) {
                 attacker.kills = (attacker.kills ?? 0) + 1;
+                for (const [contributorId, totalDamage] of contributions ?? []) {
+                    if (contributorId === attacker.id || totalDamage <= 0) continue;
+                    const assister = state.playersById.get(contributorId);
+                    if (assister) assister.assists = (assister.assists ?? 0) + 1;
+                }
                 const previousHealth = attacker.hp ?? MATCH_BALANCE.initialHealth;
                 const maximumHealth = attacker.maxHp ?? MATCH_BALANCE.initialHealth;
                 const nextHealth = Math.min(maximumHealth, previousHealth + PICKUP_BALANCE.healOnKill);
@@ -685,6 +706,7 @@ export class CombatManager {
                 }
             }
 
+            state.damageContributions.delete(player.id);
             if (state.mode === 'battleRoyale' || (state.mode === 'everyone-vs-one' && player.role === 'titan')) {
                 player.spectator = true;
                 state.respawn.delete(player.id);
