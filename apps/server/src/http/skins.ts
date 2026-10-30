@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import multer from 'multer';
 import type { Request, Response } from 'express';
+import { PROFILE_TEXTS } from '@hackatec/shared';
 import type { AccountStore } from '../auth/AccountStore.js';
 
 const SKINS_DIRECTORY = path.resolve('storage/skins');
@@ -26,7 +27,7 @@ const upload = multer({
     {
         if (!ALLOWED_MIME_TYPES.has(file.mimetype))
         {
-            callback(new Error('Formato de imagen no permitido.'));
+            callback(new Error(PROFILE_TEXTS.errors.unsupportedFormat));
             return;
         }
 
@@ -45,7 +46,7 @@ export async function skinsUploadHandler(
     if (!request.file)
     {
         response.status(400).json({
-            error: 'No se recibió ninguna imagen.'
+            error: PROFILE_TEXTS.errors.noUploadFile
         });
 
         return;
@@ -59,7 +60,7 @@ export async function skinsUploadHandler(
     if (!dimensions)
     {
         response.status(400).json({
-            error: 'No se pudo leer la imagen.'
+            error: PROFILE_TEXTS.errors.unreadableImage
         });
 
         return;
@@ -71,7 +72,7 @@ export async function skinsUploadHandler(
     )
     {
         response.status(400).json({
-            error: 'La imagen no puede superar 512x512 píxeles.'
+            error: PROFILE_TEXTS.errors.imageTooLarge
         });
 
         return;
@@ -94,7 +95,7 @@ export async function skinsUploadHandler(
 
     const accountId = response.locals.accountId;
     if (typeof accountId !== 'string' || !accountId) {
-        response.status(401).json({ error: 'La sesión ya no es válida.' });
+        response.status(401).json({ error: PROFILE_TEXTS.errors.sessionExpired });
         return;
     }
 
@@ -111,7 +112,7 @@ export async function skinsUploadHandler(
     } catch (error) {
         await fs.unlink(filePath).catch(() => undefined);
         console.error('[skins] could not persist skin ownership:', error instanceof Error ? error.message : 'unknown error');
-        response.status(500).json({ error: 'No se pudo guardar la skin.' });
+        response.status(500).json({ error: PROFILE_TEXTS.errors.uploadFailed });
         return;
     }
 
