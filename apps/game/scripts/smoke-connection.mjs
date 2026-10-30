@@ -551,6 +551,31 @@ async function main() {
     console.log('[smoke] 32-player movement stress: ' + movementPacketsSent +
         ' intents in ' + stressDurationMs + 'ms (~' + inputRate + ' intents/s)');
 
+    // Exercise server-authoritative projectile creation and collision processing with all 32 players.
+    let combatStateSamples = 0;
+    let peakActiveProjectiles = 0;
+    const onCombatLoad = payload => {
+        if ((payload?.players?.length ?? 0) !== 32) return;
+        combatStateSamples += 1;
+        peakActiveProjectiles = Math.max(peakActiveProjectiles, payload?.projectiles?.length ?? 0);
+    };
+    alpha.on('combat:state', onCombatLoad);
+    for (const socket of activeRoomSockets) {
+        socket.emit('weapon:select', { slot: 2 });
+        socket.emit('weapon:fire', { angle: 0, firing: true });
+    }
+    await new Promise(resolve => setTimeout(resolve, 1_500));
+    for (const socket of activeRoomSockets) {
+        socket.emit('weapon:fire', { angle: 0, firing: false });
+    }
+    alpha.off('combat:state', onCombatLoad);
+    assert(combatStateSamples >= 10,
+        'combat state should continue synchronizing during the 32-player projectile load');
+    assert(peakActiveProjectiles > 0,
+        'the server should simulate active projectiles while all 32 players fire');
+    console.log('[smoke] 32-player weapon stress: ' + combatStateSamples +
+        ' combat snapshots, peak ' + peakActiveProjectiles + ' active projectiles');
+
     const alphaLoadStopped = waitForMatchPhase(alpha, 'waiting', 10000);
     alpha.emit('match:host-stop');
     await alphaLoadStopped;
