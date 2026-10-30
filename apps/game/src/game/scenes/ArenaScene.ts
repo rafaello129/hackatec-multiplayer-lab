@@ -339,12 +339,12 @@ export class ArenaScene extends Scene
     private applyMinimalHud(): void {
         const alpha = this.minimalHud ? 0 : 1;
         this.frame?.setMinimalHud(this.minimalHud);
-        const secondary: Array<GameObjects.GameObject & { setAlpha(alpha: number): unknown }> = [
+        const secondary: Array<GameObjects.Text | undefined> = [
             this.combatText, this.progressionHud, this.scoreboard, this.killFeedHud,
             this.chatPanel, this.chatInputHud, this.matchStatusText, this.matchCountdownText,
             this.spectatorStatusText, ...this.voteButtons.values(),
             this.hostMenuButton, this.hostModeButton, this.hostStartButton, this.hostStopButton
-        ].filter((item): item is GameObjects.GameObject & { setAlpha(alpha: number): unknown } => Boolean(item));
+        ].filter((item): item is GameObjects.Text => Boolean(item));
         for (const item of secondary) {
             item.setAlpha(alpha);
             if (this.minimalHud) item.disableInteractive();
