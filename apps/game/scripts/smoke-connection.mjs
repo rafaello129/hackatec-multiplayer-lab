@@ -443,7 +443,7 @@ async function main() {
     const hunters = teamCombat.players.filter(player => player.role === 'hunter');
     assert(teamCountdown.mode === 'everyone-vs-one' && titans.length === 1 && hunters.length === 1,
         'Todos contra uno must assign one Titan and one hunter');
-    assert(titans[0].maxHp === 600 && hunters[0].lives === 2,
+    assert(titans[0].maxHp === 580 && hunters[0].lives === 2,
         'Titan health and hunter lives must be set by the server');
     const teamStopped = waitForMatchPhase(modeAlpha, 'waiting');
     modeAlpha.emit('match:host-stop');
@@ -460,6 +460,18 @@ async function main() {
     const royaleStopped = waitForMatchPhase(modeAlpha, 'waiting');
     modeAlpha.emit('match:host-stop');
     await royaleStopped;
+
+    const zombieStatePromise = waitFor(modeAlpha, 'zombie:state');
+    const zombieCountdownPromise = waitForMatchPhase(modeAlpha, 'countdown');
+    modeAlpha.emit('match:host-start', { mode: 'zombies' });
+    const zombieCountdown = await zombieCountdownPromise;
+    const zombieState = await zombieStatePromise;
+    assert(zombieCountdown.mode === 'zombies' && zombieState.round === 1 &&
+        zombieState.totalRounds === 10 && zombieState.runPhase === 'wave',
+        'Zombies mode must start its first survival round');
+    const zombieStopped = waitForMatchPhase(modeAlpha, 'waiting');
+    modeAlpha.emit('match:host-stop');
+    await zombieStopped;
     modeAlpha.disconnect();
     modeBeta.disconnect();
     console.log('[smoke] Rocket, team and Battle Royale mode setup verified');
