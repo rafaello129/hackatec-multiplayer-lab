@@ -58,3 +58,57 @@ export const WEAPON_TEXTS = {
         invalidIntent: 'La orden de disparo no es válida.'
     }
 } as const;
+
+
+export const ARENA_UI_TEXTS = {
+    brand: 'HACKATEC',
+    subtitle: 'MULTIPLAYER ARENA',
+    roomPrefix: 'SALA',
+    playerCountSuffix: 'JUGADORES',
+    sharedArena: 'ARENA COMPARTIDA · ESTADO AUTORITATIVO',
+    movementHelp: 'WASD / FLECHAS  ·  SHIFT DASH',
+    connection: {
+        connecting: '● CONECTANDO',
+        connected: '● CONECTADO',
+        disconnected: '● DESCONECTADO'
+    }
+} as const;
+
+export const CHAT_TEXTS = {
+    panelTitle: 'CHAT · ENTER para escribir',
+    inputIdle: 'ENTER · Escribir mensaje',
+    inputPrompt: '> Escribe y pulsa ENTER',
+    inputPrefix: '> ',
+    spectatorPrefix: '[ESPECTADORES] ',
+    systemPrefix: 'Sistema: +',
+    systemSuffix: ' XP por la partida',
+    errors: {
+        invalidChannel: 'Canal de chat inválido.',
+        spectatorOnly: 'Solo los espectadores pueden usar ese canal.',
+        activeOnly: 'Los espectadores deben usar el canal de espectadores.',
+        invalidText: 'El mensaje debe ser texto.',
+        empty: 'Escribe un mensaje antes de enviarlo.',
+        tooLong: 'El mensaje supera los 120 caracteres.',
+        rateLimit: 'Estás enviando mensajes demasiado rápido.'
+    }
+} as const;
+
+export const PROFILE_TEXTS = {
+    toggle: 'Personalizar',
+    close: 'Cerrar perfil',
+    heading: 'Tu perfil',
+    username: 'Nombre de usuario',
+    usernameHint: '3–16 caracteres',
+    color: 'Color del jugador',
+    appearance: 'Apariencia',
+    colorOption: 'Color sólido',
+    skinOption: 'Skin',
+    uploadSkin: 'Subir skin',
+    uploading: 'Subiendo skin…',
+    skinUploaded: 'Skin cargada correctamente.',
+    skinUploadError: 'No se pudo subir la skin.',
+    save: 'Guardar cambios',
+    saving: 'Guardando cambios…',
+    saved: 'Perfil guardado.',
+    skinRequired: 'Primero selecciona y sube una skin.'
+} as const;
