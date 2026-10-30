@@ -99,9 +99,13 @@ export class ProfilePanel {
                     body: form,
                     credentials: 'include'
                 });
-                const result = await response.json() as PlayerAppearance['skin'] & { error?: string };
-                if (!response.ok || !result?.url) throw new Error(result?.error || 'No se pudo subir la skin.');
-                this.savedSkin = result;
+                const result = await response.json() as {
+                    id?: string; url?: string; width?: number; height?: number; error?: string
+                };
+                if (!response.ok || !result.url || !result.id || !result.width || !result.height) {
+                    throw new Error(result.error || 'No se pudo subir la skin.');
+                }
+                this.savedSkin = { id: result.id, url: result.url, width: result.width, height: result.height };
                 mode.value = 'skin';
                 this.setStatus('Skin cargada correctamente.');
             } catch (error) {
