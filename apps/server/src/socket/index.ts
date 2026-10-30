@@ -337,6 +337,16 @@ export function registerSocketHandlers(
                 socket.emit(SOCKET_EVENTS.ROOM_ERROR, { code: 'AUTH_REQUIRED', message: 'La sesión ya no es válida.' });
                 return;
             }
+            const duplicateAccountPlayer = roomManager.getPlayers(roomId).find(
+                member => member.id !== socket.id && identities.get(member.id) === account.id
+            );
+            if (duplicateAccountPlayer) {
+                socket.emit(SOCKET_EVENTS.ROOM_ERROR, {
+                    code: 'ACCOUNT_IN_ROOM',
+                    message: 'Esta cuenta ya está participando en esa sala.'
+                });
+                return;
+            }
             const result = roomManager.join(roomId, socket.id, profile.username);
 
             if (!result.ok)
