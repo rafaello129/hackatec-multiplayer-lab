@@ -22,7 +22,7 @@ type RoomMatch = {
     blockedByHost: boolean;
 };
 
-type MatchTransition = { roomId: string; resetPlayers: boolean };
+type MatchTransition = { roomId: string; resetPlayers: boolean; previousPhase: MatchStatePayload['phase']; phase: MatchStatePayload['phase'] };
 export type MatchActionResult = { ok: boolean; message: string };
 
 export class MatchManager {
@@ -160,7 +160,7 @@ export class MatchManager {
             if (match.phase === 'voting' && match.voteEndsAt !== null && now >= match.voteEndsAt) {
                 const mode = this.resolveVote(match.votes);
                 this.startCountdown(roomId, match, mode, now, MATCH_TEXTS.messages.voteFinished);
-                transitions.push({ roomId, resetPlayers: true });
+                transitions.push({ roomId, resetPlayers: true, previousPhase: 'voting', phase: 'countdown' });
                 continue;
             }
             if (match.phase === 'countdown' && match.startsAt !== null && now >= match.startsAt) {
@@ -169,6 +169,7 @@ export class MatchManager {
                 match.endsAt = now + this.durationForMode(match.mode);
                 match.message = MATCH_TEXTS.messages.gameStarted;
                 this.markDirty(roomId);
+                transitions.push({ roomId, resetPlayers: false, previousPhase: 'countdown', phase: 'playing' });
                 continue;
             }
             if (match.phase === 'playing' && match.endsAt !== null) {
@@ -183,6 +184,9 @@ export class MatchManager {
                     name: player.name,
                     kills: player.kills ?? 0,
                     deaths: player.deaths ?? 0,
+                    assists: player.assists ?? 0,
+                    zombieKills: player.zombieKills ?? 0,
+                    survivedStormPhases: player.survivedStormPhases ?? 0,
                     placement: index + 1
                 }));
                 match.winnerId = outcome.winnerId;
@@ -190,6 +194,7 @@ export class MatchManager {
                 match.endsAt = now + this.resultsDurationMs;
                 match.message = outcome.message;
                 this.markDirty(roomId);
+                transitions.push({ roomId, resetPlayers: false, previousPhase: 'playing', phase: 'results' });
                 continue;
             }
             if (match.phase === 'results' && match.endsAt !== null && now >= match.endsAt) {
@@ -204,6 +209,7 @@ export class MatchManager {
                 match.winnerName = null;
                 match.message = MATCH_TEXTS.messages.nextRound;
                 this.markDirty(roomId);
+                transitions.push({ roomId, resetPlayers: false, previousPhase: 'results', phase: 'waiting' });
                 if (!match.blockedByHost && match.players.size >= MATCH_BALANCE.minimumPlayers) this.startVoting(roomId, match, now);
             }
         }
