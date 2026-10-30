@@ -487,7 +487,11 @@ export function registerSocketHandlers(
                 !appearance || typeof appearance !== 'object' ||
                 (appearance.mode !== 'color' && appearance.mode !== 'skin') ||
                 typeof appearance.colorHex !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(appearance.colorHex) ||
-                (appearance.mode === 'skin' && (!appearance.skin || !/^\/skins\/[a-f0-9-]+\.(png|jpg|webp)$/.test(appearance.skin.url)))
+                (appearance.mode === 'skin' && (
+                    !appearance.skin ||
+                    !/^\/skins\/[a-f0-9-]+\.(png|jpg|webp)$/.test(appearance.skin.url) ||
+                    !accounts.ownsSkin(userId, appearance.skin)
+                ))
             )) {
                 socket.emit(SOCKET_EVENTS.PROFILE_RESULT, { ok: false, message: 'Apariencia inválida' });
                 return;
