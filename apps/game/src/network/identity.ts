@@ -1,3 +1,15 @@
+function createProfileId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return createProfileId();
+    }
+
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 export type ClientIdentity = {
     roomId: string;
     playerName?: string;
@@ -16,10 +28,10 @@ export function getClientIdentity(search: string): ClientIdentity
     try {
         profileId = localStorage.getItem('hackatec-profile-id') ?? '';
         if (!profileId) {
-            profileId = crypto.randomUUID();
+            profileId = createProfileId();
             localStorage.setItem('hackatec-profile-id', profileId);
         }
-    } catch { profileId = crypto.randomUUID(); }
+    } catch { profileId = createProfileId(); }
     return {
         profileId,
         roomId,
