@@ -269,7 +269,8 @@ export function registerSocketHandlers(
                 beams: snapshot.beams,
                 explosions: snapshot.explosions,
                 trapped: snapshot.trapped,
-                heals: snapshot.heals
+                heals: snapshot.heals,
+                killFeed: snapshot.killFeed
             });
             for (const trapped of snapshot.trapped) io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_TRAPPED, trapped);
             for (const healed of snapshot.heals) io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_HEALED, healed);
