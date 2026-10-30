@@ -23,6 +23,7 @@ export const SOCKET_EVENTS = {
     PICKUP_STATE: 'pickup:state',
     PICKUP_COLLECTED: 'pickup:collected',
     STORM_STATE: 'storm:state',
+    ZOMBIE_STATE: 'zombie:state',
     PROFILE_SET: 'profile:set',
     PROFILE_RESULT: 'profile:result',
 
