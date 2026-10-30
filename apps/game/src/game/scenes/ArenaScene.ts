@@ -17,6 +17,7 @@ import {
     type RoomErrorPayload,
     type RoomStatePayload,
     type MatchStatePayload,
+    type GameMode,
     type GameMapState,
     MATCH_TEXTS
 } from '@hackatec/shared';
@@ -62,8 +63,11 @@ export class ArenaScene extends Scene
     private combatText?: GameObjects.Text;
     private matchState?: MatchStatePayload;
     private matchStatusText?: GameObjects.Text;
-    private voteButton?: GameObjects.Text;
+    private readonly voteButtons = new Map<GameMode, GameObjects.Text>();
     private hostMenuButton?: GameObjects.Text;
+    private hostModeButton?: GameObjects.Text;
+    private selectedHostMode: GameMode = 'classic';
+    private readonly gameModeOrder: GameMode[] = ['classic', 'everyone-vs-one', 'rockets', 'battleRoyale'];
     private hostStartButton?: GameObjects.Text;
     private hostStopButton?: GameObjects.Text;
     private matchCountdownText?: GameObjects.Text;
@@ -163,8 +167,10 @@ export class ArenaScene extends Scene
 
         this.events.once('shutdown', () => {
             this.matchStatusText?.destroy();
-            this.voteButton?.destroy();
+            for (const button of this.voteButtons.values()) button.destroy();
+            this.voteButtons.clear();
             this.hostMenuButton?.destroy();
+            this.hostModeButton?.destroy();
             this.hostStartButton?.destroy();
             this.hostStopButton?.destroy();
             this.matchCountdownText?.destroy();
@@ -182,11 +188,23 @@ export class ArenaScene extends Scene
             backgroundColor: '#0f172acc', padding: { x: 10, y: 5 }, align: 'center'
         }).setOrigin(0.5).setDepth(320);
 
-        this.voteButton = this.add.text(512, 220, MATCH_TEXTS.controls.voteClassic, {
-            fontFamily: 'Arial Black', fontSize: 16, color: '#ffffff',
-            backgroundColor: '#0369a1', padding: { x: 14, y: 8 }
-        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
-        this.voteButton.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_VOTE, { mode: 'classic' }));
+        const modeOptions: Array<{ mode: GameMode; label: string }> = [
+            { mode: 'classic', label: MATCH_TEXTS.modes.classic },
+            { mode: 'everyone-vs-one', label: MATCH_TEXTS.modes.everyoneVsOne },
+            { mode: 'rockets', label: MATCH_TEXTS.modes.rockets },
+            { mode: 'battleRoyale', label: MATCH_TEXTS.modes.battleRoyale }
+        ];
+        const modeSpacing = 160;
+        modeOptions.forEach(({ mode, label }, index) => {
+            const x = 512 + (index - 1.5) * modeSpacing;
+            const button = this.add.text(x, 220, label, {
+                fontFamily: 'Arial Black', fontSize: 13, color: '#ffffff',
+                backgroundColor: '#0369a1', padding: { x: 9, y: 8 },
+                align: 'center', fixedWidth: 145
+            }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+            button.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_VOTE, { mode }));
+            this.voteButtons.set(mode, button);
+        });
 
         this.hostMenuButton = this.add.text(870, 112, MATCH_TEXTS.controls.hostMenu, {
             fontFamily: 'Arial Black', fontSize: 14, color: '#facc15',
@@ -194,22 +212,34 @@ export class ArenaScene extends Scene
         }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
         this.hostMenuButton.on('pointerdown', () => {
             const visible = !this.hostStartButton?.visible;
+            this.hostModeButton?.setVisible(visible);
             this.hostStartButton?.setVisible(visible);
             this.hostStopButton?.setVisible(visible);
         });
 
-        this.hostStartButton = this.add.text(870, 158, MATCH_TEXTS.controls.hostStart, {
+        this.hostModeButton = this.add.text(870, 150, 'Modo: Clásico', {
+            fontFamily: 'Arial', fontSize: 12, color: '#ffffff',
+            backgroundColor: '#334155', padding: { x: 9, y: 6 }
+        }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
+        this.hostModeButton.on('pointerdown', () => {
+            const currentIndex = this.gameModeOrder.indexOf(this.selectedHostMode);
+            this.selectedHostMode = this.gameModeOrder[(currentIndex + 1) % this.gameModeOrder.length] ?? 'classic';
+            this.hostModeButton?.setText('Modo: ' + this.getModeLabel(this.selectedHostMode));
+        });
+
+        this.hostStartButton = this.add.text(870, 188, 'Iniciar modo elegido', {
             fontFamily: 'Arial', fontSize: 13, color: '#ffffff',
             backgroundColor: '#166534', padding: { x: 9, y: 6 }
         }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
-        this.hostStartButton.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_HOST_START, { mode: 'classic' }));
+        this.hostStartButton.on('pointerdown', () => this.socket.emit(SOCKET_EVENTS.MATCH_HOST_START, { mode: this.selectedHostMode }));
 
-        this.hostStopButton = this.add.text(870, 198, MATCH_TEXTS.controls.hostStop, {
+        this.hostStopButton = this.add.text(870, 226, MATCH_TEXTS.controls.hostStop, {
             fontFamily: 'Arial', fontSize: 13, color: '#ffffff',
             backgroundColor: '#991b1b', padding: { x: 9, y: 6 }
         }).setOrigin(0.5).setDepth(321).setInteractive().setVisible(false);
         this.hostStopButton.on('pointerdown', () => {
             this.socket.emit(SOCKET_EVENTS.MATCH_HOST_STOP);
+            this.hostModeButton?.setVisible(false);
             this.hostStartButton?.setVisible(false);
             this.hostStopButton?.setVisible(false);
         });
@@ -228,10 +258,14 @@ export class ArenaScene extends Scene
         const voteCount = Object.keys(state.votes).length;
         const host = this.roomHostId === this.selfId;
         this.matchStatusText?.setText(state.message ? labels[state.phase] + '\\n' + state.message : labels[state.phase]);
-        this.voteButton?.setVisible(state.phase === 'voting');
-        this.voteButton?.setText(state.votes[this.selfId] ? MATCH_TEXTS.controls.changeVoteClassic : 'Votar: Clásico');
+        for (const [mode, button] of this.voteButtons) {
+            const selected = state.votes[this.selfId] === mode;
+            button.setText((selected ? '✓ ' : '') + this.getModeLabel(mode));
+            button.setVisible(state.phase === 'voting');
+        }
         this.hostMenuButton?.setVisible(host);
         if (!host) {
+            this.hostModeButton?.setVisible(false);
             this.hostStartButton?.setVisible(false);
             this.hostStopButton?.setVisible(false);
         }
@@ -245,6 +279,16 @@ export class ArenaScene extends Scene
         this.updateMatchClock();
     };
 
+    private getModeLabel(mode: GameMode): string {
+        switch (mode) {
+            case 'everyone-vs-one': return MATCH_TEXTS.modes.everyoneVsOne;
+            case 'rockets': return MATCH_TEXTS.modes.rockets;
+            case 'battleRoyale': return MATCH_TEXTS.modes.battleRoyale;
+            case 'classic':
+            default: return MATCH_TEXTS.modes.classic;
+        }
+    }
+
     private readonly handleRoomMap = (map: GameMapState): void => {
         this.mapView?.render(map);
     };
@@ -253,7 +297,7 @@ export class ArenaScene extends Scene
         this.roomHostId = payload.hostId;
         const isHost = this.roomHostId === this.selfId;
         this.hostMenuButton?.setVisible(isHost);
-        if (!isHost) { this.hostStartButton?.setVisible(false); this.hostStopButton?.setVisible(false); }
+        if (!isHost) { this.hostModeButton?.setVisible(false); this.hostStartButton?.setVisible(false); this.hostStopButton?.setVisible(false); }
     };
 
     private readonly handleMatchActionResult = (result: { ok: boolean; message: string }): void => {
