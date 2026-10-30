@@ -25,7 +25,7 @@ export class BootScene extends Scene
             align: 'center'
         }).setOrigin(0.5);
 
-        this.add.text(512, 315, 'Fase 1 · Entrando al servidor multijugador', {
+        this.add.text(512, 315, 'Conectando con la arena multijugador', {
             fontFamily: 'Arial',
             fontSize: 20,
             color: '#94a3b8'
