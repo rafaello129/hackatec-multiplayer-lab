@@ -26,11 +26,11 @@ export class ZombieView {
             }
             visual.container.setPosition(zombie.x, zombie.y);
             visual.container.setAlpha(zombie.alive ? 1 : 0.25);
-            visual.label.setText(zombie.type === 'giant' ? 'GIGANTE' : 'ESCUPIDOR');
+            visual.label.setText(zombie.type === 'boss' ? 'JEFE FINAL' : zombie.type === 'giant' ? 'GIGANTE' : 'ESCUPIDOR');
             visual.health.clear();
             visual.health.fillStyle(0x334155, 0.95).fillRect(-24, -40, 48, 5);
-            visual.health.fillStyle(zombie.type === 'giant' ? 0xef4444 : 0xa78bfa, 1)
-                .fillRect(-24, -40, 48 * Math.max(0, zombie.hp) / Math.max(1, zombie.maxHp), 5);
+            visual.health.fillStyle(zombie.type === 'boss' ? 0xf97316 : zombie.type === 'giant' ? 0xef4444 : 0xa78bfa, 1)
+                .fillRect(zombie.type === 'boss' ? -42 : -24, -40, (zombie.type === 'boss' ? 84 : 48) * Math.max(0, zombie.hp) / Math.max(1, zombie.maxHp), 6);
             if (zombie.phase === 'telegraph') {
                 visual.body.setStrokeStyle(4, 0xfacc15, 1);
             } else if (zombie.phase === 'charge') {
@@ -69,11 +69,12 @@ export class ZombieView {
         this.effects.destroy();
     }
 
-    private create(type: 'giant' | 'spitter'): ZombieVisual {
-        const giant = type === 'giant';
-        const body = this.scene.add.circle(0, 0, giant ? 29 : 22, giant ? 0x991b1b : 0x6d28d9, 1)
+    private create(type: 'giant' | 'spitter' | 'boss'): ZombieVisual {
+        const giant = type !== 'spitter';
+        const boss = type === 'boss';
+        const body = this.scene.add.circle(0, 0, boss ? 54 : giant ? 29 : 22, boss ? 0x7f1d1d : giant ? 0x991b1b : 0x6d28d9, 1)
             .setStrokeStyle(2, 0xffffff, 0.8);
-        const label = this.scene.add.text(0, giant ? -49 : -40, giant ? 'GIGANTE' : 'ESCUPIDOR', {
+        const label = this.scene.add.text(0, boss ? -76 : giant ? -49 : -40, boss ? 'JEFE FINAL' : giant ? 'GIGANTE' : 'ESCUPIDOR', {
             fontFamily: 'Arial Black',
             fontSize: 10,
             color: '#ffffff',
