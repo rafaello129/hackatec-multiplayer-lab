@@ -140,10 +140,10 @@ function createCandidate(
     if (type === 'wall' || type === 'fence')
     {
         const horizontal = random() >= 0.5;
-        const width = horizontal
+        const obstacleWidth = horizontal
             ? randomBetween(random, 100, 205)
             : randomBetween(random, 24, 34);
-        const height = horizontal
+        const obstacleHeight = horizontal
             ? randomBetween(random, 24, 34)
             : randomBetween(random, 90, 160);
 
@@ -156,8 +156,8 @@ function createCandidate(
                 MAP_GENERATION_CONFIG.topBoundary + 30,
                 MAP_GENERATION_CONFIG.bottomBoundary - 30
             ),
-            width,
-            height
+            width: obstacleWidth,
+            height: obstacleHeight
         };
     }
 
