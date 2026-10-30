@@ -11,6 +11,8 @@ export class PlayerView
     private readonly skin: GameObjects.Image;
     private currentSkin = '';
     private readonly nameText: GameObjects.Text;
+    private readonly trapText: GameObjects.Text;
+    private readonly trapBar: GameObjects.Graphics;
     private readonly selfText?: GameObjects.Text;
 
     constructor(
@@ -43,11 +45,18 @@ export class PlayerView
             strokeThickness: 4
         }).setOrigin(0.5);
 
+        this.trapText = scene.add.text(0, -62, '', {
+            fontFamily: 'Arial Black', fontSize: 12, color: '#fecaca',
+            stroke: '#450a0a', strokeThickness: 3, align: 'center'
+        }).setOrigin(0.5).setVisible(false);
+        this.trapBar = scene.add.graphics();
         this.skin = scene.add.image(0, 0, '__WHITE').setVisible(false);
         const children: GameObjects.GameObject[] = [
             this.body,
             this.skin,
-            this.nameText
+            this.nameText,
+            this.trapText,
+            this.trapBar
         ];
 
         if (isSelf)
@@ -70,8 +79,36 @@ export class PlayerView
     update(player: PlayerState)
     {
         this.container.setPosition(player.x, player.y);
-        this.body.setFillStyle(0x3b82f6);
+        this.container.setRotation(player.aimAngle ?? player.angle ?? 0);
+        const color = player.appearance?.mode === 'color'
+            ? Number.parseInt(player.appearance.colorHex.slice(1), 16)
+            : 0x3b82f6;
+        this.body.setFillStyle(player.alive === false ? 0x64748b : color);
+        this.body.setAlpha(player.isInvulnerable ? 0.5 : player.alive === false ? 0.35 : 1);
         this.nameText.setText(player.name);
+
+        const remainingMs = Math.max(0, (player.immobilizedUntil ?? 0) - Date.now());
+        const trapped = remainingMs > 0;
+        this.trapText.setVisible(trapped);
+        this.trapText.setText(trapped ? `¡ATRAPADO! ${(remainingMs / 1_000).toFixed(1)}s` : '');
+        this.trapBar.clear();
+        if (trapped) {
+            const progress = Math.min(1, remainingMs / 5_000);
+            this.trapBar.fillStyle(0x450a0a, 0.9).fillRect(-32, -49, 64, 5);
+            this.trapBar.fillStyle(0xf87171, 1).fillRect(-32, -49, 64 * progress, 5);
+        }
+    }
+
+    showHeal(amount: number)
+    {
+        const floating = this.scene.add.text(this.container.x, this.container.y - 28, `+${Math.round(amount)}`, {
+            fontFamily: 'Arial Black', fontSize: 18, color: '#86efac',
+            stroke: '#052e16', strokeThickness: 4
+        }).setOrigin(0.5).setDepth(12);
+        this.scene.tweens.add({
+            targets: floating, y: floating.y - 34, alpha: 0, duration: 850,
+            ease: 'Cubic.easeOut', onComplete: () => floating.destroy()
+        });
     }
 
     playSpin()
