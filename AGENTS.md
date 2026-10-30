@@ -1,64 +1,46 @@
 # AGENTS.md — HackaTec Multiplayer Lab
 
-## Propósito
+## Estado y alcance
 
-Este repositorio es un laboratorio educativo. La base multijugador ya funciona y las features del shooter se implementan durante la clase mediante Issues, ramas, agentes y Pull Requests.
+Este repositorio contiene un juego web multijugador 2D en desarrollo activo. La implementación integrada vive en la rama `work/full-game-completion`. No asumir que la base termina con jugadores estáticos: ya existen autenticación, salas, movimiento, combate, modos, progresión, HUD, perfiles, skins y sistemas PvE.
 
 ## Stack
 
-- TypeScript
-- Phaser 4
-- Socket.IO
-- Express
-- Vite
-- Vitest
-- npm workspaces
+- TypeScript estricto y npm workspaces
+- Phaser 4 + Vite en `apps/game`
+- Express + Socket.IO + SQLite en `apps/server`
+- Contratos, eventos, textos y balance compartidos en `packages/shared`
+- Vitest para pruebas
+
+## Reglas obligatorias
+
+1. Trabaja exclusivamente en `work/full-game-completion`, salvo autorización expresa del responsable del proyecto.
+2. Nunca modifiques, fusiones ni envíes cambios a `main` sin autorización explícita.
+3. Antes de cambiar código, inspecciona la implementación actual, sus tipos compartidos y pruebas relacionadas.
+4. Los contratos de red, nombres de eventos y tipos compartidos viven en `packages/shared`; no dupliques contratos entre cliente y servidor.
+5. El servidor es autoritativo para autenticación, movimiento, colisiones, armas, cadencias, daño, muertes, respawn, pickups, tormenta, IA, votos, chat y XP.
+6. Trata todos los datos enviados por el cliente como no confiables. Valida sala, identidad, estado del jugador, rangos, enumeraciones y frecuencia en el servidor.
+7. No expongas secretos, tokens, hashes de sesión ni datos privados de cuentas en snapshots públicos, logs o respuestas.
+8. No agregues dependencias sin justificar su necesidad.
+9. Evita `any` y mantén TypeScript estricto.
+10. Conserva compatibilidad con cuentas existentes y datos persistidos; cualquier migración SQLite debe ser segura y repetible.
+11. Actualiza pruebas y documentación cuando cambies balance, controles, eventos o comportamiento visible.
+12. No afirmes que una función se ve o funciona en pantalla sin ejecutar el juego y verificarla. Distingue pruebas automatizadas, smoke tests y aceptación manual.
+13. No cambies balance o comportamiento solicitado por el responsable sin explicar el motivo y obtener autorización cuando sea un cambio de diseño.
 
 ## Arquitectura
 
 ```text
 apps/game       cliente Phaser + Socket.IO Client
-apps/server     servidor Express + Socket.IO
-packages/shared contratos de red y tipos compartidos
+apps/server     Express + Socket.IO + SQLite
+packages/shared contratos, eventos, textos y balance
 ```
 
-## Reglas obligatorias para cualquier agente
+El cliente envía intenciones; el servidor valida y simula; los clientes representan el estado aprobado. Los sistemas de zombies son exclusivos del modo Zombies y la tormenta es exclusiva de Battle Royale.
 
-1. Lee el Issue completo antes de modificar código.
-2. No dupliques eventos Socket.IO.
-3. No dupliques tipos compartidos entre cliente y servidor.
-4. Los contratos de red viven en `packages/shared`.
-5. El servidor mantiene el estado compartido y decide las reglas autoritativas.
-6. No instales dependencias sin justificarlo.
-7. No modifiques archivos fuera del alcance de la tarea salvo que sea estrictamente necesario.
-8. No implementes features pertenecientes a otros Issues.
-9. Mantén TypeScript estricto y evita `any` innecesario.
-10. Ejecuta `npm test` y `npm run build` antes de terminar.
-11. Ejecuta `npm run check` cuando la tarea esté lista para revisión.
-12. Revisa `git diff` antes de considerar una tarea terminada.
+## Validación
 
-## Base que debe preservarse
-
-No romper:
-
-- `GET /health`;
-- conexión Socket.IO;
-- `room:join`;
-- snapshot de sala;
-- `player:joined`;
-- `player:left`;
-- aislamiento entre salas;
-- reconexión;
-- smoke test multicliente;
-- ejecución LAN mediante `VITE_SERVER_URL`.
-
-## Restricción educativa
-
-La base termina deliberadamente con jugadores estáticos. No añadas movimiento, disparos, health, kills, respawn, obstáculos o scoreboard salvo que el Issue asignado lo pida.
-
-Ejemplo: si trabajas en movimiento, no aproveches para implementar disparos.
-
-## Validación mínima
+Antes de terminar una modificación:
 
 ```bash
 npm test
@@ -66,4 +48,14 @@ npm run build
 npm run check
 ```
 
-Si modificas red o servidor, prueba además dos clientes reales o el smoke test existente.
+Si el cambio afecta red, autenticación o simulación, ejecuta también el smoke test multicliente. Si cambia interfaz, controles, animaciones o mapa, registra explícitamente si se realizó o no una verificación visual real.
+
+## Documentación relevante
+
+- `docs/GAMEPLAY_SYSTEMS.md`: balance y reglas de juego.
+- `docs/MATCH_LIFECYCLE.md`: ciclo de vida de las partidas.
+- `docs/AUTHENTICATION.md`: cuentas y sesiones.
+- `docs/integration/MANUAL_GAMEPLAY_ACCEPTANCE.md`: pruebas visuales/manuales.
+- `docs/integration/PHASE_11_REPORT.md`: informe de integración.
+
+No marcar la aceptación visual o la prueba física en LAN como completadas solo porque CI esté verde.

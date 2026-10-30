@@ -1,3 +1,25 @@
+:root {
+    color-scheme: dark;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --color-bg: #050b18;
+    --color-surface: #0b1528;
+    --color-surface-raised: #101e35;
+    --color-border: #263a57;
+    --color-border-strong: #3b5273;
+    --color-text: #eff6ff;
+    --color-muted: #9aacc4;
+    --color-subtle: #7185a1;
+    --color-primary: #3b82f6;
+    --color-primary-hover: #60a5fa;
+    --color-accent: #22d3ee;
+    --color-danger: #fb7185;
+    --shadow-panel: 0 28px 90px rgba(0, 0, 0, 0.48);
+}
+
+* {
+    box-sizing: border-box;
+}
+
 html,
 body,
 #app,
@@ -9,18 +31,441 @@ body,
 
 body {
     overflow: hidden;
-    background: #020617;
-    font-family: Arial, Helvetica, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
 }
 
 #game-container {
     display: flex;
     align-items: center;
     justify-content: center;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(30, 64, 115, 0.2), transparent 62%),
+        var(--color-bg);
 }
 
 #game-container canvas {
     display: block;
     max-width: 100%;
     max-height: 100%;
+    border: 1px solid rgba(100, 140, 190, 0.18);
+    border-radius: 12px;
+    box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+}
+
+#auth-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    overflow-y: auto;
+    padding: 28px;
+    background:
+        radial-gradient(ellipse at 14% 12%, rgba(37, 99, 235, 0.24), transparent 42%),
+        radial-gradient(ellipse at 88% 88%, rgba(6, 182, 212, 0.14), transparent 38%),
+        linear-gradient(145deg, #050b18, #081326 55%, #050b18);
+    color: var(--color-text);
+}
+
+.auth-card {
+    position: relative;
+    width: min(100%, 440px);
+    overflow: hidden;
+    padding: 38px;
+    border: 1px solid rgba(104, 143, 190, 0.28);
+    border-radius: 22px;
+    background: linear-gradient(160deg, rgba(15, 29, 51, 0.98), rgba(7, 17, 33, 0.98));
+    box-shadow: var(--shadow-panel);
+    animation: auth-card-enter 380ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.auth-card::before {
+    position: absolute;
+    top: 0;
+    left: 10%;
+    width: 80%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.9), transparent);
+    content: "";
+}
+
+.auth-kicker {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #7dd3fc;
+    font-size: 11px;
+    font-weight: 850;
+    letter-spacing: 0.18em;
+}
+
+.auth-kicker::before {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 16px rgba(34, 211, 238, 0.85);
+    content: "";
+}
+
+.auth-card h1 {
+    margin: 18px 0 9px;
+    color: #f8fbff;
+    font-size: clamp(30px, 5vw, 38px);
+    font-weight: 850;
+    letter-spacing: -0.045em;
+}
+
+.auth-description {
+    margin: 0 0 26px;
+    color: var(--color-muted);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.auth-card label {
+    display: block;
+    margin: 18px 0 8px;
+    color: #dbeafe;
+    font-size: 12px;
+    font-weight: 750;
+    letter-spacing: 0.025em;
+}
+
+.auth-card input {
+    width: 100%;
+    min-height: 48px;
+    padding: 13px 14px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 11px;
+    outline: none;
+    background: rgba(5, 13, 27, 0.9);
+    color: var(--color-text);
+    font-size: 14px;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.auth-card input::placeholder {
+    color: #647995;
+}
+
+.auth-card input:hover {
+    border-color: #58769e;
+}
+
+.auth-card input:focus {
+    border-color: var(--color-primary-hover);
+    background: #07152c;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.17);
+}
+
+.auth-password-field {
+    position: relative;
+}
+
+.auth-password-field input {
+    padding-right: 100px;
+}
+
+.auth-password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    min-width: 76px;
+    padding: 7px 9px;
+    transform: translateY(-50%);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: rgba(30, 52, 82, 0.75);
+    color: #bfdbfe;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.auth-password-toggle:hover {
+    border-color: var(--color-border-strong);
+    background: #1c3558;
+}
+
+.auth-hint {
+    margin: 7px 0 0;
+    color: var(--color-subtle);
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.auth-error {
+    min-height: 20px;
+    margin: 12px 0 10px;
+    color: #fda4af;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.auth-submit {
+    width: 100%;
+    min-height: 48px;
+    padding: 13px 16px;
+    border: 1px solid rgba(147, 197, 253, 0.2);
+    border-radius: 11px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+    font-size: 14px;
+    font-weight: 850;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+    transition: transform 150ms ease, filter 150ms ease, box-shadow 150ms ease;
+}
+
+.auth-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.12);
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.3);
+}
+
+.auth-submit:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.auth-submit:disabled {
+    opacity: 0.58;
+    cursor: wait;
+}
+
+.auth-switch {
+    margin: 22px 0 0;
+    color: var(--color-muted);
+    text-align: center;
+    font-size: 12px;
+}
+
+.auth-switch button {
+    border: 0;
+    padding: 0 0 0 5px;
+    background: transparent;
+    color: #93c5fd;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.auth-switch button:hover {
+    color: #e0f2fe;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.session-logout {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 900;
+    padding: 10px 14px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 10px;
+    background: rgba(8, 20, 38, 0.94);
+    color: #dbeafe;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.session-logout:hover:not(:disabled) {
+    border-color: #647995;
+    background: #172b48;
+}
+
+.session-logout:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.auth-card [hidden] {
+    display: none !important;
+}
+
+@keyframes auth-card-enter {
+    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 520px) {
+    #auth-screen {
+        padding: 16px;
+    }
+
+    .auth-card {
+        padding: 28px 22px;
+        border-radius: 18px;
+    }
+
+    .session-logout {
+        top: 8px;
+        right: 8px;
+        padding: 8px 10px;
+    }
+
+    #game-container canvas {
+        border-radius: 0;
+        border: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+
+.profile-panel {
+    position: fixed;
+    top: 14px;
+    right: 132px;
+    z-index: 880;
+    color: var(--color-text);
+}
+
+.profile-panel__toggle {
+    min-height: 38px;
+    padding: 9px 13px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 10px;
+    background: rgba(8, 20, 38, 0.94);
+    color: #dbeafe;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.profile-panel__toggle:hover {
+    border-color: #647995;
+    background: #172b48;
+}
+
+.profile-panel__content {
+    position: absolute;
+    top: 46px;
+    right: 0;
+    display: grid;
+    gap: 8px;
+    width: 250px;
+    padding: 16px;
+    border: 1px solid rgba(104, 143, 190, 0.32);
+    border-radius: 14px;
+    background: rgba(8, 19, 37, 0.98);
+    box-shadow: var(--shadow-panel);
+    backdrop-filter: blur(16px);
+}
+
+.profile-panel__content[hidden] {
+    display: none !important;
+}
+
+.profile-panel__heading {
+    margin-bottom: 3px;
+    color: #f8fbff;
+    font-size: 14px;
+    font-weight: 850;
+}
+
+.profile-panel__content label {
+    margin-top: 5px;
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.profile-panel__content input:not([type="color"]):not([type="file"]),
+.profile-panel__content select {
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: #071326;
+    color: var(--color-text);
+    font-size: 12px;
+}
+
+.profile-panel__content input[type="color"] {
+    width: 100%;
+    height: 36px;
+    padding: 3px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: #071326;
+}
+
+.profile-panel__content input[type="file"] {
+    width: 100%;
+    color: var(--color-muted);
+    font-size: 10px;
+}
+
+.profile-panel__save {
+    min-height: 38px;
+    margin-top: 6px;
+    border: 1px solid rgba(147, 197, 253, 0.22);
+    border-radius: 9px;
+    background: #1d4ed8;
+    color: white;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.profile-panel__save:hover {
+    background: #2563eb;
+}
+
+.profile-panel__status {
+    min-height: 16px;
+    color: #86efac;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.profile-panel__status.is-error {
+    color: #fda4af;
+}
+
+@media (max-width: 520px) {
+    .profile-panel {
+        top: 52px;
+        right: 8px;
+    }
+
+    .profile-panel__content {
+        width: min(250px, calc(100vw - 16px));
+    }
+}
+
+/* The in-game clean HUD mode also hides the surrounding account controls. */
+body.hud-minimal .profile-panel,
+body.hud-minimal .session-logout {
+    display: none !important;
 }

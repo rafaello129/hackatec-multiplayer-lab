@@ -1,3 +1,4 @@
+import { MATCH_BALANCE } from '@hackatec/shared';
 import type {
     PlayerState,
     GameMapState,
@@ -16,6 +17,7 @@ const MAX_PLAYER_NAME_LENGTH = 20;
 type LeaveResult = {
     roomId: string;
     player: PlayerState;
+    hostId?: string;
 };
 
 export type JoinSuccess = {
@@ -24,6 +26,7 @@ export type JoinSuccess = {
     player: PlayerState;
     players: PlayerState[];
     map: GameMapState;
+    hostId: string;
     previous?: LeaveResult;
 };
 
@@ -63,6 +66,8 @@ export class RoomManager
     private readonly rooms = new Map<string, Map<string, PlayerState>>();
     private readonly roomMaps = new Map<string, GameMapState>();
     private readonly socketRooms = new Map<string, string>();
+    // Map insertion order is join order, so the first remaining player is host.
+    private readonly roomHosts = new Map<string, string>();
 
     join(
         roomId: string,
@@ -93,7 +98,8 @@ export class RoomManager
                     roomId,
                     player: existingPlayer,
                     players: [...currentRoom.values()],
-                    map: this.getOrCreateMap(roomId)
+                    map: this.getOrCreateMap(roomId),
+                    hostId: this.roomHosts.get(roomId) ?? socketId
                 };
             }
         }
@@ -130,11 +136,12 @@ export class RoomManager
             x: spawn.x,
             y: spawn.y,
             color: PLAYER_COLORS[spawnIndex % PLAYER_COLORS.length],
-            hp: 100, maxHp: 100, alive: true, kills: 0, deaths: 0
+            hp: MATCH_BALANCE.initialHealth, maxHp: MATCH_BALANCE.initialHealth, alive: true, kills: 0, deaths: 0
         };
 
         room.set(socketId, player);
         this.socketRooms.set(socketId, roomId);
+        if (!this.roomHosts.has(roomId)) this.roomHosts.set(roomId, socketId);
 
         return {
             ok: true,
@@ -142,6 +149,7 @@ export class RoomManager
             player,
             players: [...room.values()],
             map,
+            hostId: this.roomHosts.get(roomId) ?? socketId,
             previous
         };
     }
@@ -166,16 +174,23 @@ export class RoomManager
         }
 
         room.delete(socketId);
+        if (this.roomHosts.get(roomId) === socketId) {
+            const nextHostId = room.keys().next().value as string | undefined;
+            if (nextHostId) this.roomHosts.set(roomId, nextHostId);
+            else this.roomHosts.delete(roomId);
+        }
 
         if (room.size === 0)
         {
             this.rooms.delete(roomId);
             this.roomMaps.delete(roomId);
+            this.roomHosts.delete(roomId);
         }
 
         return {
             roomId,
-            player
+            player,
+            hostId: this.roomHosts.get(roomId)
         };
     }
 
@@ -213,6 +228,42 @@ export class RoomManager
     hasRoom(roomId: string): boolean
     {
         return this.rooms.has(roomId);
+    }
+
+    resetForMatch(roomId: string, mode: string | null = 'classic'): { map: GameMapState; players: PlayerState[] } | undefined
+    {
+        const room = this.rooms.get(roomId);
+        if (!room) return undefined;
+        const map = generateMap(createMapSeed(), room.size, mode);
+        this.roomMaps.set(roomId, map);
+        let index = 0;
+        for (const player of room.values()) {
+            const spawn = getSpawnPosition(index++, map.width, map.height);
+            player.x = spawn.x;
+            player.y = spawn.y;
+            player.hp = MATCH_BALANCE.initialHealth;
+            player.maxHp = MATCH_BALANCE.initialHealth;
+            player.alive = true;
+            player.spectator = false;
+            player.kills = 0;
+            player.deaths = 0;
+            player.assists = 0;
+            player.zombieKills = 0;
+            player.survivedStormPhases = 0;
+            player.isDashing = false;
+            player.isInvulnerable = false;
+            player.spawnInvulnerableUntil = 0;
+            player.dashReadyAt = 0;
+            player.shield = 0;
+            player.selectedWeapon = 'pistol';
+            player.immobilizedUntil = 0;
+        }
+        return { map, players: [...room.values()] };
+    }
+
+    getHostId(roomId: string): string | undefined
+    {
+        return this.roomHosts.get(roomId);
     }
 
     private findAvailableSpawnIndex(room: Map<string, PlayerState>): number

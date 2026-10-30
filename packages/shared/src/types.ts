@@ -1,39 +1,48 @@
 export interface PlayerInput {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
-  shift: boolean;
+    up: boolean;
+    down: boolean;
+    left: boolean;
+    right: boolean;
+    /** Keyboard dash state; older client code may still use shift. */
+    dash?: boolean;
+    shift?: boolean;
+    /** Last pointer aim in radians; the server uses it for stationary dash direction. */
+    aimAngle?: number;
 }
 
-export interface PlayerState {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  velocity: number;
-  angle: number;
-  isInvulnerable: boolean;
-}
-export interface PlayerInput {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
-  shift: boolean;
-}
+export type PlayerEmote = 'spin' | 'jump' | 'crouch' | 'shake';
+export type PlayerEmotePayload = { playerId: string; emote: PlayerEmote };
 
 export interface PlayerState {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  velocity: number;
-  angle: number;
-  hp: number;
-  maxHp: number;
-  isInvulnerable: boolean;
+    id: string;
+    name: string;
+    x: number;
+    y: number;
+    color?: number;
+    velocity?: number;
+    angle?: number;
+    hp?: number;
+    maxHp?: number;
+    shield?: number;
+    isInvulnerable?: boolean;
+    isDashing?: boolean;
+    dashReadyAt?: number;
+    spawnInvulnerableUntil?: number;
+    aimAngle?: number;
+    alive?: boolean;
+    spectator?: boolean;
+    kills?: number;
+    deaths?: number;
+    immobilizedUntil?: number;
+    selectedWeapon?: WeaponType;
+    role?: 'titan' | 'hunter' | 'survivor';
+    lives?: number;
+    zombieKills?: number;
+    assists?: number;
+    survivedStormPhases?: number;
+    appearance?: PlayerAppearance;
 }
+
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
 export type ConnectionReadyPayload = {
@@ -41,25 +50,6 @@ export type ConnectionReadyPayload = {
     socketId: string;
 };
 
-<<<<<<< HEAD
-export type PlayerState = {
-    id: string;
-    name: string;
-    x: number;
-    y: number;
-    color: number;
-    isDashing?: boolean;
-    hp?: number;
-    maxHp?: number;
-    alive?: boolean;
-    kills?: number;
-    deaths?: number;
-    immobilizedUntil?: number;
-    appearance?: PlayerAppearance;
-};
-
-=======
->>>>>>> Emotes-Modos
 export type JoinRoomPayload = {
     roomId: string;
     playerName?: string;
@@ -71,7 +61,104 @@ export type RoomStatePayload = {
     selfId: string;
     players: PlayerState[];
     map: GameMapState;
+    hostId?: string;
 };
+
+export type PickupType = 'medkit' | 'shield';
+export type PickupState = {
+    id: string;
+    type: PickupType;
+    x: number;
+    y: number;
+    active: boolean;
+    respawnAt: number | null;
+};
+export type PickupStatePayload = { roomId: string; pickups: PickupState[] };
+export type PickupCollectedPayload = {
+    pickupId: string;
+    type: PickupType;
+    playerId: string;
+    restored: number;
+};
+export type ZombieType = 'giant' | 'spitter' | 'boss';
+export type ZombiePhase = 'approach' | 'telegraph' | 'charge' | 'stunned' | 'spit';
+export type ZombieState = {
+    id: string;
+    type: ZombieType;
+    x: number;
+    y: number;
+    hp: number;
+    maxHp: number;
+    radius: number;
+    alive: boolean;
+    phase: ZombiePhase;
+    phaseEndsAt: number;
+    targetId: string | null;
+    angle: number;
+};
+export type AcidProjectileState = {
+    id: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    createdAt: number;
+};
+export type AcidPuddleState = {
+    id: string;
+    x: number;
+    y: number;
+    radius: number;
+    expiresAt: number;
+};
+export type ZombieRunPhase = 'wave' | 'intermission' | 'boss' | 'won' | 'lost';
+export type ZombieStatePayload = {
+    roomId: string;
+    zombies: ZombieState[];
+    projectiles: AcidProjectileState[];
+    puddles: AcidPuddleState[];
+    round?: number;
+    totalRounds?: number;
+    runPhase?: ZombieRunPhase;
+    intermissionEndsAt?: number | null;
+};
+export type ZombieHitPayload = { zombieId: string; attackerId: string; damage: number };
+export type ProgressionStatePayload = {
+    level: number;
+    xp: number;
+    totalXP: number;
+    xpToNextLevel: number;
+    awardedXP?: number;
+};
+export type ChatChannel = 'all' | 'spectators';
+export type ChatMessage = {
+    id: string;
+    roomId: string;
+    senderId: string;
+    senderName: string;
+    channel: ChatChannel;
+    text: string;
+    createdAt: number;
+};
+export type ChatSendPayload = { channel: ChatChannel; text: string };
+export type ChatHistoryPayload = { roomId: string; messages: ChatMessage[] };
+
+
+export type StormStatePayload = {
+    roomId: string;
+    phase: number;
+    phaseCount: number;
+    centerX: number;
+    centerY: number;
+    radius: number;
+    closesAt: number;
+    nextPhaseAt: number;
+    damagePerSecond: number;
+    closing: boolean;
+    completed: boolean;
+};
+export type PlayerTrappedPayload = { playerId: string; trappedUntil: number };
+export type PlayerHealedPayload = { playerId: string; x: number; y: number; amount: number };
 
 export type PlayerJoinedPayload = {
     player: PlayerState;
@@ -81,54 +168,110 @@ export type PlayerLeftPayload = {
     playerId: string;
 };
 
-export type RoomErrorCode =
-    | 'INVALID_ROOM'
-    | 'ROOM_FULL';
+export type RoomErrorCode = 'INVALID_ROOM' | 'ROOM_FULL' | 'AUTH_REQUIRED' | 'ACCOUNT_IN_ROOM';
 
 export type RoomErrorPayload = {
     code: RoomErrorCode;
     message: string;
 };
 
-<<<<<<< HEAD
-export type MapObstacleType = 'wall' | 'trap' | 'cactus';
+export type MapObstacleType = 'wall' | 'fence' | 'rock' | 'lake' | 'trap' | 'cactus';
 export type CactusSize = 'small' | 'medium' | 'large';
-export type BaseMapObstacle = { id: string; type: MapObstacleType; x: number; y: number; width: number; height: number };
+export type BaseMapObstacle = {
+    id: string;
+    type: MapObstacleType;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
 export type WallObstacle = BaseMapObstacle & { type: 'wall' };
+export type FenceObstacle = BaseMapObstacle & { type: 'fence' };
+export type RockObstacle = BaseMapObstacle & { type: 'rock' };
+export type LakeObstacle = BaseMapObstacle & { type: 'lake' };
 export type TrapObstacle = BaseMapObstacle & { type: 'trap' };
 export type CactusObstacle = BaseMapObstacle & { type: 'cactus'; size: CactusSize; damage: number };
-export type MapObstacle = WallObstacle | TrapObstacle | CactusObstacle;
+export type MapObstacle = WallObstacle | FenceObstacle | RockObstacle | LakeObstacle | TrapObstacle | CactusObstacle;
 export type GameMapState = { seed: number; width: number; height: number; obstacles: MapObstacle[] };
-export type PlayerInput = { up: boolean; down: boolean; left: boolean; right: boolean; dash: boolean };
 export type PlayerInputPayload = { input: PlayerInput };
 export type PlayerMovedPayload = { player: PlayerState };
 
-export type WeaponType = 'pistol' | 'machineGun' | 'shotgun';
-export type ShootPayload = { angle: number; weapon: WeaponType };
-export type ProjectileState = { id: string; ownerId: string; x: number; y: number; vx: number; vy: number; weapon: WeaponType };
-export type CombatSnapshot = { players: PlayerState[]; projectiles: ProjectileState[] };
+export type WeaponType =
+    | 'knife'
+    | 'machineGun'
+    | 'shotgun'
+    | 'pistol'
+    | 'sniper'
+    | 'rocketLauncher'
+    | 'laser';
+
+export type ProjectileWeaponType = 'machineGun' | 'shotgun' | 'pistol' | 'rocketLauncher';
+export type WeaponSlot = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type WeaponSelectPayload = { slot: number };
+export type WeaponFirePayload = { angle: number; firing: boolean };
+/** @deprecated Use WeaponFirePayload; any legacy weapon field is ignored by the server. */
+export type ShootPayload = WeaponFirePayload & { weapon?: WeaponType };
+export type WeaponStatePayload = {
+    selectedSlot: WeaponSlot;
+    selectedWeapon: WeaponType;
+    availableSlots: WeaponSlot[];
+    cooldownRemainingMs: number;
+    laserEnergyMs?: number;
+    laserEnergyMaxMs?: number;
+};
+export type WeaponActionResultPayload = { ok: boolean; message: string };
+export type ProjectileState = {
+    id: string;
+    ownerId: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    weapon: ProjectileWeaponType;
+    createdAt?: number;
+};
+export type LaserBeamState = { ownerId: string; x1: number; y1: number; x2: number; y2: number; weapon?: 'laser' | 'sniper' };
+export type ExplosionState = { id: string; x: number; y: number; radius: number; createdAt: number };
+export type KillFeedEntry = {
+    id: string;
+    killerId: string;
+    killerName: string;
+    victimId: string;
+    victimName: string;
+    createdAt: number;
+};
+export type CombatSnapshot = {
+    players: PlayerState[];
+    projectiles: ProjectileState[];
+    beams?: LaserBeamState[];
+    explosions?: ExplosionState[];
+    trapped?: PlayerTrappedPayload[];
+    heals?: PlayerHealedPayload[];
+    killFeed?: KillFeedEntry[];
+};
 
 export type SkinAsset = { id: string; url: string; width: number; height: number };
 export type PlayerAppearance = { mode: 'color' | 'skin'; colorHex: string; skin?: SkinAsset };
 export type ProfileUpdatePayload = { username?: string; appearance?: PlayerAppearance };
-=======
-export interface PlayerInput {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
-  shift: boolean;
-}
 
-export interface PlayerState {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  velocity: number;
-  angle: number;
-  hp: number;
-  maxHp: number;
-  isInvulnerable: boolean;
-}
->>>>>>> Emotes-Modos
+export type GameMode = 'classic' | 'everyone-vs-one' | 'rockets' | 'battleRoyale' | 'zombies';
+export type MatchPhase = 'waiting' | 'voting' | 'countdown' | 'playing' | 'results';
+export type MatchStatePayload = {
+    roomId: string;
+    phase: MatchPhase;
+    mode: GameMode | null;
+    hostId: string | null;
+    votes: Record<string, GameMode>;
+    alivePlayerIds: string[];
+    voteEndsAt: number | null;
+    startsAt: number | null;
+    endsAt: number | null;
+    results: Array<{ playerId: string; name: string; kills: number; deaths: number; assists?: number; zombieKills?: number; survivedStormPhases?: number; placement?: number }>;
+    winnerId?: string | null;
+    winnerName?: string | null;
+    message?: string;
+};
+export type MatchVotePayload = { mode: GameMode };
+export type HostStartMatchPayload = { mode: GameMode };
+
+export type MatchActionResultPayload = { ok: boolean; message: string };

@@ -13,7 +13,6 @@ on:
 jobs:
   test-build-smoke:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +30,8 @@ jobs:
         run: npm run check
 
       - name: Start multiplayer server
+        env:
+          AUTH_REGISTRATION_LIMIT_PER_HOUR: 40
         run: |
           npm run start -w @hackatec/server > /tmp/hackatec-server.log 2>&1 &
           echo $! > /tmp/hackatec-server.pid
