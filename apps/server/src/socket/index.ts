@@ -83,34 +83,45 @@ export function registerSocketHandlers(
     const rooms = new Set<string>();
     const tick = setInterval(() => {
         const now = Date.now();
+
         for (const [socketId, state] of movement) {
             const player = roomManager.getPlayer(socketId);
             const roomId = roomManager.getRoomId(socketId);
             if (!player || !roomId) { movement.delete(socketId); continue; }
-            if (player.spectator) continue;
+            rooms.add(roomId);
+            if (player.spectator || !matches.isPlaying(roomId)) continue;
             const map = roomManager.getMap(roomId);
             if (!map) continue;
-            if (!matches.isPlaying(roomId)) continue;
             const wasDashing = player.isDashing;
             const moved = advanceMovement(player, state, map, 50, now);
             if (moved || wasDashing !== player.isDashing) {
                 io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.PLAYER_MOVED, { player });
             }
-            rooms.add(roomId);
         }
+
+        for (const roomId of rooms) {
+            if (!roomManager.hasRoom(roomId)) {
+                rooms.delete(roomId);
+                continue;
+            }
+            syncMatchRoom(roomId, now);
+        }
+
+        for (const transition of matches.advance(now, id => roomManager.getPlayers(id))) {
+            if (transition.resetPlayers) resetRoomForMatch(transition.roomId);
+        }
+
         for (const roomId of rooms) {
             const map = roomManager.getMap(roomId);
             if (!map) { rooms.delete(roomId); continue; }
+            if (!matches.isPlaying(roomId)) continue;
             const players = roomManager.getPlayers(roomId);
-            syncMatchRoom(roomId, now);
-            for (const transition of matches.advance(now, id => roomManager.getPlayers(id))) {
-                if (transition.resetPlayers) resetRoomForMatch(transition.roomId);
-            }
-            if (matches.isPlaying(roomId)) {
-                const projectiles = combat.step(roomId, players, map, 50, now);
-                io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players, projectiles });
-            }
-            for (const state of matches.takeUpdates()) io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
+            const projectiles = combat.step(roomId, players, map, 50, now);
+            io.to(socketRoom(roomId)).emit(SOCKET_EVENTS.COMBAT_STATE, { players, projectiles });
+        }
+
+        for (const state of matches.takeUpdates()) {
+            io.to(socketRoom(state.roomId)).emit(SOCKET_EVENTS.MATCH_STATE, state);
         }
     }, 50);
     tick.unref?.();
