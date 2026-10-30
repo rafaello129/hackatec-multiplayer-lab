@@ -35,6 +35,8 @@ export interface PlayerState {
     role?: 'titan' | 'hunter' | 'survivor';
     lives?: number;
     zombieKills?: number;
+    assists?: number;
+    survivedStormPhases?: number;
     appearance?: PlayerAppearance;
 }
 
@@ -224,7 +226,7 @@ export type MatchStatePayload = {
     voteEndsAt: number | null;
     startsAt: number | null;
     endsAt: number | null;
-    results: Array<{ playerId: string; name: string; kills: number; deaths: number; placement?: number }>;
+    results: Array<{ playerId: string; name: string; kills: number; deaths: number; assists?: number; zombieKills?: number; survivedStormPhases?: number; placement?: number }>;
     winnerId?: string | null;
     winnerName?: string | null;
     message?: string;
