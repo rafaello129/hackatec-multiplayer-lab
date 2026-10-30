@@ -130,7 +130,7 @@ export class MapView
         let attempts = 0;
 
         // Small stones and dry scrub make the sand feel like a continuous terrain.
-        while (placed < 34 && attempts < 180)
+        while (placed < Math.round(34 * mapWidth / 1_024) && attempts < Math.round(180 * mapWidth / 1_024))
         {
             attempts += 1;
             const x = ARENA.x + 24 + random() * (mapWidth - ARENA.x * 2 - 48);
@@ -155,7 +155,7 @@ export class MapView
         }
 
         // Sparse dry grass tufts, kept subtle so they do not compete with players.
-        for (let index = 0; index < 22; index += 1)
+        for (let index = 0; index < Math.round(22 * mapWidth / 1_024); index += 1)
         {
             const x = ARENA.x + 20 + random() * (mapWidth - ARENA.x * 2 - 40);
             const y = ARENA.y + 20 + random() * (ARENA.height - 40);
