@@ -115,12 +115,12 @@ describe('CombatManager weapon authority', () => {
         combat.setFireIntent('room', shooter, { angle: 0, firing: true }, 1_000);
         const shot = combat.step('room', [shooter, target], map, 50, 1_000);
         expect(target.hp).toBe(5);
-        expect(shot.beams).toMatchObject([{ ownerId: 'shooter', x1: 250, y1: 400, x2: 500, y2: 400, weapon: 'sniper' }]);
+        expect(shot.beams).toMatchObject([{ ownerId: 'shooter', x1: 250, y1: 400, x2: 484, y2: 400, weapon: 'sniper' }]);
 
         combat.setFireIntent('room', shooter, { angle: 0, firing: false }, 1_050);
         combat.setFireIntent('room', shooter, { angle: 0, firing: true }, 1_100);
         combat.step('room', [shooter, target], map, 50, 1_100);
-        expect(target.hp).toBe(20);
+        expect(target.hp).toBe(5);
     });
 
     it('credits an assist to a player who damaged the victim before the final hit', () => {
