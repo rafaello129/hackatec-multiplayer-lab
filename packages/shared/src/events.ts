@@ -19,5 +19,10 @@ export const SOCKET_EVENTS = {
     PLAYER_SHOOT: 'player:shoot',
     COMBAT_STATE: 'combat:state',
     PROFILE_SET: 'profile:set',
-    PROFILE_RESULT: 'profile:result'
+    PROFILE_RESULT: 'profile:result',
+
+    WEAPON_SELECT: 'weapon:select',
+    WEAPON_FIRE: 'weapon:fire',
+    WEAPON_STATE: 'weapon:state',
+    WEAPON_RESULT: 'weapon:result'
 } as const;
