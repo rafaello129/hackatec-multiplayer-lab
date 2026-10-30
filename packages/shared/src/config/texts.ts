@@ -10,7 +10,8 @@ export const MATCH_TEXTS = {
         classic: 'Clásico',
         everyoneVsOne: 'Todos contra uno',
         rockets: 'Rocket para todos',
-        battleRoyale: 'Battle Royale'
+        battleRoyale: 'Battle Royale',
+        zombies: 'Zombies'
     },
     messages: {
         votePrompt: 'Vota por el modo de la siguiente partida.',
