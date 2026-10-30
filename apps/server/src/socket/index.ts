@@ -225,7 +225,8 @@ export function registerSocketHandlers(
             if (transition.resetPlayers) resetRoomForMatch(transition.roomId);
             if (transition.previousPhase === 'countdown' && transition.phase === 'playing') {
                 const match = matches.getState(transition.roomId);
-                const duration = match?.endsAt ? Math.max(1, match.endsAt - now) : MATCH_BALANCE.classicDurationMs;
+                const duration = match?.endsAt ? Math.max(1, match.endsAt - now) :
+                    match?.mode === 'zombies' ? MATCH_BALANCE.zombiesDurationMs : MATCH_BALANCE.classicDurationMs;
                 activityTracker.start(transition.roomId, roomManager.getPlayers(transition.roomId), now, duration);
             }
             if (transition.previousPhase === 'playing' && transition.phase === 'results') {
