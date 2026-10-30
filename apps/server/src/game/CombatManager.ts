@@ -15,7 +15,9 @@ import {
     type WeaponFirePayload,
     type WeaponSlot,
     type WeaponStatePayload,
-    type WeaponType
+    type WeaponType,
+    type ZombieState,
+    type ZombieHitPayload
 } from '@hackatec/shared';
 import { availableWeaponSlots, WEAPON_DEFINITIONS, weaponForSlot } from '../weapons/registry.js';
 import { getSpawnPosition } from './spawn.js';
@@ -55,6 +57,7 @@ export type CombatStepResult = {
     explosions: ExplosionState[];
     trapped: PlayerTrappedPayload[];
     heals: PlayerHealedPayload[];
+    zombieHits: ZombieHitPayload[];
 };
 
 export type WeaponActionResult = { ok: boolean; message: string };
@@ -230,7 +233,8 @@ export class CombatManager {
         map: GameMapState,
         dtMs: number,
         now: number,
-        mode: string | null = 'classic'
+        mode: string | null = 'classic',
+        zombies: ZombieState[] = []
     ): CombatStepResult {
         const state = this.runtime(roomId);
         state.mode = mode;
@@ -238,6 +242,7 @@ export class CombatManager {
         const explosions: ExplosionState[] = [];
         const beams: LaserBeamState[] = [];
         const trapped: PlayerTrappedPayload[] = [];
+        const zombieHits: ZombieHitPayload[] = [];
         state.heals = [];
         const byId = new Map(players.map(player => [player.id, player]));
         const playerRadius = COMBAT_BALANCE.playerRadius;
@@ -289,17 +294,18 @@ export class CombatManager {
                 }
             }
             state.traps.set(player.id, touching);
-            this.processWeapon(state, roomId, player, players, map, dt, now, mode, beams);
+            this.processWeapon(state, roomId, player, players, map, dt, now, mode, beams, zombies, zombieHits);
         }
 
-        this.stepProjectiles(state, roomId, players, map, dt, now, explosions, byId);
+        this.stepProjectiles(state, roomId, players, map, dt, now, explosions, byId, zombies, zombieHits);
 
         return {
             projectiles: [...state.projectiles.values()],
             beams,
             explosions,
             trapped,
-            heals: [...state.heals]
+            heals: [...state.heals],
+            zombieHits
         };
     }
 
@@ -312,7 +318,9 @@ export class CombatManager {
         dtMs: number,
         now: number,
         mode: string | null,
-        beams: LaserBeamState[]
+        beams: LaserBeamState[],
+        zombies: ZombieState[],
+        zombieHits: ZombieHitPayload[]
     ): void {
         const weaponState = this.weaponRuntime(state, player.id);
         if (weaponState.firing && now - weaponState.lastIntentAt > 220) weaponState.firing = false;
@@ -344,11 +352,11 @@ export class CombatManager {
                 return;
             }
             const energyUsed = Math.min(WEAPON_BALANCE.laser.tickMs, weaponState.laserEnergyMs);
-            const trace = this.traceRay(player, weaponState.angle, WEAPON_BALANCE.laser.range, players, map);
+            const trace = this.traceRay(player, weaponState.angle, WEAPON_BALANCE.laser.range, players, map, zombies);
             beams.push({ ownerId: player.id, x1: player.x, y1: player.y, x2: trace.x, y2: trace.y });
-            if (trace.target) {
-                this.damage(state, trace.target, WEAPON_BALANCE.laser.damagePerSecond * energyUsed / 1_000, now, player);
-            }
+            const laserDamage = WEAPON_BALANCE.laser.damagePerSecond * energyUsed / 1_000;
+            if (trace.target) this.damage(state, trace.target, laserDamage, now, player);
+            else if (trace.zombie) zombieHits.push({ zombieId: trace.zombie.id, attackerId: player.id, damage: laserDamage });
             weaponState.laserEnergyMs = Math.max(0, weaponState.laserEnergyMs - energyUsed);
             weaponState.cooldownUntil = now + WEAPON_BALANCE.laser.tickMs;
             if (weaponState.laserEnergyMs <= 0) weaponState.firing = false;
@@ -358,11 +366,12 @@ export class CombatManager {
         weaponState.cooldownUntil = now + definition.cooldownMs;
         switch (weapon) {
             case 'knife':
-                this.fireKnife(state, player, players, now, weaponState.angle);
+                this.fireKnife(state, player, players, zombies, zombieHits, now, weaponState.angle);
                 break;
             case 'sniper': {
-                const trace = this.traceRay(player, weaponState.angle, WEAPON_BALANCE.sniper.range, players, map);
+                const trace = this.traceRay(player, weaponState.angle, WEAPON_BALANCE.sniper.range, players, map, zombies);
                 if (trace.target) this.damage(state, trace.target, WEAPON_BALANCE.sniper.damage, now, player);
+                else if (trace.zombie) zombieHits.push({ zombieId: trace.zombie.id, attackerId: player.id, damage: WEAPON_BALANCE.sniper.damage });
                 break;
             }
             case 'rocketLauncher':
@@ -400,10 +409,13 @@ export class CombatManager {
         state: Runtime,
         attacker: PlayerState,
         players: PlayerState[],
+        zombies: ZombieState[],
+        zombieHits: ZombieHitPayload[],
         now: number,
         angle: number
     ): void {
         let nearest: PlayerState | undefined;
+        let nearestZombie: ZombieState | undefined;
         let nearestDistance = Number.POSITIVE_INFINITY;
         for (const target of players) {
             if (target.id === attacker.id || target.alive === false || target.spectator) continue;
@@ -415,10 +427,27 @@ export class CombatManager {
             if (offset > WEAPON_BALANCE.knife.arcRadians) continue;
             if (distance < nearestDistance) {
                 nearest = target;
+                nearestZombie = undefined;
+                nearestDistance = distance;
+            }
+        }
+        for (const zombie of zombies) {
+            if (!zombie.alive) continue;
+            const dx = zombie.x - attacker.x;
+            const dy = zombie.y - attacker.y;
+            const distance = Math.hypot(dx, dy);
+            if (distance > WEAPON_BALANCE.knife.range + zombie.radius) continue;
+            const offset = Math.abs(normalizeAngle(Math.atan2(dy, dx) - angle));
+            if (offset <= WEAPON_BALANCE.knife.arcRadians && distance < nearestDistance) {
+                nearest = undefined;
+                nearestZombie = zombie;
                 nearestDistance = distance;
             }
         }
         if (nearest) this.damage(state, nearest, WEAPON_BALANCE.knife.damage, now, attacker);
+        else if (nearestZombie) zombieHits.push({
+            zombieId: nearestZombie.id, attackerId: attacker.id, damage: WEAPON_BALANCE.knife.damage
+        });
     }
 
     private traceRay(
@@ -426,8 +455,9 @@ export class CombatManager {
         angle: number,
         range: number,
         players: PlayerState[],
-        map: GameMapState
-    ): { x: number; y: number; target?: PlayerState } {
+        map: GameMapState,
+        zombies: ZombieState[] = []
+    ): { x: number; y: number; target?: PlayerState; zombie?: ZombieState } {
         const step = 6;
         const dx = Math.cos(angle);
         const dy = Math.sin(angle);
@@ -443,6 +473,9 @@ export class CombatManager {
                 Math.hypot(player.x - x, player.y - y) <= COMBAT_BALANCE.playerRadius
             );
             if (target) return { x, y, target };
+            const zombie = zombies.find(candidate => candidate.alive &&
+                Math.hypot(candidate.x - x, candidate.y - y) <= candidate.radius);
+            if (zombie) return { x, y, zombie };
         }
         return { x: attacker.x + dx * range, y: attacker.y + dy * range };
     }
@@ -477,7 +510,9 @@ export class CombatManager {
         dtMs: number,
         now: number,
         explosions: ExplosionState[],
-        byId: Map<string, PlayerState>
+        byId: Map<string, PlayerState>,
+        zombies: ZombieState[],
+        zombieHits: ZombieHitPayload[]
     ): void {
         const dt = Math.min(Math.max(dtMs, 0), COMBAT_BALANCE.serverTickMs) / 1_000;
         for (const [id, projectile] of state.projectiles) {
@@ -485,6 +520,7 @@ export class CombatManager {
             const segments = Math.max(1, Math.ceil(speedDistance / COMBAT_BALANCE.maxProjectileSubstepPx));
             let hit = false;
             let impactTarget: PlayerState | undefined;
+            let impactZombie: ZombieState | undefined;
 
             if (projectile.weapon === 'rocketLauncher' &&
                 now - (projectile.createdAt ?? now) >= WEAPON_BALANCE.rocketLauncher.lifetimeMs) {
@@ -508,11 +544,17 @@ export class CombatManager {
                         COMBAT_BALANCE.playerRadius + COMBAT_BALANCE.projectileRadius
                 );
                 if (impactTarget) hit = true;
+                if (!impactTarget) {
+                    impactZombie = zombies.find(target => target.alive &&
+                        Math.hypot(target.x - projectile.x, target.y - projectile.y) <=
+                            target.radius + COMBAT_BALANCE.projectileRadius);
+                    if (impactZombie) hit = true;
+                }
             }
 
             if (hit) {
                 if (projectile.weapon === 'rocketLauncher') {
-                    this.explode(state, roomId, projectile, players, now, explosions);
+                    this.explode(state, roomId, projectile, players, now, explosions, zombies, zombieHits);
                 } else if (impactTarget) {
                     const damage = projectile.weapon === 'machineGun'
                         ? WEAPON_BALANCE.machineGun.damage
@@ -520,6 +562,13 @@ export class CombatManager {
                             ? WEAPON_BALANCE.shotgun.damagePerPellet
                             : WEAPON_BALANCE.pistol.damage;
                     this.damage(state, impactTarget, damage, now, byId.get(projectile.ownerId));
+                } else if (impactZombie) {
+                    const damage = projectile.weapon === 'machineGun'
+                        ? WEAPON_BALANCE.machineGun.damage
+                        : projectile.weapon === 'shotgun'
+                            ? WEAPON_BALANCE.shotgun.damagePerPellet
+                            : WEAPON_BALANCE.pistol.damage;
+                    zombieHits.push({ zombieId: impactZombie.id, attackerId: projectile.ownerId, damage });
                 }
                 state.projectiles.delete(id);
             }
@@ -532,7 +581,9 @@ export class CombatManager {
         projectile: ProjectileState,
         players: PlayerState[],
         now: number,
-        explosions: ExplosionState[]
+        explosions: ExplosionState[],
+        zombies: ZombieState[],
+        zombieHits: ZombieHitPayload[]
     ): void {
         const balance = WEAPON_BALANCE.rocketLauncher;
         explosions.push({
@@ -562,6 +613,14 @@ export class CombatManager {
                 vy: directionY / directionLength * balance.knockbackSpeed * strength,
                 endsAt: now + 400
             });
+        }
+        for (const zombie of zombies) {
+            if (!zombie.alive) continue;
+            const distance = Math.hypot(zombie.x - projectile.x, zombie.y - projectile.y);
+            if (distance > balance.blastRadius + zombie.radius) continue;
+            const falloff = Math.min(1, distance / balance.blastRadius);
+            const damage = balance.centerDamage - (balance.centerDamage - balance.edgeDamage) * falloff;
+            zombieHits.push({ zombieId: zombie.id, attackerId: projectile.ownerId, damage });
         }
     }
 
