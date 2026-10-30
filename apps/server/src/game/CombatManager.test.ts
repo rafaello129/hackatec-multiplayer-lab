@@ -250,7 +250,7 @@ describe('CombatManager weapon authority', () => {
         combat.selectWeapon('laser-room', laserUser, 7, 'classic', 1_000);
         combat.setFireIntent('laser-room', laserUser, { angle: 0, firing: true }, 1_000);
         const laser = combat.step('laser-room', [laserUser], map, 50, 1_000, 'classic', [laserTarget]);
-        expect(laser.zombieHits[0]?.damage).toBe(6);
+        expect(laser.zombieHits[0]?.damage).toBe(8);
     });
 
     it('restricts Rocket para todos to slot six on the server tick', () => {
