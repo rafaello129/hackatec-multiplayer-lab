@@ -134,6 +134,24 @@ async function loginAccount(username) {
     return setCookie.split(';')[0];
 }
 
+async function verifyAccountLoginRateLimit(username) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        const response = await fetch(`${url}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password: 'Wrong-password-123!' })
+        });
+        assert(response.status === 401, 'initial invalid login attempts should be rejected normally');
+    }
+    const blocked = await fetch(`${url}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password: 'Wrong-password-123!' })
+    });
+    assert(blocked.status === 429, 'the sixth invalid attempt for one account should be rate limited');
+}
+
+
 async function verifyAuthApi(account) {
     const sessionResponse = await fetch(`${url}/api/auth/session`, {
         headers: { Cookie: account.cookie },
@@ -232,7 +250,9 @@ async function main() {
     const betaAccount = await createAccount('Beta');
     const gammaAccount = await createAccount('Gamma');
     const deltaAccount = await createAccount('Delta');
+    const limitedAccount = await createAccount('Limited');
     await verifyAuthApi(alphaAccount);
+    await verifyAccountLoginRateLimit(limitedAccount.username);
     const betaLoginCookie = await loginAccount(betaAccount.username);
 
     const alpha = await connectClient('alpha', alphaAccount.cookie);
