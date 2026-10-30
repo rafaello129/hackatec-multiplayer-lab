@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import multer from 'multer';
-import type { Request, Response } from 'express';
+import type { Request, RequestHandler, Response } from 'express';
 import { PROFILE_TEXTS } from '@hackatec/shared';
 import type { AccountStore } from '../auth/AccountStore.js';
 
@@ -35,7 +35,20 @@ const upload = multer({
     }
 });
 
-export const uploadSkin = upload.single('skin');
+export const uploadSkin: RequestHandler = (request, response, next) => {
+    upload.single('skin')(request, response, error => {
+        if (!error) {
+            next();
+            return;
+        }
+        const message = error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE'
+            ? PROFILE_TEXTS.errors.fileTooLarge
+            : error instanceof Error
+                ? error.message
+                : PROFILE_TEXTS.errors.uploadFailed;
+        response.status(400).json({ error: message });
+    });
+};
 
 export async function skinsUploadHandler(
     request: Request,
