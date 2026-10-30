@@ -48,7 +48,7 @@ function blocked(x: number, y: number, map: GameMapState): boolean {
 }
 
 export function advanceMovement(player: PlayerState, state: MovementRuntime, map: GameMapState, deltaMs: number, now: number): boolean {
-    if (player.alive === false) { player.isDashing = false; return false; }
+    if (player.alive === false || player.spectator) { player.isDashing = false; return false; }
     const input = now - state.lastInputAt <= INPUT_TIMEOUT_MS ? state.input : undefined;
     player.isDashing = now < state.dashUntil && (player.immobilizedUntil ?? 0) <= now;
     if ((player.immobilizedUntil ?? 0) > now) return false;
