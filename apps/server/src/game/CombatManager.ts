@@ -62,6 +62,7 @@ export type CombatStepResult = {
     trapped: PlayerTrappedPayload[];
     heals: PlayerHealedPayload[];
     zombieHits: ZombieHitPayload[];
+    killFeed: KillFeedEntry[];
 };
 
 export type WeaponActionResult = { ok: boolean; message: string };
