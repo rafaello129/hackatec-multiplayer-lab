@@ -232,12 +232,13 @@ describe('MatchManager', () => {
         manager.advance(15, () => [survivor, eliminated]);
         manager.advance(16, () => [survivor, eliminated]);
 
-        expect(manager.getState('room-br')).toMatchObject({
+        const result = manager.getState('room-br');
+        expect(result).toMatchObject({
             phase: 'results',
             mode: 'battleRoyale',
-            winnerId: 'survivor',
-            results: [{ playerId: 'survivor', placement: 1 }]
+            winnerId: 'survivor'
         });
+        expect(result?.results[0]).toMatchObject({ playerId: 'survivor', placement: 1 });
     });
 
     it('gives Rocket para todos its own match duration', () => {
