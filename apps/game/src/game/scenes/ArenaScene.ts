@@ -113,7 +113,7 @@ export class ArenaScene extends Scene
         this.zombieView = new ZombieView(this);
         this.bullets = this.add.graphics().setDepth(3);
         this.combatText = this.add.text(36, 105, '', { fontFamily: 'Arial', fontSize: 15, color: '#f8fafc' }).setDepth(8);
-        this.progressionHud = this.add.text(36, 85, 'Nivel 1 · XP 0/100', {
+        this.progressionHud = this.add.text(280, 76, 'Nivel 1 · XP 0/100', {
             fontFamily: 'Arial Black', fontSize: 12, color: '#c4b5fd',
             stroke: '#020617', strokeThickness: 3
         }).setDepth(8);
