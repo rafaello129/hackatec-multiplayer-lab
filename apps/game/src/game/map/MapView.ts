@@ -205,7 +205,7 @@ export class MapView
         const thickness = horizontal ? obstacle.height : obstacle.width;
         const start = (horizontal ? obstacle.x : obstacle.y) - length / 2;
         const cross = (horizontal ? obstacle.y : obstacle.x);
-        const postCount = Math.max(2, Math.floor(length / 42) + 1;
+        const postCount = Math.max(2, Math.floor(length / 42) + 1);
 
         // Shadow and two weathered timber rails.
         this.graphics.fillStyle(0x654326, 0.25);
