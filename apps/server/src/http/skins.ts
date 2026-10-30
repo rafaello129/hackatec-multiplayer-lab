@@ -138,22 +138,23 @@ function getExtension(
     }
 }
 
-function getImageDimensions(
+export function getImageDimensions(
     buffer: Buffer,
     mimeType: string
 ): { width: number; height: number } | undefined
 {
     if (mimeType === 'image/png')
     {
-        if (buffer.length < 24)
+        const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+        if (buffer.length < 24 || !signature.every((byte, index) => buffer[index] === byte))
         {
             return undefined;
         }
 
-        return {
-            width: buffer.readUInt32BE(16),
-            height: buffer.readUInt32BE(20)
-        };
+        const width = buffer.readUInt32BE(16);
+        const height = buffer.readUInt32BE(20);
+        if (width < 1 || height < 1) return undefined;
+        return { width, height };
     }
 
     if (mimeType === 'image/jpeg')
