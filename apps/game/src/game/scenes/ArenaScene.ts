@@ -373,6 +373,14 @@ export class ArenaScene extends Scene
 
     private readonly handleZombieState = (state: ZombieStatePayload): void => {
         this.zombieView?.sync(state);
+        const round = state.round ?? 1;
+        const total = state.totalRounds ?? 10;
+        const phase = state.runPhase;
+        if (phase === 'boss') this.combatText?.setText('JEFE FINAL · ¡DERROTEN AL ZOMBI!');
+        else if (phase === 'intermission') this.combatText?.setText('RONDA ' + round + '/' + total + ' · PREPÁRENSE PARA LA SIGUIENTE');
+        else if (phase === 'won') this.combatText?.setText('¡VICTORIA! JEFE ZOMBI DERROTADO');
+        else if (phase === 'lost') this.combatText?.setText('DERROTA · TODO EL EQUIPO FUE ELIMINADO');
+        else if (phase === 'wave') this.combatText?.setText('RONDA ' + round + '/' + total);
     };
 
     private readonly handleStormState = (state: StormStatePayload): void => {
