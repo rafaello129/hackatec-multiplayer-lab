@@ -16,6 +16,7 @@ export const SOCKET_EVENTS = {
     PLAYER_LEFT: 'player:left',
     PLAYER_INPUT: 'player:input',
     PLAYER_MOVED: 'player:moved',
+    PLAYER_EMOTE: 'player:emote',
     PLAYER_SHOOT: 'player:shoot',
     COMBAT_STATE: 'combat:state',
     PLAYER_TRAPPED: 'player:trapped',
