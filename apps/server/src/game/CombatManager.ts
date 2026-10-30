@@ -23,6 +23,12 @@ export class CombatManager {
         }
         return state;
     }
+    resetRoom(roomId: string): void {
+        const state = this.rooms.get(roomId);
+        if (!state) return;
+        state.projectiles.clear(); state.cooldowns.clear(); state.invulnerable.clear();
+        state.cactus.clear(); state.traps.clear(); state.respawn.clear();
+    }
     leave(roomId: string, playerId: string, roomEmpty: boolean): void {
         if (roomEmpty) { this.rooms.delete(roomId); return; }
         const s = this.rooms.get(roomId);
