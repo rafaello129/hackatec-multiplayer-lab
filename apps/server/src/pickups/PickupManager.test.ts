@@ -15,7 +15,9 @@ describe('PickupManager', () => {
         const a = first.reset('room', map);
         const b = second.reset('room', map);
         expect(a).toEqual(b);
-        expect(a.length).toBe(8);
+        expect(a.length).toBe(6);
+        expect(a.filter(pickup => pickup.type === 'medkit')).toHaveLength(2);
+        expect(a.filter(pickup => pickup.type === 'shield')).toHaveLength(4);
         for (const pickup of a) {
             expect(map.obstacles.some(obstacle => {
                 const dx = Math.max(Math.abs(pickup.x - obstacle.x) - obstacle.width / 2, 0);
@@ -39,6 +41,8 @@ describe('PickupManager', () => {
         expect(injured.hp).toBe(100);
         expect(collected.collected[0]?.restored).toBe(30);
         expect(collected.pickups.find(item => item.id === medkit.id)?.active).toBe(false);
+        expect(collected.pickups.find(item => item.id === medkit.id)?.respawnAt)
+            .toBe(1_050 + PICKUP_BALANCE.medkitRespawnMs);
     });
 
     it('collects a pickup only once when two players touch it on the same tick', () => {
@@ -66,6 +70,12 @@ describe('PickupManager', () => {
         expect(result.collected[0]?.restored).toBe(15);
         expect(result.pickups.find(item => item.id === shieldPickup.id)?.respawnAt)
             .toBe(3_000 + PICKUP_BALANCE.battleRoyaleRespawnMs);
+
+        const medkit = pickups.find(pickup => pickup.type === 'medkit')!;
+        const injured = player('injured', medkit.x, medkit.y, 50);
+        const medkitResult = manager.step('room', [injured], 'battleRoyale', 4_000);
+        expect(medkitResult.pickups.find(item => item.id === medkit.id)?.respawnAt)
+            .toBe(4_000 + PICKUP_BALANCE.battleRoyaleMedkitRespawnMs);
     });
 
     it('removes state cleanly when the room is empty', () => {
