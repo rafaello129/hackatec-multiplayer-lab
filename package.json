@@ -12,7 +12,7 @@
     "dev:server": "npm run build -w @hackatec/shared && npm run dev -w @hackatec/server",
     "dev:game": "npm run build -w @hackatec/shared && npm run dev -w @hackatec/game",
     "build": "npm run build -w @hackatec/shared && npm run build -w @hackatec/server && npm run build -w @hackatec/game",
-    "test": "npm run test --workspaces --if-present",
+    "test": "npm run build -w @hackatec/shared && npm run test --workspaces --if-present",
     "check": "npm test && npm run build"
   },
   "devDependencies": {
