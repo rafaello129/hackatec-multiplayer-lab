@@ -53,9 +53,13 @@ function renderAuth(message = ''): void {
                     placeholder="Ej. Gueta" required />
                 <p class="auth-hint">3–16 caracteres. Empieza con una letra; usa letras, números o _.</p>
                 <label for="auth-password">Contraseña</label>
-                <input id="auth-password" name="password" type="password" autocomplete="current-password"
-                    minlength="8" maxlength="128" placeholder="Mínimo 8 caracteres" required />
-                <p id="auth-error" class="auth-error" role="alert"></p>
+                <div class="auth-password-field">
+                    <input id="auth-password" name="password" type="password" autocomplete="current-password"
+                        minlength="8" maxlength="128" placeholder="Mínimo 8 caracteres" required />
+                    <button id="auth-password-toggle" class="auth-password-toggle" type="button"
+                        aria-label="Mostrar contraseña" aria-pressed="false">Mostrar</button>
+                </div>
+                <p id="auth-error" class="auth-error" role="alert" aria-live="polite"></p>
                 <button id="auth-submit" class="auth-submit" type="submit">Iniciar sesión</button>
             </form>
             <p class="auth-switch"><span id="auth-switch-copy">¿Aún no tienes cuenta?</span>
@@ -71,6 +75,7 @@ function renderAuth(message = ''): void {
     const switchButton = screen.querySelector<HTMLButtonElement>('#auth-switch')!;
     const switchCopy = screen.querySelector<HTMLSpanElement>('#auth-switch-copy')!;
     const password = screen.querySelector<HTMLInputElement>('#auth-password')!;
+    const passwordToggle = screen.querySelector<HTMLButtonElement>('#auth-password-toggle')!;
     const usernameInput = screen.querySelector<HTMLInputElement>('#auth-username')!;
     const error = screen.querySelector<HTMLParagraphElement>('#auth-error')!;
 
@@ -86,6 +91,14 @@ function renderAuth(message = ''): void {
     };
 
     switchButton.addEventListener('click', () => setMode(mode === 'login' ? 'register' : 'login'));
+    passwordToggle.addEventListener('click', () => {
+        const visible = password.type === 'password';
+        password.type = visible ? 'text' : 'password';
+        passwordToggle.textContent = visible ? 'Ocultar' : 'Mostrar';
+        passwordToggle.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
+        passwordToggle.setAttribute('aria-pressed', String(visible));
+        password.focus();
+    });
     if (message) error.textContent = message;
 
     form.addEventListener('submit', async (event) => {
