@@ -250,6 +250,22 @@ async function main() {
     );
     assert(joined.player?.name === betaAccount.username, 'alpha did not observe beta joining');
 
+    // Load acceptance: fill the room to its documented 32-player capacity.
+    const loadClients = [];
+    let finalLoadSnapshot;
+    for (let index = 0; index < 29; index += 1) {
+        const loadAccount = await createAccount('Load' + index);
+        const loadSocket = await connectClient('load-' + index, loadAccount.cookie);
+        const loadState = await joinRoom(loadSocket, 'hackatec');
+        loadClients.push(loadSocket);
+        finalLoadSnapshot = loadState;
+        assert(loadState.players.length === index + 4,
+            'room roster count is incorrect at load player ' + index);
+    }
+    assert(finalLoadSnapshot?.players.length === 32,
+        'room should accept exactly 32 authenticated players');
+    console.log('[smoke] 32 authenticated players joined a single room');
+
     const gamma = await connectClient('gamma', gammaAccount.cookie);
     const gammaState = await joinRoom(gamma, 'other-room');
     assert(gammaState.players.length === 1, 'other-room should be isolated');
@@ -265,6 +281,7 @@ async function main() {
     assert(left.playerId === alphaId, 'beta did not observe the previous host leaving');
     beta.disconnect();
     delta.disconnect();
+    for (const socket of loadClients) socket.disconnect();
 
     console.log('[smoke] authenticated same-room join/state/leave verified');
     console.log('[smoke] room isolation verified');
