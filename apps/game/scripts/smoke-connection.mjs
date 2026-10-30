@@ -170,6 +170,36 @@ async function uploadTestSkin(cookie) {
 }
 
 
+async function verifyRejectedSkinUploads(cookie) {
+    const unsupported = new FormData();
+    unsupported.append('skin', new Blob([Buffer.from('not an image')], {
+        type: 'application/octet-stream'
+    }), 'bad.bin');
+    const unsupportedResponse = await fetch(`${url}/api/skins`, {
+        method: 'POST',
+        headers: { Cookie: cookie },
+        body: unsupported
+    });
+    const unsupportedBody = await unsupportedResponse.json();
+    assert(unsupportedResponse.status === 400 && typeof unsupportedBody.error === 'string',
+        'unsupported skin formats should return a JSON 400 error');
+
+    const oversized = new FormData();
+    oversized.append('skin', new Blob([Buffer.alloc(2 * 1024 * 1024 + 1)], {
+        type: 'image/png'
+    }), 'large.png');
+    const oversizedResponse = await fetch(`${url}/api/skins`, {
+        method: 'POST',
+        headers: { Cookie: cookie },
+        body: oversized
+    });
+    const oversizedBody = await oversizedResponse.json();
+    assert(oversizedResponse.status === 400 && typeof oversizedBody.error === 'string',
+        'oversized skins should return a JSON 400 error');
+}
+
+
+
 
 async function verifyAuthApi(account) {
     const sessionResponse = await fetch(`${url}/api/auth/session`, {
@@ -307,6 +337,7 @@ async function main() {
     assert(votingState.phase === 'voting' && betaMatchState.phase === 'voting', 'two players should trigger a shared vote');
 
     const renamedBeta = betaAccount.username + 'New';
+    await verifyRejectedSkinUploads(betaLoginCookie);
     const uploadedSkin = await uploadTestSkin(betaLoginCookie);
     const profileResultPromise = waitFor(beta, 'profile:result');
     beta.emit('profile:set', {
