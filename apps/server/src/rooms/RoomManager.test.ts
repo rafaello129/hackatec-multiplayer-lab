@@ -40,12 +40,17 @@ describe('RoomManager', () =>
         players[0]!.kills = 4;
         players[0]!.deaths = 2;
         players[0]!.hp = 10;
+        players[0]!.assists = 3;
+        players[0]!.zombieKills = 5;
+        players[0]!.survivedStormPhases = 2;
         players[1]!.spectator = true;
         const oldSeed = manager.getMap('round-room')?.seed;
         const reset = manager.resetForMatch('round-room');
         expect(reset).toBeDefined();
         expect(reset?.map.seed).not.toBe(oldSeed);
-        expect(reset?.players.every(player => player.kills === 0 && player.deaths === 0 && player.hp === 100 && player.spectator === false)).toBe(true);
+        expect(reset?.players.every(player => player.kills === 0 && player.deaths === 0 &&
+            player.assists === 0 && player.zombieKills === 0 && player.survivedStormPhases === 0 &&
+            player.hp === 100 && player.spectator === false)).toBe(true);
         expect(manager.resetForMatch('missing-room')).toBeUndefined();
         expect(joined.ok).toBe(true);
     });
