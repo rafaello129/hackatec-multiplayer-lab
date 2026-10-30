@@ -74,6 +74,19 @@ export type PickupCollectedPayload = {
     playerId: string;
     restored: number;
 };
+export type StormStatePayload = {
+    roomId: string;
+    phase: number;
+    phaseCount: number;
+    centerX: number;
+    centerY: number;
+    radius: number;
+    closesAt: number;
+    nextPhaseAt: number;
+    damagePerSecond: number;
+    closing: boolean;
+    completed: boolean;
+};
 export type PlayerTrappedPayload = { playerId: string; trappedUntil: number };
 export type PlayerHealedPayload = { playerId: string; x: number; y: number; amount: number };
 
