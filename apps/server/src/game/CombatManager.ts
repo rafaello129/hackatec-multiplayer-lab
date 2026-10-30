@@ -259,8 +259,6 @@ export class CombatManager {
                 continue;
             }
 
-            if (now >= (state.invulnerable.get(player.id) ?? 0)) player.isInvulnerable = false;
-
             const touching = new Set<string>();
             const previousTraps = state.traps.get(player.id) ?? new Set<string>();
             for (const obstacle of map.obstacles) {
@@ -581,7 +579,7 @@ export class CombatManager {
         now: number,
         attacker?: PlayerState
     ): boolean {
-        if (player.alive === false || player.spectator || player.isDashing ||
+        if (player.alive === false || player.spectator || player.isDashing || player.isInvulnerable ||
             now < (state.invulnerable.get(player.id) ?? 0)) return false;
 
         let remainingDamage = Math.max(0, amount);
