@@ -1,4 +1,4 @@
-import { MATCH_BALANCE, MATCH_TEXTS, type GameMode, type MatchStatePayload, type PlayerState } from '@hackatec/shared';
+import { MATCH_BALANCE, MATCH_TEXTS, type GameMode, type MatchStatePayload, type PlayerState, type ZombieStatePayload } from '@hackatec/shared';
 
 export const AVAILABLE_GAME_MODES: readonly GameMode[] = ['classic', 'everyone-vs-one', 'rockets', 'battleRoyale', 'zombies'];
 
@@ -159,7 +159,7 @@ export class MatchManager {
         return { ok: true, message: 'Partida detenida.' };
     }
 
-    advance(now: number, getPlayers: (roomId: string) => PlayerState[]): MatchTransition[] {
+    advance(now: number, getPlayers: (roomId: string) => PlayerState[], getZombieState?: (roomId: string) => ZombieStatePayload): MatchTransition[] {
         const transitions: MatchTransition[] = [];
         for (const [roomId, match] of this.matches) {
             if (match.phase === 'voting' && match.voteEndsAt !== null && now >= match.voteEndsAt) {
@@ -171,15 +171,15 @@ export class MatchManager {
             if (match.phase === 'countdown' && match.startsAt !== null && now >= match.startsAt) {
                 match.phase = 'playing';
                 match.startsAt = null;
-                match.endsAt = now + this.durationForMode(match.mode);
+                match.endsAt = match.mode === 'zombies' ? null : now + this.durationForMode(match.mode);
                 match.message = MATCH_TEXTS.messages.gameStarted;
                 this.markDirty(roomId);
                 transitions.push({ roomId, resetPlayers: false, previousPhase: 'countdown', phase: 'playing' });
                 continue;
             }
-            if (match.phase === 'playing' && match.endsAt !== null) {
+            if (match.phase === 'playing' && (match.endsAt !== null || match.mode === 'zombies')) {
                 const roundPlayers = getPlayers(roomId);
-                const outcome = this.resolveModeOutcome(match.mode, roundPlayers, now >= match.endsAt);
+                const outcome = this.resolveModeOutcome(match.mode, roundPlayers, match.endsAt !== null && now >= match.endsAt, getZombieState?.(roomId));
                 if (!outcome.finished) continue;
                 match.phase = 'results';
                 match.startsAt = null;
@@ -254,6 +254,19 @@ export class MatchManager {
         players: PlayerState[],
         timeExpired: boolean
     ): { finished: boolean; winnerId: string | null; message: string } {
+        if (mode === 'zombies') {
+            const phase = zombieState?.runPhase;
+            if (phase !== 'won' && phase !== 'lost') return { finished: false, winnerId: null, message: '' };
+            const winner = [...players].sort((a, b) =>
+                (b.zombieKills ?? 0) - (a.zombieKills ?? 0) || a.name.localeCompare(b.name)
+            )[0];
+            return {
+                finished: true,
+                winnerId: phase === 'won' ? winner?.id ?? null : null,
+                message: phase === 'won' ? '¡El equipo derrotó al jefe zombi!' : 'La horda acabó con todo el equipo.'
+            };
+        }
+
         if (mode === 'battleRoyale') {
             const survivors = players.filter(player => player.alive !== false && !player.spectator);
             if (survivors.length <= 1) {
