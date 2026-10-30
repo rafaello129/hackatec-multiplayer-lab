@@ -52,9 +52,6 @@ function renderAuth(message = ''): void {
                     minlength="3" maxlength="16" pattern="[A-Za-z][A-Za-z0-9_]{2,15}"
                     placeholder="Ej. Gueta" required />
                 <p class="auth-hint">3–16 caracteres. Empieza con una letra; usa letras, números o _.</p>
-                <label id="auth-owner-key-label" for="auth-owner-key" hidden>Clave adicional de registro</label>
-                <input id="auth-owner-key" name="ownerKey" type="password" autocomplete="off"
-                    placeholder="Clave adicional" hidden />
                 <label for="auth-password">Contraseña</label>
                 <input id="auth-password" name="password" type="password" autocomplete="current-password"
                     minlength="8" maxlength="128" placeholder="Mínimo 8 caracteres" required />
@@ -75,18 +72,7 @@ function renderAuth(message = ''): void {
     const switchCopy = screen.querySelector<HTMLSpanElement>('#auth-switch-copy')!;
     const password = screen.querySelector<HTMLInputElement>('#auth-password')!;
     const usernameInput = screen.querySelector<HTMLInputElement>('#auth-username')!;
-    const ownerKey = screen.querySelector<HTMLInputElement>('#auth-owner-key')!;
-    const ownerKeyLabel = screen.querySelector<HTMLLabelElement>('#auth-owner-key-label')!;
     const error = screen.querySelector<HTMLParagraphElement>('#auth-error')!;
-
-    const updateOwnerKeyVisibility = () => {
-        const show = mode === 'register' && usernameInput.value.trim().toLowerCase() === 'gueta';
-        ownerKey.hidden = !show;
-        ownerKeyLabel.hidden = !show;
-        ownerKey.required = show;
-        if (!show) ownerKey.value = '';
-    };
-    usernameInput.addEventListener('input', updateOwnerKeyVisibility);
 
     const setMode = (next: 'login' | 'register') => {
         mode = next;
@@ -97,7 +83,6 @@ function renderAuth(message = ''): void {
         switchButton.textContent = registering ? 'Iniciar sesión' : 'Crear cuenta';
         password.autocomplete = registering ? 'new-password' : 'current-password';
         error.textContent = '';
-        updateOwnerKeyVisibility();
     };
 
     switchButton.addEventListener('click', () => setMode(mode === 'login' ? 'register' : 'login'));
@@ -115,8 +100,7 @@ function renderAuth(message = ''): void {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     username: String(data.get('username') ?? ''),
-                    password: String(data.get('password') ?? ''),
-                    ...(mode === 'register' && ownerKey.value ? { ownerKey: ownerKey.value } : {})
+                    password: String(data.get('password') ?? '')
                 })
             });
             const result = await response.json() as AuthResponse;
