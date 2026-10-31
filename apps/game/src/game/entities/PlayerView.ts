@@ -32,6 +32,9 @@ export class PlayerView
             [24, 0, 7, -7, -13, -17, -8, -4, -8, 4, -13, 17, 7, 7],
             0x3b82f6
         );
+        // Keep the ship geometry anchored to the same world point used by the server hitbox.
+        // Polygon vertices are authored around (0, 0); its default centered origin shifts them.
+        this.body.setOrigin(0, 0);
 
         this.body.setStrokeStyle(
             isSelf ? 4 : 2,
