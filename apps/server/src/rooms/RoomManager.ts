@@ -128,8 +128,8 @@ export class RoomManager
         }
 
         const map = this.getOrCreateMap(roomId);
-        const spawnIndex = this.findAvailableSpawnIndex(room);
-        const spawn = getSpawnPosition(spawnIndex);
+        const spawnIndex = this.findAvailableSpawnIndex(room, map);
+        const spawn = getSpawnPosition(spawnIndex, map.width, map.height);
         const player: PlayerState = {
             id: socketId,
             name: normalizePlayerName(playerName, socketId),
@@ -266,11 +266,11 @@ export class RoomManager
         return this.roomHosts.get(roomId);
     }
 
-    private findAvailableSpawnIndex(room: Map<string, PlayerState>): number
+    private findAvailableSpawnIndex(room: Map<string, PlayerState>, map: GameMapState): number
     {
         for (let index = 0; index < MAX_PLAYERS_PER_ROOM; index += 1)
         {
-            const spawn = getSpawnPosition(index);
+            const spawn = getSpawnPosition(index, map.width, map.height);
             const occupied = [...room.values()].some(
                 (player) => player.x === spawn.x && player.y === spawn.y
             );
