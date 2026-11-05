@@ -399,7 +399,7 @@ export function registerSocketHandlers(
 
             if (!socket.connected) return;
             identities.set(socket.id, account.id);
-            const canUseLaser = normalizeUsername(profile.username) === 'gueta';
+            const canUseLaser = profile.isOwner;
             laserPermissions.set(socket.id, canUseLaser);
             const initialWeaponState = combat.initializePlayer(result.roomId, result.player, canUseLaser, matches.getState(result.roomId)?.mode ?? null);
             result.player.appearance = profile.appearance;
