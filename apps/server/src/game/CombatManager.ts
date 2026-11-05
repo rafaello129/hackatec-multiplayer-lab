@@ -539,7 +539,7 @@ export class CombatManager {
             const x = attacker.x + dx * distance;
             const y = attacker.y + dy * distance;
             if (x < 0 || x > map.width || y < COMBAT_BALANCE.playableTop || y > map.height - 40 ||
-                map.obstacles.some(obstacle => ['wall', 'rock'].includes(obstacle.type) && overlaps(x, y, 1, obstacle))) {
+                map.obstacles.some(obstacle => ['wall', 'rock', 'lake'].includes(obstacle.type) && overlaps(x, y, 1, obstacle))) {
                 return { x, y };
             }
             const target = players.find(player =>
@@ -607,7 +607,7 @@ export class CombatManager {
                 if (projectile.x < 0 || projectile.x > map.width ||
                     projectile.y < COMBAT_BALANCE.playableTop ||
                     projectile.y > map.height - 40 ||
-                    map.obstacles.some(obstacle => ['wall', 'rock'].includes(obstacle.type) &&
+                    map.obstacles.some(obstacle => ['wall', 'rock', 'lake'].includes(obstacle.type) &&
                         overlaps(projectile.x, projectile.y, COMBAT_BALANCE.projectileRadius, obstacle))) {
                     hit = true;
                     break;
