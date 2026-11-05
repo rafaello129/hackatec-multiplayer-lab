@@ -467,6 +467,11 @@ export class CombatManager {
     }
 
     private rechargeLaser(weapon: WeaponRuntime, dtMs: number): void {
+        if (WEAPON_BALANCE.laser.rechargeMs <= 0) {
+            weapon.laserEnergyMs = WEAPON_BALANCE.laser.energyMs;
+            return;
+        }
+
         const rechargePerMs = WEAPON_BALANCE.laser.energyMs / WEAPON_BALANCE.laser.rechargeMs;
         weapon.laserEnergyMs = Math.min(
             WEAPON_BALANCE.laser.energyMs,
