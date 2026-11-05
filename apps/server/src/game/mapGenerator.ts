@@ -287,16 +287,18 @@ export function generateMap(seed: number, playerCount = 2, mode: string | null =
         Math.round(MAP_GENERATION_CONFIG.counts.fence * width / ARENA_WIDTH),
         random,
         spawnSafeZones,
-        width
+        width,
+        height
     );
-    addObstacles(obstacles, 'rock', Math.round(MAP_GENERATION_CONFIG.counts.rock * width / ARENA_WIDTH), random, spawnSafeZones, width);
+    addObstacles(obstacles, 'rock', Math.round(MAP_GENERATION_CONFIG.counts.rock * width / ARENA_WIDTH), random, spawnSafeZones, width, height);
     addObstacles(
         obstacles,
         'trap',
         Math.round(MAP_GENERATION_CONFIG.counts.trap * width / ARENA_WIDTH),
         random,
         spawnSafeZones,
-        width
+        width,
+        height
     );
     addObstacles(
         obstacles,
@@ -304,7 +306,8 @@ export function generateMap(seed: number, playerCount = 2, mode: string | null =
         Math.round(MAP_GENERATION_CONFIG.counts.cactus * width / ARENA_WIDTH),
         random,
         spawnSafeZones,
-        width
+        width,
+        height
     );
 
     return {
