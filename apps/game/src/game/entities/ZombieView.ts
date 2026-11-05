@@ -1,4 +1,4 @@
-import type { ZombieStatePayload } from '@hackatec/shared';
+import type { ZombieStatePayload, ZombieType } from '@hackatec/shared';
 import { GameObjects, Scene } from 'phaser';
 
 type ZombieVisual = {
@@ -29,7 +29,7 @@ export class ZombieView {
             if (!zombie.alive) continue;
             visual.label.setText(zombie.type === 'boss'
                 ? zombie.hp <= zombie.maxHp * 0.5 ? 'JEFE FINAL · FURIOSO' : 'JEFE FINAL'
-                : zombie.type === 'giant' ? 'GIGANTE' : 'ESCUPIDOR');
+                : zombie.type === 'giant' ? 'GIGANTE' : zombie.type === 'normal' ? 'ZOMBIE' : 'ESCUPIDOR');
             visual.health.clear();
             visual.health.fillStyle(0x334155, 0.95).fillRect(zombie.type === 'boss' ? -42 : -24, -40, zombie.type === 'boss' ? 84 : 48, 6);
             visual.health.fillStyle(zombie.type === 'boss' ? 0xf97316 : zombie.type === 'giant' ? 0xef4444 : 0xa78bfa, 1)
@@ -71,12 +71,13 @@ export class ZombieView {
         this.effects.destroy();
     }
 
-    private create(type: 'giant' | 'spitter' | 'boss'): ZombieVisual {
-        const giant = type !== 'spitter';
+    private create(type: ZombieType): ZombieVisual {
+        const giant = type === 'giant';
         const boss = type === 'boss';
-        const body = this.scene.add.circle(0, 0, boss ? 54 : giant ? 29 : 22, boss ? 0x7f1d1d : giant ? 0x991b1b : 0x6d28d9, 1)
+        const normal = type === 'normal';
+        const body = this.scene.add.circle(0, 0, boss ? 54 : giant ? 29 : normal ? 20 : 22, boss ? 0x7f1d1d : giant ? 0x991b1b : normal ? 0x4d7c0f : 0x6d28d9, 1)
             .setStrokeStyle(2, 0xffffff, 0.8);
-        const label = this.scene.add.text(0, boss ? -76 : giant ? -49 : -40, boss ? 'JEFE FINAL' : giant ? 'GIGANTE' : 'ESCUPIDOR', {
+        const label = this.scene.add.text(0, boss ? -76 : giant ? -49 : -40, boss ? 'JEFE FINAL' : giant ? 'GIGANTE' : normal ? 'ZOMBIE' : 'ESCUPIDOR', {
             fontFamily: 'Arial Black',
             fontSize: 10,
             color: '#ffffff',
