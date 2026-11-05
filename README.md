@@ -81,10 +81,10 @@ El botón de la esquina superior derecha alterna entre HUD completo y HUD minima
 ## Modos de juego
 
 - **Clásico:** ronda de 5 minutos o límite de 30 bajas; respawn de 5 segundos. Sin zombies.
-- **Todos contra uno:** un Titan con vida escalada contra cazadores con dos vidas; respawn de 5 segundos para cazadores que conservan vidas. Sin zombies.
+- **Todos contra uno:** un Titan con vida escalada contra cazadores con tres vidas; respawn de 5 segundos para cazadores que conservan vidas. Sin zombies.
 - **Rocket para todos:** todos usan exclusivamente el lanzacohetes; ronda de 5 minutos. Sin zombies.
 - **Battle Royale:** eliminación definitiva, tormenta de cinco fases y victoria del último superviviente. Duración máxima configurada de 7.5 minutos. Sin zombies.
-- **Zombies:** supervivencia contra hordas de gigantes y escupidores; es el único modo que genera zombies.
+- **Zombies:** supervivencia de diez rondas contra hordas de gigantes y escupidores, con jefe final; es el único modo que genera zombies.
 
 La votación se abre al haber dos jugadores. El anfitrión también puede elegir e iniciar un modo, o detener la partida. Consulta [MATCH_LIFECYCLE.md](docs/MATCH_LIFECYCLE.md) para reglas exactas.
 

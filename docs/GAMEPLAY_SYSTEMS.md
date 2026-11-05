@@ -12,9 +12,9 @@ La selección de ranuras es fija:
 | 2 | Metralleta | 8 de daño, cooldown 100 ms, velocidad de proyectil 770 px/s |
 | 3 | Escopeta | 3 perdigones, 15 de daño por perdigón, cooldown 800 ms, velocidad 590 px/s |
 | 4 | Pistola | 20 de daño, cooldown 500 ms, velocidad 640 px/s |
-| 5 | Sniper | 95 de daño, alcance 1600 px, cooldown 3000 ms; impacto hitscan con trazador visual |
-| 6 | Lanzacohetes | 50 de daño central, 15 en el borde, radio 110 px, cooldown 1600 ms, empuje |
-| 7 | Láser | 100 de daño por segundo, alcance 1800 px, energía para 4 s, sin tiempo de recarga |
+| 5 | Sniper | 75 de daño, alcance 1600 px, cooldown 3000 ms; impacto hitscan con trazador visual |
+| 6 | Lanzacohetes | 50 de daño central, 15 en el borde, radio 110 px, cooldown 1300 ms, velocidad 430 px/s, empuje |
+| 7 | Láser | 200 de daño por segundo, alcance 1800 px, energía para 4 s, sin tiempo de recarga |
 
 Rocket para todos fuerza la ranura 6 y bloquea las demás. El cliente no puede elegir el arma enviando un campo arbitrario en el disparo.
 
@@ -65,7 +65,7 @@ La IA, los objetivos, los proyectiles, el daño y la salud de los enemigos son a
 ## Tormenta de Battle Royale
 
 - Cinco fases.
-- Cada fase espera 30 segundos y se cierra durante 45 segundos.
+- Cada fase espera 25 segundos y se cierra durante 40 segundos.
 - Daño fuera del círculo: 2, 4, 8, 12 y 20 por segundo según la fase.
 - Radio final mínimo: 80 px.
 - Quien queda eliminado pasa a espectador y no reaparece.
@@ -113,12 +113,14 @@ El historial es temporal y se pierde cuando la sala queda vacía o el servidor s
 | Cuenta regresiva | 5 s |
 | Resultados | 15 s |
 | Clásico | 5 min / 30 bajas |
-| Todos contra uno | 4 min |
+| Todos contra uno | 4.5 min |
 | Rocket para todos | 5 min |
 | Battle Royale | 7.5 min |
-| Zombies | 5 min |
+| Zombies | 10 rondas + jefe final |
 
 Los valores se pueden ajustar en un solo sitio. Cualquier cambio de balance debe actualizar los tests y esta documentación.
+
+En Todos contra uno, cada cazador comienza con **3 vidas**. El Titan mantiene su vida escalada según la cantidad de cazadores.
 
 
 ## Modos y mapas

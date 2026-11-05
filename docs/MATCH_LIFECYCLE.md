@@ -21,22 +21,22 @@ Cada sala tiene una única máquina de estados del servidor:
 | Modo | Duración máxima | Regla de victoria / eliminación |
 |---|---:|---|
 | Clásico | 5 min | Gana quien alcance 30 bajas o tenga más bajas al terminar. Respawn de 5 s. |
-| Todos contra uno | 4 min | Los cazadores ganan al eliminar al Titan. El Titan gana si resiste o elimina las vidas de todos los cazadores. |
+| Todos contra uno | 4.5 min | Los cazadores ganan al eliminar al Titan. El Titan gana si resiste o elimina las vidas de todos los cazadores. |
 | Rocket para todos | 5 min | Solo ranura 6, lanzacohetes. |
 | Battle Royale | 7.5 min | Último jugador vivo. No hay respawn. Si el tiempo se agota, se desempata por supervivientes y salud. |
-| Zombies | 5 min | Supervivencia frente a oleadas de zombies; solo este modo activa la IA zombie. |
+| Zombies | 10 rondas + jefe final | Supervivencia frente a oleadas de zombies; solo este modo activa la IA zombie. |
 
 Los valores son configurables en `packages/shared/src/config/balance.ts`.
 
 ## Todos contra uno
 
-El servidor selecciona al azar un Titan. Su vida máxima es `500 + 100 × número de cazadores`. Cada cazador comienza con dos vidas. Al perder una vida reaparece tras 5 segundos; al perder la última se vuelve espectador. El Titan no reaparece. Si el Titan se desconecta, la ronda se cancela.
+El servidor selecciona al azar un Titan. Su vida máxima es `500 + 80 × número de cazadores`. Cada cazador comienza con tres vidas. Al perder una vida reaparece tras 5 segundos; al perder la última se vuelve espectador. El Titan no reaparece. Si el Titan se desconecta, la ronda se cancela.
 
 Clásico, Todos contra uno, Rocket para todos y Battle Royale no tienen zombies. La IA zombie se inicia y se sincroniza únicamente cuando el modo activo es Zombies.
 
 ## Battle Royale
 
-La tormenta tiene cinco fases. Cada fase espera 30 segundos y se cierra durante 45 segundos. Los daños por segundo configurados son 2, 4, 8, 12 y 20. El círculo final tiene radio mínimo de 80 px. El servidor genera el centro y el radio, aplica daño fuera del círculo y registra las fases sobrevividas para progresión.
+La tormenta tiene cinco fases. Cada fase espera 25 segundos y se cierra durante 40 segundos. Los daños por segundo configurados son 2, 4, 8, 12 y 20. El círculo final tiene radio mínimo de 80 px. El servidor genera el centro y el radio, aplica daño fuera del círculo y registra las fases sobrevividas para progresión.
 
 ## Anfitrión y resultados
 

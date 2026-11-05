@@ -11,7 +11,7 @@ export const MATCH_BALANCE = {
     everyoneVsOneDurationMs: 270_000,
     titanBaseHealth: 500,
     titanHealthPerHunter: 80,
-    hunterLives: 2,
+    hunterLives: 3,
     battleRoyaleDurationMs: 450_000,
     rocketsDurationMs: 300_000,
     zombiesDurationMs: 900_000
@@ -32,10 +32,10 @@ export const WEAPON_BALANCE = {
     machineGun: { cooldownMs: 100, projectileSpeed: 770, damage: 8, spreadRadians: [0] },
     shotgun: { cooldownMs: 800, projectileSpeed: 590, damagePerPellet: 15, spreadRadians: [-0.15, 0, 0.15] },
     pistol: { cooldownMs: 500, projectileSpeed: 640, damage: 20, spreadRadians: [0] },
-    sniper: { cooldownMs: 3_000, damage: 95, range: 1_600 },
+    sniper: { cooldownMs: 3_000, damage: 75, range: 1_600 },
     rocketLauncher: {
-        cooldownMs: 1_600,
-        projectileSpeed: 360,
+        cooldownMs: 1_300,
+        projectileSpeed: 430,
         centerDamage: 50,
         edgeDamage: 15,
         blastRadius: 110,
@@ -44,7 +44,7 @@ export const WEAPON_BALANCE = {
         lifetimeMs: 5_000
     },
     laser: {
-        damagePerSecond: 100,
+        damagePerSecond: 200,
         tickMs: 100,
         energyMs: 4_000,
         rechargeMs: 0,

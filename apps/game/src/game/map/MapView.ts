@@ -268,19 +268,80 @@ export class MapView
 
     private drawLargeRock(obstacle: MapObstacle): void
     {
-        this.graphics.fillStyle(0x4b3b2b, 0.3).fillEllipse(obstacle.x + 4, obstacle.y + 9, obstacle.width * 1.05, obstacle.height * 0.9);
-        this.graphics.fillStyle(0x77766f, 1).fillRoundedRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height, 22);
-        this.graphics.fillStyle(0xb0aa99, 0.85).fillEllipse(obstacle.x - obstacle.width * 0.12, obstacle.y - obstacle.height * 0.2, obstacle.width * 0.48, obstacle.height * 0.3);
-        this.graphics.lineStyle(3, 0x4d4c46, 0.85).strokeRoundedRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height, 22);
+        const outline = this.createIrregularPoints(obstacle, 9, 1, 0);
+        const highlight = this.createIrregularPoints(obstacle, 7, 0.48, 17).map(point => ({
+            x: point.x - obstacle.width * 0.12,
+            y: point.y - obstacle.height * 0.18
+        }));
+
+        this.graphics.fillStyle(0x4b3b2b, 0.3)
+            .fillEllipse(obstacle.x + 4, obstacle.y + 9, obstacle.width * 1.05, obstacle.height * 0.9);
+        this.drawPolygon(outline, 0x77766f, 1, 0x4d4c46, 0.9, 3);
+        this.drawPolygon(highlight, 0xb0aa99, 0.72, 0xb0aa99, 0.18, 1);
     }
 
     private drawLake(obstacle: MapObstacle): void
     {
-        this.graphics.fillStyle(0x59462f, 0.35).fillEllipse(obstacle.x, obstacle.y + 5, obstacle.width + 18, obstacle.height + 18);
-        this.graphics.fillStyle(0x155e75, 1).fillEllipse(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-        this.graphics.fillStyle(0x38bdf8, 0.42).fillEllipse(obstacle.x - obstacle.width * 0.12, obstacle.y - obstacle.height * 0.12, obstacle.width * 0.62, obstacle.height * 0.38);
-        this.graphics.lineStyle(4, 0x0e7490, 0.95).strokeEllipse(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-        this.graphics.lineStyle(2, 0xbae6fd, 0.55).strokeEllipse(obstacle.x, obstacle.y, obstacle.width * 0.82, obstacle.height * 0.76);
+        const shoreline = this.createIrregularPoints(obstacle, 12, 1, 31);
+        const water = this.createIrregularPoints(obstacle, 12, 0.88, 47);
+        const reflection = this.createIrregularPoints(obstacle, 7, 0.36, 63).map(point => ({
+            x: point.x - obstacle.width * 0.1,
+            y: point.y - obstacle.height * 0.12
+        }));
+
+        this.graphics.fillStyle(0x59462f, 0.35)
+            .fillEllipse(obstacle.x, obstacle.y + 5, obstacle.width + 18, obstacle.height + 18);
+        this.drawPolygon(shoreline, 0x9a8057, 1, 0x6b573c, 0.9, 3);
+        this.drawPolygon(water, 0x155e75, 1, 0x0e7490, 0.95, 3);
+        this.drawPolygon(reflection, 0x38bdf8, 0.3, 0xbae6fd, 0.35, 1);
+        this.graphics.lineStyle(2, 0xbae6fd, 0.55)
+            .lineBetween(obstacle.x - obstacle.width * 0.18, obstacle.y + obstacle.height * 0.12,
+                obstacle.x + obstacle.width * 0.22, obstacle.y + obstacle.height * 0.08);
+    }
+
+    private createIrregularPoints(
+        obstacle: MapObstacle,
+        count: number,
+        scale: number,
+        salt: number
+    ): Array<{ x: number; y: number }> {
+        let hash = 2_166_136_261;
+        for (const character of obstacle.id) {
+            hash = Math.imul(hash ^ character.charCodeAt(0), 16_777_619);
+        }
+        hash = (hash ^ salt) >>> 0;
+        const rotation = ((hash & 0xffff) / 0xffff) * Math.PI * 2;
+        const points: Array<{ x: number; y: number }> = [];
+        for (let index = 0; index < count; index += 1) {
+            const jitter = 0.82 + (((hash >>> ((index % 4) * 8)) & 0xff) / 255) * 0.18;
+            const angle = rotation + (Math.PI * 2 * index) / count;
+            points.push({
+                x: obstacle.x + Math.cos(angle) * obstacle.width * 0.5 * scale * jitter,
+                y: obstacle.y + Math.sin(angle) * obstacle.height * 0.5 * scale * jitter
+            });
+        }
+        return points;
+    }
+
+    private drawPolygon(
+        points: Array<{ x: number; y: number }>,
+        fillColor: number,
+        fillAlpha: number,
+        strokeColor: number,
+        strokeAlpha: number,
+        strokeWidth: number
+    ): void {
+        if (points.length < 3) return;
+        this.graphics.fillStyle(fillColor, fillAlpha);
+        this.graphics.lineStyle(strokeWidth, strokeColor, strokeAlpha);
+        this.graphics.beginPath();
+        this.graphics.moveTo(points[0]!.x, points[0]!.y);
+        for (let index = 1; index < points.length; index += 1) {
+            this.graphics.lineTo(points[index]!.x, points[index]!.y);
+        }
+        this.graphics.closePath();
+        this.graphics.fillPath();
+        this.graphics.strokePath();
     }
 
     private drawTrap(obstacle: MapObstacle): void

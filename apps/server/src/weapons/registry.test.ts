@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MATCH_BALANCE, WEAPON_BALANCE } from '@hackatec/shared';
 import { availableWeaponSlots, slotForWeapon, weaponForSlot, WEAPON_DEFINITIONS } from './registry.js';
 
 describe('weapon registry', () => {
@@ -18,6 +19,14 @@ describe('weapon registry', () => {
 
     it('restricts Rocket para todos to the rocket launcher loadout', () => {
         expect(availableWeaponSlots(true, 'rockets')).toEqual([6]);
+    });
+
+    it('keeps the agreed balance for special weapons and hunters', () => {
+        expect(WEAPON_BALANCE.laser.damagePerSecond).toBe(200);
+        expect(WEAPON_BALANCE.sniper.damage).toBe(75);
+        expect(WEAPON_BALANCE.rocketLauncher.cooldownMs).toBe(1_300);
+        expect(WEAPON_BALANCE.rocketLauncher.projectileSpeed).toBe(430);
+        expect(MATCH_BALANCE.hunterLives).toBe(3);
     });
 
     it('defines all seven weapon behaviors', () => {
