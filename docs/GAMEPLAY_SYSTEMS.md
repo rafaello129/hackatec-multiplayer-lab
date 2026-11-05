@@ -28,7 +28,7 @@ Rocket para todos fuerza la ranura 6 y bloquea las demás. El cliente no puede e
 - Las trampas inmovilizan durante 5 segundos.
 - Los cactus aplican daño con un cooldown de 1 segundo.
 
-La física de movimiento y las colisiones se ejecutan en el servidor, con un tick nominal de 50 ms.
+La física de movimiento y las colisiones se ejecutan en el servidor, con un tick nominal de 50 ms. El área visible del mapa conserva proporción cuadrada y aumenta de tamaño según el número de jugadores; Battle Royale recibe espacio adicional. Los límites de movimiento, obstáculos, pickups, enemigos y tormenta usan la altura generada para evitar zonas desincronizadas.
 
 ## Vida, escudos y pickups
 
@@ -45,7 +45,7 @@ Un pickup que no puede beneficiar a un jugador (por ejemplo, un botiquín con sa
 
 ## Zombies
 
-Los zombies aparecen exclusivamente en el modo Zombies. Clásico, Todos contra uno, Rocket para todos y Battle Royale no generan enemigos ni proyectiles de zombies. El máximo configurado es de 12 vivos, con intervalo de aparición de 20 segundos.
+Los zombies aparecen exclusivamente en el modo Zombies. Clásico, Todos contra uno, Rocket para todos y Battle Royale no generan enemigos ni proyectiles de zombies. El máximo configurado es de 24 vivos, con intervalo de aparición de 20 segundos.
 
 **Gigante**
 - 400 de salud.
