@@ -443,7 +443,7 @@ async function main() {
     const hunters = teamCombat.players.filter(player => player.role === 'hunter');
     assert(teamCountdown.mode === 'everyone-vs-one' && titans.length === 1 && hunters.length === 1,
         'Todos contra uno must assign one Titan and one hunter');
-    assert(titans[0].maxHp === 580 && hunters[0].lives === 2,
+    assert(titans[0].maxHp === 580 && hunters[0].lives === 3,
         'Titan health and hunter lives must be set by the server');
     const teamStopped = waitForMatchPhase(modeAlpha, 'waiting');
     modeAlpha.emit('match:host-stop');
