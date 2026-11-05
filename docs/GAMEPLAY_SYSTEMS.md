@@ -47,6 +47,10 @@ Un pickup que no puede beneficiar a un jugador (por ejemplo, un botiquín con sa
 
 Los zombies aparecen exclusivamente en el modo Zombies. Clásico, Todos contra uno, Rocket para todos y Battle Royale no generan enemigos ni proyectiles de zombies. El máximo configurado es de 24 vivos, con intervalo de aparición de 20 segundos.
 
+**Zombie normal**
+- 120 de salud.
+- Persigue al jugador a 105 px/s y causa 14 de daño en contacto, con cooldown de 900 ms.
+
 **Gigante**
 - 400 de salud.
 - Se aproxima al objetivo, anuncia una embestida durante 800 ms y carga a 420 px/s.
