@@ -112,6 +112,33 @@ describe('CombatManager weapon authority', () => {
         expect(combat.step('room', [shooter], map, 50, 1_100).projectiles).toHaveLength(2);
     });
 
+    it('blocks sniper rays and projectiles at lakes just like player movement', () => {
+        const lakeMap: GameMapState = {
+            ...map,
+            obstacles: [{ id: 'lake', type: 'lake', x: 330, y: 400, width: 20, height: 100 }]
+        };
+
+        const sniper = player('sniper', 250);
+        const target = player('target', 500);
+        combat.initializePlayer('lake-sniper', sniper, false);
+        combat.selectWeapon('lake-sniper', sniper, 5, 'classic', 1_000);
+        combat.setFireIntent('lake-sniper', sniper, { angle: 0, firing: true }, 1_000);
+        const beam = combat.step('lake-sniper', [sniper, target], lakeMap, 50, 1_000);
+        expect(target.hp).toBe(100);
+        expect(beam.beams[0]?.x2).toBeLessThan(330);
+
+        const gunner = player('gunner', 250);
+        const victim = player('victim', 500);
+        combat.initializePlayer('lake-projectile', gunner, false);
+        combat.selectWeapon('lake-projectile', gunner, 2, 'classic', 2_000);
+        combat.setFireIntent('lake-projectile', gunner, { angle: 0, firing: true }, 2_000);
+        combat.step('lake-projectile', [gunner, victim], lakeMap, 50, 2_000);
+        combat.step('lake-projectile', [gunner, victim], lakeMap, 50, 2_050);
+        const impact = combat.step('lake-projectile', [gunner, victim], lakeMap, 50, 2_100);
+        expect(victim.hp).toBe(100);
+        expect(impact.projectiles).toHaveLength(0);
+    });
+
     it('deals 75 damage with the sniper and respects its cooldown', () => {
         const shooter = player('shooter', 250);
         const target = player('target', 500);
