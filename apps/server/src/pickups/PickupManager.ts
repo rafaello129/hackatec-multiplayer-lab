@@ -40,7 +40,7 @@ function intersectsObstacle(x: number, y: number, radius: number, map: GameMapSt
 function createPickupPositions(map: GameMapState, count: number): Array<{ x: number; y: number }> {
     const candidates: Array<{ x: number; y: number }> = [];
     for (let y = COMBAT_BALANCE.playableTop + PICKUP_BALANCE.spawnMarginY;
-        y <= COMBAT_BALANCE.playableBottom - PICKUP_BALANCE.spawnMarginY;
+        y <= map.height - 40 - PICKUP_BALANCE.spawnMarginY;
         y += PICKUP_BALANCE.spawnGridY) {
         for (let x = PICKUP_BALANCE.spawnMarginX;
             x <= map.width - PICKUP_BALANCE.spawnMarginX;
