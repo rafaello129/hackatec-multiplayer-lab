@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameMapState, PlayerState } from '@hackatec/shared';
-import { STORM_BALANCE } from '@hackatec/shared';
+import { COMBAT_BALANCE, STORM_BALANCE } from '@hackatec/shared';
 import { StormManager } from './StormManager.js';
 
 const map: GameMapState = { seed: 12345, width: 1_024, height: 768, obstacles: [] };
@@ -30,6 +30,16 @@ describe('StormManager', () => {
         expect(half.radius).toBeLessThan(initial.radius);
         expect(half.radius).toBeGreaterThan(end.radius);
         expect(end.radius).toBe(220);
+    });
+
+    it('centers the storm and sizes its initial safe zone from a taller generated map', () => {
+        const manager = new StormManager();
+        const tallMap: GameMapState = { ...map, width: 1_536, height: 1_640 };
+        const state = manager.start('tall-room', tallMap, 0);
+
+        expect(state.centerX).toBe(768);
+        expect(state.centerY).toBe((COMBAT_BALANCE.playableTop + tallMap.height - 40) / 2);
+        expect(state.radius).toBe((tallMap.height - 40 - COMBAT_BALANCE.playableTop) / 2 - 20);
     });
 
     it('applies authoritative damage only to active players outside the current circle', () => {
