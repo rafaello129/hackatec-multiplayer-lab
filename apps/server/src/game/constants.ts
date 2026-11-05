@@ -12,4 +12,4 @@ export const PLAYER_COLORS = [
 ] as const;
 
 export const ARENA_WIDTH = 1024;
-export const ARENA_HEIGHT = 768;
+export const ARENA_HEIGHT = ARENA_WIDTH + 104;
