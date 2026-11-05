@@ -29,7 +29,7 @@ export const WEAPON_SLOT_ORDER = [
 
 export const WEAPON_BALANCE = {
     knife: { cooldownMs: 450, damage: 28, range: 70, arcRadians: Math.PI / 3 },
-    machineGun: { cooldownMs: 100, projectileSpeed: 770, damage: 8, spreadRadians: [0] },
+    machineGun: { cooldownMs: 100, projectileSpeed: 770, damage: 6, spreadRadians: [0] },
     shotgun: { cooldownMs: 800, projectileSpeed: 590, damagePerPellet: 15, spreadRadians: [-0.15, 0, 0.15] },
     pistol: { cooldownMs: 500, projectileSpeed: 640, damage: 20, spreadRadians: [0] },
     sniper: { cooldownMs: 3_000, damage: 75, range: 1_600 },
