@@ -23,6 +23,7 @@ type StormRuntime = {
     targetRadius: number;
     completed: boolean;
     lastRewardedPhase: number;
+    playableBottom: number;
 };
 
 export type StormStepResult = {
@@ -52,8 +53,9 @@ export class StormManager {
 
     start(roomId: string, map: GameMapState, now: number): StormStatePayload {
         const centerX = map.width / 2;
-        const centerY = (COMBAT_BALANCE.playableTop + COMBAT_BALANCE.playableBottom) / 2;
-        const radius = Math.min(map.width / 2 - 40, (COMBAT_BALANCE.playableBottom - COMBAT_BALANCE.playableTop) / 2 - 20);
+        const playableBottom = map.height - 40;
+        const centerY = (COMBAT_BALANCE.playableTop + playableBottom) / 2;
+        const radius = Math.min(map.width / 2 - 40, (playableBottom - COMBAT_BALANCE.playableTop) / 2 - 20);
         const runtime: StormRuntime = {
             seed: map.seed >>> 0,
             phase: 1,
@@ -70,7 +72,8 @@ export class StormManager {
             targetCenterY: centerY,
             targetRadius: TARGET_RADII[0],
             completed: false,
-            lastRewardedPhase: 0
+            lastRewardedPhase: 0,
+            playableBottom
         };
         this.rooms.set(roomId, runtime);
         this.prepareTarget(runtime, map);
@@ -164,7 +167,7 @@ export class StormManager {
         const nextRadius = storm.targetRadius;
         const limitX = Math.max(nextRadius + 10, map.width - nextRadius - 10);
         const limitY = Math.max(nextRadius + COMBAT_BALANCE.playableTop,
-            COMBAT_BALANCE.playableBottom - nextRadius);
+            storm.playableBottom - nextRadius);
         storm.targetCenterX = Math.max(nextRadius + 10, Math.min(limitX, storm.targetCenterX));
         storm.targetCenterY = Math.max(
             nextRadius + COMBAT_BALANCE.playableTop,
