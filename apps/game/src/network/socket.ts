@@ -1,7 +1,13 @@
 import { io, type Socket } from 'socket.io-client';
 import { normalizeServerUrl } from './config';
 
-export const serverUrl = normalizeServerUrl(import.meta.env.VITE_SERVER_URL);
+const browserHostname = typeof window === 'undefined' ? undefined : window.location.hostname;
+const browserProtocol = typeof window === 'undefined' ? 'http:' : window.location.protocol;
+export const serverUrl = normalizeServerUrl(
+    import.meta.env.VITE_SERVER_URL,
+    browserHostname,
+    browserProtocol
+);
 
 let socket: Socket | undefined;
 
