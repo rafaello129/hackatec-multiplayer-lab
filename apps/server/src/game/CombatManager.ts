@@ -326,7 +326,7 @@ export class CombatManager {
                         !map.obstacles.some(obstacle => ['wall', 'rock', 'lake'].includes(obstacle.type) && overlaps(point.x, point.y, playerRadius, obstacle)) &&
                         !players.some(other => other.id !== player.id && other.alive !== false &&
                             !other.spectator && Math.hypot(other.x - point.x, other.y - point.y) < playerRadius * 2)
-                    ) ?? getSpawnPosition(players.findIndex(item => item.id === player.id));
+                    ) ?? getSpawnPosition(players.findIndex(item => item.id === player.id), map.width, map.height);
                     player.x = spawn.x;
                     player.y = spawn.y;
                     player.hp = MATCH_BALANCE.initialHealth;
