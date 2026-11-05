@@ -177,6 +177,22 @@ describe('CombatManager weapon authority', () => {
         expect(target.hp).toBe(60);
     });
 
+    it('restores laser energy instantly when recharge is configured as zero seconds', () => {
+        const shooter = player('gueta', 250);
+        combat.initializePlayer('laser-recharge', shooter, true);
+        combat.selectWeapon('laser-recharge', shooter, 7, 'classic', 1_000);
+
+        for (let now = 1_000; now <= 4_900; now += 50) {
+            combat.setFireIntent('laser-recharge', shooter, { angle: 0, firing: true }, now);
+            combat.step('laser-recharge', [shooter], map, 50, now);
+        }
+        expect(combat.getWeaponState('laser-recharge', shooter.id, 4_900, 'classic').laserEnergyMs).toBe(0);
+
+        combat.setFireIntent('laser-recharge', shooter, { angle: 0, firing: false }, 4_950);
+        combat.step('laser-recharge', [shooter], map, 0, 4_950);
+        expect(combat.getWeaponState('laser-recharge', shooter.id, 4_950, 'classic').laserEnergyMs).toBe(4_000);
+    });
+
     it('permanently eliminates Battle Royale players instead of scheduling respawn', () => {
         const shooter = player('shooter', 250);
         const victim = player('victim', 280);
