@@ -133,6 +133,7 @@ describe('CombatManager weapon authority', () => {
         combat.selectWeapon('lake-projectile', gunner, 2, 'classic', 2_000);
         combat.setFireIntent('lake-projectile', gunner, { angle: 0, firing: true }, 2_000);
         combat.step('lake-projectile', [gunner, victim], lakeMap, 50, 2_000);
+        combat.setFireIntent('lake-projectile', gunner, { angle: 0, firing: false }, 2_050);
         combat.step('lake-projectile', [gunner, victim], lakeMap, 50, 2_050);
         const impact = combat.step('lake-projectile', [gunner, victim], lakeMap, 50, 2_100);
         expect(victim.hp).toBe(100);
@@ -333,7 +334,7 @@ describe('CombatManager weapon authority', () => {
         expect(laser.zombieHits[0]?.damage).toBe(20);
     });
 
-    it('blocks shots with rocks but lets projectiles pass through lakes', () => {
+    it('blocks shots with both rocks and lakes', () => {
         const fireThrough = (type: 'rock' | 'lake'): number => {
             const manager = new CombatManager();
             const shooter = player('shooter', 250);
@@ -351,7 +352,7 @@ describe('CombatManager weapon authority', () => {
         };
 
         expect(fireThrough('rock')).toBe(100);
-        expect(fireThrough('lake')).toBe(80);
+        expect(fireThrough('lake')).toBe(100);
     });
 
     it('decrements zombie lives and eliminates a player after the third death', () => {
