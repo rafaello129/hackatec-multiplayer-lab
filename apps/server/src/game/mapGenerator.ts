@@ -6,7 +6,6 @@ import type {
     MapObstacleType
 } from '@hackatec/shared';
 import {
-    ARENA_HEIGHT,
     ARENA_WIDTH,
     MAX_PLAYERS_PER_ROOM
 } from './constants.js';
@@ -29,7 +28,7 @@ export const MAP_GENERATION_CONFIG = {
     },
     edgePadding: 42,
     topBoundary: 155,
-    bottomBoundary: 715,
+    bottomPadding: 40,
     obstacleGap: 18,
     spawnClearance: 58,
     maxPlacementAttempts: 360
@@ -80,11 +79,11 @@ function intersects(
     );
 }
 
-function getSpawnSafeZones(width: number): Rectangle[]
+function getSpawnSafeZones(width: number, height: number): Rectangle[]
 {
     return Array.from({ length: MAX_PLAYERS_PER_ROOM }, (_, index) =>
     {
-        const spawn = getSpawnPosition(index, width);
+        const spawn = getSpawnPosition(index, width, height);
 
         return {
             x: spawn.x,
@@ -95,7 +94,7 @@ function getSpawnSafeZones(width: number): Rectangle[]
     });
 }
 
-function isInsidePlayableArea(rectangle: Rectangle, width: number): boolean
+function isInsidePlayableArea(rectangle: Rectangle, width: number, height: number): boolean
 {
     const halfWidth = rectangle.width / 2;
     const halfHeight = rectangle.height / 2;
@@ -104,22 +103,22 @@ function isInsidePlayableArea(rectangle: Rectangle, width: number): boolean
         rectangle.x - halfWidth >= MAP_GENERATION_CONFIG.edgePadding &&
         rectangle.x + halfWidth <= width - MAP_GENERATION_CONFIG.edgePadding &&
         rectangle.y - halfHeight >= MAP_GENERATION_CONFIG.topBoundary &&
-        rectangle.y + halfHeight <= MAP_GENERATION_CONFIG.bottomBoundary
+        rectangle.y + halfHeight <= height - MAP_GENERATION_CONFIG.bottomPadding
     );
 }
 
-function blocksReservedCorridor(rectangle: Rectangle, width: number): boolean
+function blocksReservedCorridor(rectangle: Rectangle, width: number, height: number): boolean
 {
     const verticalCorridor: Rectangle = {
         x: width / 2,
-        y: (MAP_GENERATION_CONFIG.topBoundary + MAP_GENERATION_CONFIG.bottomBoundary) / 2,
+        y: (MAP_GENERATION_CONFIG.topBoundary + height - MAP_GENERATION_CONFIG.bottomPadding) / 2,
         width: 90,
-        height: MAP_GENERATION_CONFIG.bottomBoundary - MAP_GENERATION_CONFIG.topBoundary
+        height: height - MAP_GENERATION_CONFIG.bottomPadding - MAP_GENERATION_CONFIG.topBoundary
     };
 
     const horizontalCorridor: Rectangle = {
         x: width / 2,
-        y: 438,
+        y: (MAP_GENERATION_CONFIG.topBoundary + height - MAP_GENERATION_CONFIG.bottomPadding) / 2,
         width: width - (MAP_GENERATION_CONFIG.edgePadding * 2),
         height: 74
     };
@@ -134,7 +133,8 @@ function createCandidate(
     type: MapObstacleType,
     index: number,
     random: () => number,
-    width: number
+    width: number,
+    height: number
 ): MapObstacle
 {
     if (type === 'wall' || type === 'fence')
@@ -154,7 +154,7 @@ function createCandidate(
             y: randomBetween(
                 random,
                 MAP_GENERATION_CONFIG.topBoundary + 30,
-                MAP_GENERATION_CONFIG.bottomBoundary - 30
+                height - MAP_GENERATION_CONFIG.bottomPadding - 30
             ),
             width: obstacleWidth,
             height: obstacleHeight
@@ -170,7 +170,7 @@ function createCandidate(
             y: randomBetween(
                 random,
                 MAP_GENERATION_CONFIG.topBoundary + 40,
-                MAP_GENERATION_CONFIG.bottomBoundary - 40
+                height - MAP_GENERATION_CONFIG.bottomPadding - 40
             ),
             width: randomBetween(random, 54, 76),
             height: randomBetween(random, 54, 76)
@@ -183,7 +183,7 @@ function createCandidate(
             id: type + '-' + index,
             type,
             x: randomBetween(random, 70, width - 70),
-            y: randomBetween(random, MAP_GENERATION_CONFIG.topBoundary + 45, MAP_GENERATION_CONFIG.bottomBoundary - 45),
+            y: randomBetween(random, MAP_GENERATION_CONFIG.topBoundary + 45, height - MAP_GENERATION_CONFIG.bottomPadding - 45),
             width: lake ? randomBetween(random, 130, 220) : randomBetween(random, 58, 104),
             height: lake ? randomBetween(random, 90, 160) : randomBetween(random, 48, 86)
         };
@@ -200,7 +200,7 @@ function createCandidate(
         y: randomBetween(
             random,
             MAP_GENERATION_CONFIG.topBoundary + 35,
-            MAP_GENERATION_CONFIG.bottomBoundary - 35
+            height - MAP_GENERATION_CONFIG.bottomPadding - 35
         ),
         width: config.size,
         height: config.size,
@@ -215,15 +215,16 @@ function canPlace(
     obstacle: MapObstacle,
     existing: MapObstacle[],
     spawnSafeZones: Rectangle[],
-    width: number
+    width: number,
+    height: number
 ): boolean
 {
-    if (!isInsidePlayableArea(obstacle, width))
+    if (!isInsidePlayableArea(obstacle, width, height))
     {
         return false;
     }
 
-    if (blocksReservedCorridor(obstacle, width))
+    if (blocksReservedCorridor(obstacle, width, height))
     {
         return false;
     }
@@ -246,7 +247,8 @@ function addObstacles(
     count: number,
     random: () => number,
     spawnSafeZones: Rectangle[],
-    width: number
+    width: number,
+    height: number
 )
 {
     for (let index = 0; index < count; index += 1)
@@ -257,9 +259,9 @@ function addObstacles(
             attempt += 1
         )
         {
-            const candidate = createCandidate(type, index, random, width);
+            const candidate = createCandidate(type, index, random, width, height);
 
-            if (canPlace(candidate, target, spawnSafeZones, width))
+            if (canPlace(candidate, target, spawnSafeZones, width, height))
             {
                 target.push(candidate);
                 break;
@@ -274,9 +276,10 @@ export function generateMap(seed: number, playerCount = 2, mode: string | null =
     const random = seededRandom(normalizedSeed);
     const obstacles: MapObstacle[] = [];
     const width = Math.min(2_560, ARENA_WIDTH + Math.max(0, playerCount - 2) * 48 + (mode === 'battleRoyale' ? 512 : 0));
-    const spawnSafeZones = getSpawnSafeZones(width);
+    const height = width + 104;
+    const spawnSafeZones = getSpawnSafeZones(width, height);
 
-    addObstacles(obstacles, 'lake', Math.round(MAP_GENERATION_CONFIG.counts.lake * width / ARENA_WIDTH), random, spawnSafeZones, width);
+    addObstacles(obstacles, 'lake', Math.round(MAP_GENERATION_CONFIG.counts.lake * width / ARENA_WIDTH), random, spawnSafeZones, width, height);
 
     addObstacles(
         obstacles,
@@ -307,7 +310,7 @@ export function generateMap(seed: number, playerCount = 2, mode: string | null =
     return {
         seed: normalizedSeed,
         width,
-        height: ARENA_HEIGHT,
+        height,
         obstacles
     };
 }
