@@ -107,14 +107,14 @@ describe('CombatManager weapon authority', () => {
         expect(combat.step('room', [shooter], map, 50, 1_100).projectiles).toHaveLength(2);
     });
 
-    it('deals 95 damage with the sniper and respects its cooldown', () => {
+    it('deals 75 damage with the sniper and respects its cooldown', () => {
         const shooter = player('shooter', 250);
         const target = player('target', 500);
         combat.initializePlayer('room', shooter, false);
         combat.selectWeapon('room', shooter, 5, 'classic', 1_000);
         combat.setFireIntent('room', shooter, { angle: 0, firing: true }, 1_000);
         const shot = combat.step('room', [shooter, target], map, 50, 1_000);
-        expect(target.hp).toBe(5);
+        expect(target.hp).toBe(25);
         expect(shot.beams).toMatchObject([{ ownerId: 'shooter', x1: 250, y1: 400, x2: 484, y2: 400, weapon: 'sniper' }]);
 
         combat.setFireIntent('room', shooter, { angle: 0, firing: false }, 1_050);
@@ -163,7 +163,7 @@ describe('CombatManager weapon authority', () => {
         expect(shooter.x).toBeLessThan(before);
     });
 
-    it('applies continuous laser damage at 100 DPS and exposes the beam state', () => {
+    it('applies continuous laser damage at 200 DPS and exposes the beam state', () => {
         const shooter = player('gueta', 250);
         const target = player('target', 500);
         combat.initializePlayer('room', shooter, true);
@@ -174,7 +174,7 @@ describe('CombatManager weapon authority', () => {
         const second = combat.step('room', [shooter, target], map, 50, 1_100);
         expect(first.beams).toHaveLength(1);
         expect(second.beams).toHaveLength(1);
-        expect(target.hp).toBe(80);
+        expect(target.hp).toBe(60);
     });
 
     it('permanently eliminates Battle Royale players instead of scheduling respawn', () => {
@@ -250,7 +250,7 @@ describe('CombatManager weapon authority', () => {
         combat.selectWeapon('laser-room', laserUser, 7, 'classic', 1_000);
         combat.setFireIntent('laser-room', laserUser, { angle: 0, firing: true }, 1_000);
         const laser = combat.step('laser-room', [laserUser], map, 50, 1_000, 'classic', [laserTarget]);
-        expect(laser.zombieHits[0]?.damage).toBe(10);
+        expect(laser.zombieHits[0]?.damage).toBe(20);
     });
 
     it('blocks shots with rocks but lets projectiles pass through lakes', () => {
