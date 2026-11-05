@@ -316,11 +316,13 @@ export class MapView
         for (const character of obstacle.id) {
             hash = Math.imul(hash ^ character.charCodeAt(0), 16_777_619);
         }
-        hash = (hash ^ salt) >>> 0;
-        const rotation = ((hash & 0xffff) / 0xffff) * Math.PI * 2;
+        const random = seededRandom((hash ^ salt) >>> 0);
+        const rotation = random() * Math.PI * 2;
         const points: Array<{ x: number; y: number }> = [];
         for (let index = 0; index < count; index += 1) {
-            const jitter = 0.82 + (((hash >>> ((index % 4) * 8)) & 0xff) / 255) * 0.18;
+            // Independent deterministic variation avoids the four-point repetition
+            // that made larger rocks and lakes look mechanically symmetrical.
+            const jitter = 0.78 + random() * 0.3;
             const angle = rotation + (Math.PI * 2 * index) / count;
             points.push({
                 x: obstacle.x + Math.cos(angle) * obstacle.width * 0.5 * scale * jitter,
