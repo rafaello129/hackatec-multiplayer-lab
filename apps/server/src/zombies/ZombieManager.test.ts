@@ -35,6 +35,7 @@ describe('ZombieManager', () => {
         expect(stateA.zombies.length).toBeGreaterThanOrEqual(ZOMBIE_BALANCE.initialSpawnCount);
         expect(stateA.round).toBe(1);
         expect(stateA.runPhase).toBe('wave');
+        expect(stateA.zombies.some(zombie => zombie.type === 'normal')).toBe(true);
         for (const zombie of stateA.zombies) {
             expect(Math.hypot(zombie.x - 500, zombie.y - 420)).toBeGreaterThan(150);
         }
@@ -114,6 +115,21 @@ describe('ZombieManager', () => {
         expect(eliminated).toMatchObject({ alive: true, spectator: false, lives: 1 });
     });
 
+
+    it('uses a basic zombie that chases and attacks players at close range', () => {
+        const manager = new ZombieManager();
+        const target = player('target', 500, 400);
+        const state = manager.reset('normal-run', map, [target], 0);
+        const normal = manager.getTargets('normal-run').find(zombie => zombie.type === 'normal')!;
+        normal.x = target.x - 30;
+        normal.y = target.y;
+
+        const first = manager.step('normal-run', [target], map, 50, 1_000);
+        expect(first?.damage).toEqual([{ playerId: target.id, amount: ZOMBIE_BALANCE.normal.damage }]);
+        const cooldown = manager.step('normal-run', [target], map, 50, 1_100);
+        expect(cooldown?.damage).toEqual([]);
+        expect(state.zombies.some(zombie => zombie.type === 'normal')).toBe(true);
+    });
 
     it('requires an 800ms telegraph before a giant charges', () => {
         const manager = new ZombieManager();
