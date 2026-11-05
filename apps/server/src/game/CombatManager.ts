@@ -81,7 +81,7 @@ function blocked(x: number, y: number, map: GameMapState): boolean {
     const radius = COMBAT_BALANCE.playerRadius;
     if (x < radius || x > map.width - radius ||
         y < COMBAT_BALANCE.playableTop + radius ||
-        y > COMBAT_BALANCE.playableBottom - radius) return true;
+        y > map.height - 40 - radius) return true;
     return map.obstacles.some(obstacle =>
         ['wall', 'rock', 'lake'].includes(obstacle.type) && overlaps(x, y, radius, obstacle)
     );
@@ -532,7 +532,7 @@ export class CombatManager {
         for (let distance = step; distance <= range; distance += step) {
             const x = attacker.x + dx * distance;
             const y = attacker.y + dy * distance;
-            if (x < 0 || x > map.width || y < COMBAT_BALANCE.playableTop || y > COMBAT_BALANCE.playableBottom ||
+            if (x < 0 || x > map.width || y < COMBAT_BALANCE.playableTop || y > map.height - 40 ||
                 map.obstacles.some(obstacle => ['wall', 'rock'].includes(obstacle.type) && overlaps(x, y, 1, obstacle))) {
                 return { x, y };
             }
@@ -600,7 +600,7 @@ export class CombatManager {
                 projectile.y += projectile.vy * dt / segments;
                 if (projectile.x < 0 || projectile.x > map.width ||
                     projectile.y < COMBAT_BALANCE.playableTop ||
-                    projectile.y > COMBAT_BALANCE.playableBottom ||
+                    projectile.y > map.height - 40 ||
                     map.obstacles.some(obstacle => ['wall', 'rock'].includes(obstacle.type) &&
                         overlaps(projectile.x, projectile.y, COMBAT_BALANCE.projectileRadius, obstacle))) {
                     hit = true;
