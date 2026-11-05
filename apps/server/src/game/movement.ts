@@ -46,7 +46,7 @@ function normalize(x: number, y: number): { x: number; y: number } {
 function blocked(x: number, y: number, map: GameMapState): boolean {
     if (x < PLAYER_RADIUS || x > map.width - PLAYER_RADIUS ||
         y < COMBAT_BALANCE.playableTop + PLAYER_RADIUS ||
-        y > Math.min(map.height, COMBAT_BALANCE.playableBottom) - PLAYER_RADIUS) return true;
+        y > map.height - 40 - PLAYER_RADIUS) return true;
 
     return map.obstacles.some(obstacle => {
         if (!['wall', 'rock', 'lake'].includes(obstacle.type)) return false;
