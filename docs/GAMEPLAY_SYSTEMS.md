@@ -45,7 +45,7 @@ Un pickup que no puede beneficiar a un jugador (por ejemplo, un botiquín con sa
 
 ## Zombies
 
-Los zombies aparecen exclusivamente en el modo Zombies. Clásico, Todos contra uno, Rocket para todos y Battle Royale no generan enemigos ni proyectiles de zombies. El máximo configurado es de 24 vivos, con intervalo de aparición de 20 segundos.
+Los zombies aparecen exclusivamente en el modo Zombies. Clásico, Todos contra uno, Rocket para todos y Battle Royale no generan enemigos ni proyectiles de zombies. El máximo configurado es de 24 enemigos vivos por oleada. Las oleadas avanzan después de una intermisión de 10 segundos; el jefe aparece al completar la décima ronda.
 
 **Zombie normal**
 - 120 de salud.
