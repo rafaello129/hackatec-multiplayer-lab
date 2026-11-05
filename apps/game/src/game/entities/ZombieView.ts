@@ -25,7 +25,8 @@ export class ZombieView {
                 this.visuals.set(zombie.id, visual);
             }
             visual.container.setPosition(zombie.x, zombie.y);
-            visual.container.setAlpha(zombie.alive ? 1 : 0.25);
+            visual.container.setVisible(zombie.alive);
+            if (!zombie.alive) continue;
             visual.label.setText(zombie.type === 'boss'
                 ? zombie.hp <= zombie.maxHp * 0.5 ? 'JEFE FINAL · FURIOSO' : 'JEFE FINAL'
                 : zombie.type === 'giant' ? 'GIGANTE' : 'ESCUPIDOR');
@@ -42,7 +43,6 @@ export class ZombieView {
             } else {
                 visual.body.setStrokeStyle(2, 0xffffff, 0.8);
             }
-            visual.container.setVisible(true);
         }
 
         for (const [id, visual] of this.visuals) {
