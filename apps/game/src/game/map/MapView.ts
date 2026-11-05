@@ -4,7 +4,7 @@ import type {
 } from '@hackatec/shared';
 import { GameObjects, Scene } from 'phaser';
 
-const ARENA = { x: 32, y: 128, width: 960, height: 600 } as const;
+const ARENA = { x: 32, y: 128, bottomPadding: 40 } as const;
 const GROUND_TEXTURE = 'hackatec-desert-ground';
 
 function seededRandom(seed: number): () => number
@@ -26,6 +26,12 @@ export class MapView
     private readonly ground: GameObjects.TileSprite;
     private readonly graphics: GameObjects.Graphics;
     private mapWidth = 1_024;
+    private mapHeight = 1_128;
+
+    private get arenaHeight(): number
+    {
+        return this.mapHeight - ARENA.y - ARENA.bottomPadding;
+    }
 
     constructor(private readonly scene: Scene)
     {
@@ -33,9 +39,9 @@ export class MapView
 
         this.ground = scene.add.tileSprite(
             this.mapWidth / 2,
-            ARENA.y + ARENA.height / 2,
+            ARENA.y + this.arenaHeight / 2,
             this.mapWidth - ARENA.x * 2,
-            ARENA.height,
+            this.arenaHeight,
             GROUND_TEXTURE
         ).setDepth(-2);
 
@@ -46,8 +52,9 @@ export class MapView
     {
         this.graphics.clear();
         this.mapWidth = map.width;
-        this.ground.setPosition(ARENA.x + (map.width - ARENA.x * 2) / 2, ARENA.y + ARENA.height / 2)
-            .setSize(map.width - ARENA.x * 2, ARENA.height);
+        this.mapHeight = map.height;
+        this.ground.setPosition(ARENA.x + (map.width - ARENA.x * 2) / 2, ARENA.y + this.arenaHeight / 2)
+            .setSize(map.width - ARENA.x * 2, this.arenaHeight);
         this.drawGroundDetails(map.seed, map.obstacles, map.width);
 
         for (const obstacle of map.obstacles)
@@ -110,7 +117,7 @@ export class MapView
             ARENA.x,
             ARENA.y,
             mapWidth - ARENA.x * 2,
-            ARENA.height,
+            this.arenaHeight,
             10
         );
         this.graphics.lineStyle(2, 0xf1d19a, 0.72);
@@ -118,7 +125,7 @@ export class MapView
             ARENA.x + 5,
             ARENA.y + 5,
             mapWidth - ARENA.x * 2 - 10,
-            ARENA.height - 10,
+            this.arenaHeight - 10,
             8
         );
     }
@@ -134,7 +141,7 @@ export class MapView
         {
             attempts += 1;
             const x = ARENA.x + 24 + random() * (mapWidth - ARENA.x * 2 - 48);
-            const y = ARENA.y + 24 + random() * (ARENA.height - 48);
+            const y = ARENA.y + 24 + random() * (this.arenaHeight - 48);
             const radius = 3 + random() * 5;
 
             const overlapsObstacle = obstacles.some((obstacle) =>
@@ -158,7 +165,7 @@ export class MapView
         for (let index = 0; index < Math.round(22 * mapWidth / 1_024); index += 1)
         {
             const x = ARENA.x + 20 + random() * (mapWidth - ARENA.x * 2 - 40);
-            const y = ARENA.y + 20 + random() * (ARENA.height - 40);
+            const y = ARENA.y + 20 + random() * (this.arenaHeight - 40);
             const nearObstacle = obstacles.some((obstacle) =>
                 Math.abs(x - obstacle.x) < obstacle.width / 2 + 18 &&
                 Math.abs(y - obstacle.y) < obstacle.height / 2 + 18
