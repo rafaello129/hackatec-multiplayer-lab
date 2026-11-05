@@ -7,7 +7,7 @@ export class StormView {
     private current?: StormStatePayload;
 
     constructor(private readonly scene: Scene) {
-        this.graphics = scene.add.graphics().setDepth(6).setScrollFactor(0);
+        this.graphics = scene.add.graphics().setDepth(6);
         this.status = scene.add.text(36, 151, '', {
             fontFamily: 'Arial Black',
             fontSize: 13,
@@ -46,7 +46,8 @@ export class StormView {
     private draw(): void {
         const state = this.current;
         if (!state) return;
-        const remaining = Math.max(0, Math.ceil((state.nextPhaseAt - Date.now()) / 1_000));
+        const nextBoundary = state.closing ? state.nextPhaseAt : state.closesAt;
+        const remaining = Math.max(0, Math.ceil((nextBoundary - Date.now()) / 1_000));
         const phaseText = state.completed
             ? 'CÍRCULO FINAL'
             : state.closing ? 'CERRANDO' : 'CIERRE EN';
