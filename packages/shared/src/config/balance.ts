@@ -97,6 +97,7 @@ export const STORM_BALANCE = {
 } as const;
 
 export const ZOMBIE_BALANCE = {
+    normal: { health: 120, damage: 14, moveSpeed: 105, attackCooldownMs: 900 },
     giant: {
         health: 400,
         chargeDamage: 35,
