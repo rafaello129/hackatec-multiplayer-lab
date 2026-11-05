@@ -161,6 +161,8 @@ export class ZombieManager {
 
             if (zombie.type === 'spitter') {
                 this.stepSpitter(zombie, target, runtime, roomId, dt, now, map);
+            } else if (zombie.type === 'normal') {
+                this.stepNormal(zombie, target, map, dt, now, damage);
             } else {
                 this.stepGiant(zombie, target, map, dt, now, damage);
             }
@@ -187,10 +189,10 @@ export class ZombieManager {
         position: { x: number; y: number },
         now: number
     ): void {
-        const giant = type !== 'spitter';
         const health = type === 'boss'
             ? ZOMBIE_BALANCE.bossHealth + Math.max(0, runtime.playerCount - 1) * ZOMBIE_BALANCE.bossHealthPerPlayer
-            : giant ? ZOMBIE_BALANCE.giant.health : ZOMBIE_BALANCE.spitter.health;
+            : type === 'giant' ? ZOMBIE_BALANCE.giant.health
+                : type === 'normal' ? ZOMBIE_BALANCE.normal.health : ZOMBIE_BALANCE.spitter.health;
         const id = roomId + ':zombie:' + (++runtime.counter);
         runtime.zombies.set(id, {
             id,
@@ -199,7 +201,7 @@ export class ZombieManager {
             y: position.y,
             hp: health,
             maxHp: health,
-            radius: type === 'boss' ? 54 : giant ? 29 : 22,
+            radius: type === 'boss' ? 54 : type === 'giant' ? 29 : type === 'normal' ? 20 : 22,
             alive: true,
             phase: 'approach',
             phaseEndsAt: now,
@@ -212,7 +214,7 @@ export class ZombieManager {
         const count = Math.min(ZOMBIE_BALANCE.maximumAlive, 3 + runtime.round * 2 + Math.floor(players.length / 2));
         const positions = this.spawnPositions(map, players, count, runtime);
         for (let index = 0; index < positions.length; index += 1) {
-            const type = index % 3 === 0 ? 'giant' : 'spitter';
+            const type = index % 5 === 0 ? 'giant' : index % 3 === 0 ? 'spitter' : 'normal';
             this.addZombie(runtime, roomId, type, positions[index]!, now);
         }
         runtime.runPhase = 'wave';
@@ -312,6 +314,34 @@ export class ZombieManager {
             if (selected.length >= count) break;
         }
         return selected;
+    }
+
+    private stepNormal(
+        zombie: ZombieState,
+        target: PlayerState,
+        map: GameMapState,
+        dt: number,
+        now: number,
+        damage: Array<{ playerId: string; amount: number }>
+    ): void {
+        const dx = target.x - zombie.x;
+        const dy = target.y - zombie.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        const attackRange = zombie.radius + COMBAT_BALANCE.playerRadius + 6;
+
+        if (distance <= attackRange) {
+            if (now >= zombie.phaseEndsAt) {
+                damage.push({ playerId: target.id, amount: ZOMBIE_BALANCE.normal.damage });
+                zombie.phaseEndsAt = now + ZOMBIE_BALANCE.normal.attackCooldownMs;
+            }
+            return;
+        }
+
+        const movement = ZOMBIE_BALANCE.normal.moveSpeed * dt;
+        const nextX = zombie.x + dx / distance * movement;
+        const nextY = zombie.y + dy / distance * movement;
+        if (!blocked(nextX, zombie.y, zombie.radius, map)) zombie.x = nextX;
+        if (!blocked(zombie.x, nextY, zombie.radius, map)) zombie.y = nextY;
     }
 
     private stepGiant(
