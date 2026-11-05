@@ -220,6 +220,38 @@ describe('CombatManager weapon authority', () => {
         expect(hunterVictim.spectator).not.toBe(true);
     });
 
+    it('keeps players allied in Zombies mode across hitscan, melee and rocket splash', () => {
+        const sniper = player('sniper', 250);
+        const sniperAlly = player('sniper-ally', 350);
+        combat.initializePlayer('zombie-sniper', sniper, false, 'zombies');
+        combat.selectWeapon('zombie-sniper', sniper, 5, 'zombies', 1_000);
+        combat.setFireIntent('zombie-sniper', sniper, { angle: 0, firing: true }, 1_000);
+        combat.step('zombie-sniper', [sniper, sniperAlly], map, 50, 1_000, 'zombies');
+        expect(sniperAlly.hp).toBe(100);
+
+        const knifeUser = player('knife-user', 250);
+        const knifeAlly = player('knife-ally', 280);
+        combat.initializePlayer('zombie-knife', knifeUser, false, 'zombies');
+        combat.selectWeapon('zombie-knife', knifeUser, 1, 'zombies', 1_000);
+        combat.setFireIntent('zombie-knife', knifeUser, { angle: 0, firing: true }, 1_000);
+        combat.step('zombie-knife', [knifeUser, knifeAlly], map, 50, 1_000, 'zombies');
+        expect(knifeAlly.hp).toBe(100);
+
+        const rocketUser = player('rocket-user', 250);
+        const rocketAlly = player('rocket-ally', 300);
+        const rockMap: GameMapState = {
+            ...map,
+            obstacles: [{ id: 'test-rock', type: 'rock', x: 300, y: 400, width: 20, height: 40 }]
+        };
+        combat.initializePlayer('zombie-rocket', rocketUser, false, 'zombies');
+        combat.selectWeapon('zombie-rocket', rocketUser, 6, 'zombies', 1_000);
+        combat.setFireIntent('zombie-rocket', rocketUser, { angle: 0, firing: true }, 1_000);
+        combat.step('zombie-rocket', [rocketUser, rocketAlly], rockMap, 50, 1_000, 'zombies');
+        const impact = combat.step('zombie-rocket', [rocketUser, rocketAlly], rockMap, 50, 1_050, 'zombies');
+        expect(impact.explosions).toHaveLength(1);
+        expect(rocketAlly.hp).toBe(100);
+    });
+
     it('allows projectile, melee and laser weapons to damage zombie targets', () => {
         const shooter = player('shooter', 250);
         const zombie = {
