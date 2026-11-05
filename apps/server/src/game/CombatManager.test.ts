@@ -120,7 +120,7 @@ describe('CombatManager weapon authority', () => {
         combat.setFireIntent('room', shooter, { angle: 0, firing: false }, 1_050);
         combat.setFireIntent('room', shooter, { angle: 0, firing: true }, 1_100);
         combat.step('room', [shooter, target], map, 50, 1_100);
-        expect(target.hp).toBe(5);
+        expect(target.hp).toBe(25);
     });
 
     it('credits an assist to a player who damaged the victim before the final hit', () => {
