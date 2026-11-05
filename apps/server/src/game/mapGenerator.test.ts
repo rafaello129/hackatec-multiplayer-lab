@@ -9,8 +9,10 @@ describe('generateMap', () => {
         const battleRoyale = generateMap(123, 8, 'battleRoyale');
 
         expect(crowded.width).toBeGreaterThan(small.width);
+        expect(crowded.width - 64).toBe(crowded.height - 168);
         expect(battleRoyale.width).toBeGreaterThan(crowded.width);
-        expect(battleRoyale.height).toBe(small.height);
+        expect(battleRoyale.height).toBe(battleRoyale.width + 104);
+        expect(battleRoyale.width - 64).toBe(battleRoyale.height - 168);
     });
 
     it('generates fences, blocking rocks and lakes without covering player spawn zones', () => {
