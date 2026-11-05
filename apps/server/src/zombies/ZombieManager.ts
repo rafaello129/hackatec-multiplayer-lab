@@ -48,7 +48,7 @@ function randomFor(seed: number): () => number {
 function blocked(x: number, y: number, radius: number, map: GameMapState): boolean {
     if (x < radius || x > map.width - radius ||
         y < COMBAT_BALANCE.playableTop + radius ||
-        y > COMBAT_BALANCE.playableBottom - radius) return true;
+        y > map.height - 40 - radius) return true;
     return map.obstacles.some(obstacle => {
         if (!['wall', 'rock', 'lake'].includes(obstacle.type)) return false;
         const dx = Math.max(Math.abs(x - obstacle.x) - obstacle.width / 2, 0);
@@ -290,7 +290,7 @@ export class ZombieManager {
             ? ZOMBIE_BALANCE.highDensityZombieSeparationPx
             : ZOMBIE_BALANCE.defaultZombieSeparationPx;
         for (let y = COMBAT_BALANCE.playableTop + ZOMBIE_BALANCE.spawnGridMarginPx;
-            y <= COMBAT_BALANCE.playableBottom - ZOMBIE_BALANCE.spawnGridMarginPx;
+            y <= map.height - 40 - ZOMBIE_BALANCE.spawnGridMarginPx;
             y += ZOMBIE_BALANCE.spawnGridStepY) {
             for (let x = ZOMBIE_BALANCE.spawnGridMinX;
                 x <= map.width - ZOMBIE_BALANCE.spawnGridMinX;
