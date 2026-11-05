@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { WEAPON_BALANCE } from '@hackatec/shared';
 import type { GameMapState, PlayerState } from '@hackatec/shared';
 import { CombatManager } from './CombatManager.js';
 
@@ -14,6 +15,10 @@ function player(id: string, x: number, y = 400): PlayerState {
 }
 
 describe('CombatManager weapon authority', () => {
+    it('keeps machine gun sustained damage at 60 DPS', () => {
+        expect(WEAPON_BALANCE.machineGun.damage * 1_000 / WEAPON_BALANCE.machineGun.cooldownMs).toBe(60);
+    });
+
     let combat: CombatManager;
 
     beforeEach(() => {
