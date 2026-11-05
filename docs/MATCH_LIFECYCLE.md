@@ -20,7 +20,7 @@ Cada sala tiene una única máquina de estados del servidor:
 
 | Modo | Duración máxima | Regla de victoria / eliminación |
 |---|---:|---|
-| Clásico | 5 min | Gana quien alcance 30 bajas o tenga más bajas al terminar. Respawn de 5 s. |
+| Clásico | 5 min | Gana quien alcance 30 bajas o tenga más bajas al terminar. Respawn de 4 s. |
 | Todos contra uno | 4.5 min | Los cazadores ganan al eliminar al Titan. El Titan gana si resiste o elimina las vidas de todos los cazadores. |
 | Rocket para todos | 5 min | Solo ranura 6, lanzacohetes. |
 | Battle Royale | 7.5 min | Último jugador vivo. No hay respawn. Si el tiempo se agota, se desempata por supervivientes y salud. |
