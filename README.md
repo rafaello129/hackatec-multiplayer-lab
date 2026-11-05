@@ -12,7 +12,7 @@ Juego web multijugador 2D desarrollado con TypeScript, Phaser 4, Node.js, Expres
 - Armas con daño, proyectiles, explosiones, curación y bajas calculadas por el servidor.
 - Cinco modos: Clásico, Todos contra uno, Rocket para todos, Battle Royale y Zombies.
 - Tormenta progresiva exclusiva de Battle Royale.
-- Zombies gigante y escupidor con IA autoritativa, exclusivos del modo Zombies.
+- Zombies normales, gigantes y escupidores con IA autoritativa, exclusivos del modo Zombies.
 - XP, niveles, asistencias, historial de progresión y chat con canal de espectadores.
 - HUD con hotbar, vida, escudo, roles, feed de eliminaciones, resultados, chat y burbujas de mensaje.
 - HUD minimalista conmutables desde el botón de la arena, conservando vida, escudo y armas.
@@ -48,6 +48,8 @@ Abre una URL con el mismo identificador de sala en varias pestañas o dispositiv
 http://localhost:5173/?room=hackatec
 ```
 
+Para jugar desde otros dispositivos de la misma red, abre `http://IP_DE_LA_LAPTOP:5173/?room=hackatec`. El cliente detecta esa dirección y se conecta al servidor en el puerto `3001`; permite ambos puertos en el firewall. Si el servidor está en otro equipo o puerto, define `VITE_SERVER_URL` antes de compilar el cliente.
+
 Cada jugador debe registrarse o iniciar sesión con una cuenta distinta. El servidor obtiene el nombre visible de la cuenta autenticada; no confía en nombres enviados por el cliente.
 
 Para iniciar servidor y cliente por separado:
@@ -80,11 +82,11 @@ El botón de la esquina superior derecha alterna entre HUD completo y HUD minima
 
 ## Modos de juego
 
-- **Clásico:** ronda de 5 minutos o límite de 30 bajas; respawn de 5 segundos. Sin zombies.
+- **Clásico:** ronda de 5 minutos o límite de 30 bajas; respawn de 4 segundos. Sin zombies.
 - **Todos contra uno:** un Titan con vida escalada contra cazadores con tres vidas; respawn de 5 segundos para cazadores que conservan vidas. Sin zombies.
 - **Rocket para todos:** todos usan exclusivamente el lanzacohetes; ronda de 5 minutos. Sin zombies.
 - **Battle Royale:** eliminación definitiva, tormenta de cinco fases y victoria del último superviviente. Duración máxima configurada de 7.5 minutos. Sin zombies.
-- **Zombies:** supervivencia de diez rondas contra hordas de gigantes y escupidores, con jefe final; es el único modo que genera zombies.
+- **Zombies:** supervivencia de diez rondas contra zombies normales, gigantes y escupidores, con jefe final; es el único modo que genera zombies.
 
 La votación se abre al haber dos jugadores. El anfitrión también puede elegir e iniciar un modo, o detener la partida. Consulta [MATCH_LIFECYCLE.md](docs/MATCH_LIFECYCLE.md) para reglas exactas.
 
