@@ -80,7 +80,7 @@ export type PickupCollectedPayload = {
     playerId: string;
     restored: number;
 };
-export type ZombieType = 'giant' | 'spitter' | 'boss';
+export type ZombieType = 'normal' | 'giant' | 'spitter' | 'boss';
 export type ZombiePhase = 'approach' | 'telegraph' | 'charge' | 'stunned' | 'spit';
 export type ZombieState = {
     id: string;
