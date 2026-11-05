@@ -285,6 +285,7 @@ export class CombatManager {
         state.heals = [];
         state.killFeed = [];
         const byId = new Map(players.map(player => [player.id, player]));
+        const combatTargets = mode === 'zombies' ? [] : players;
         state.playersById = byId;
         const playerRadius = COMBAT_BALANCE.playerRadius;
         const projectileRadius = COMBAT_BALANCE.projectileRadius;
@@ -360,10 +361,10 @@ export class CombatManager {
                 }
             }
             state.traps.set(player.id, touching);
-            this.processWeapon(state, roomId, player, players, map, dt, now, mode, beams, zombies, zombieHits);
+            this.processWeapon(state, roomId, player, combatTargets, map, dt, now, mode, beams, zombies, zombieHits);
         }
 
-        this.stepProjectiles(state, roomId, players, map, dt, now, explosions, byId, zombies, zombieHits);
+        this.stepProjectiles(state, roomId, combatTargets, map, dt, now, explosions, byId, zombies, zombieHits);
 
         return {
             projectiles: [...state.projectiles.values()],
