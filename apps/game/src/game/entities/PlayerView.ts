@@ -29,7 +29,7 @@ export class PlayerView
         this.body = scene.add.polygon(
             0,
             0,
-            [24, 0, 7, -7, -13, -17, -8, -4, -8, 4, -13, 17, 7, 7],
+            [18.5, 0, 1.5, -7, -18.5, -17, -13.5, -4, -13.5, 4, -18.5, 17, 1.5, 7],
             0x3b82f6
         );
         // Keep the ship geometry anchored to the same world point used by the server hitbox.
