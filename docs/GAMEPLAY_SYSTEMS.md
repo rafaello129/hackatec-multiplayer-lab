@@ -23,7 +23,7 @@ Rocket para todos fuerza la ranura 6 y bloquea las demás. El cliente no puede e
 - Velocidad normal: 185 px/s.
 - Dash: desplazamiento configurado de 170 px en 160 ms, invulnerabilidad durante 300 ms y cooldown de 2500 ms.
 - La dirección del dash usa el movimiento; si el jugador está quieto, usa el ángulo de apuntado validado por el servidor.
-- Las rocas y los lagos bloquean el movimiento; las rocas también bloquean proyectiles, mientras que los disparos atraviesan los lagos.
+- Las rocas y los lagos bloquean el movimiento y también bloquean los disparos hitscan y los proyectiles.
 - Las cercas se pueden atravesar, pero ralentizan brevemente al jugador.
 - Las trampas inmovilizan durante 5 segundos.
 - Los cactus aplican daño con un cooldown de 1 segundo.
